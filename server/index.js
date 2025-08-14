@@ -34,11 +34,18 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files from Photos directory (new staff photos location)
 app.use('/Photos', express.static(path.join(__dirname, 'Photos')));
+
+// Serve static files from the frontend build (dist)
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Fallback to index.html for SPA (must be after API routes)
+// (This will be moved to the end of the file after all routes)
 
 // MySQL connection config (replace with your Hostinger DB credentials)
 const db = await mysql.createPool({
@@ -52,6 +59,7 @@ const db = await mysql.createPool({
 });
 
 console.log(`Connected to MySQL database at ${process.env.DB_Password}`);
+
 
 
 app.use('/api', stock); 
@@ -70,6 +78,11 @@ app.use('/api', roles);
 app.use('/api', medicalRecords);
 app.use('/api', fees);
 // app.use('/api', uploads);
+
+// Fallback to index.html for SPA (must be after all routes)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
 
 
 
