@@ -1,0 +1,209 @@
+import { useState, useEffect } from 'react';
+
+export interface PaymentRecord {
+  id: string;
+  patientId: string;
+  date: string;
+  amount: number;
+  comment: string;
+  paymentMode: string;
+  balanceRemaining: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PatientPaymentData {
+  patientId: string;
+  name: string;
+  registrationId: string;
+  totalFees: number;
+  advancePaid: number;
+  payments: PaymentRecord[];
+}
+
+export const usePatientPayments = () => {
+  const [patientPayments, setPatientPayments] = useState<PatientPaymentData[]>([]);
+
+  useEffect(() => {
+    loadPatientPayments();
+  }, []);
+
+  const loadPatientPayments = () => {
+    try {
+      // Load patients from localStorage
+      const patientsData = JSON.parse(localStorage.getItem('patients') || '[]');
+      
+      // Load payment records from localStorage
+      const paymentRecords = JSON.parse(localStorage.getItem('patientPaymentRecords') || '[]');
+      
+      // Load patient payment configurations
+      const patientConfigs = JSON.parse(localStorage.getItem('patientPaymentConfigs') || '[]');
+      
+      // Merge data to create complete payment data structure
+      const paymentData = patientsData.map((patient: any) => {
+        // Find existing config or create default
+        const existingConfig = patientConfigs.find((config: any) => config.patientId === patient.id);
+        const patientPaymentRecords = paymentRecords.filter((record: PaymentRecord) => record.patientId === patient.id);
+        
+        // Use existing payment data from patient record or defaults
+        const totalFees = patient.totalAmount || existingConfig?.totalFees || 0;
+        const advancePaid = patient.payAmount || existingConfig?.advancePaid || 0;
+        
+        // If no payment records exist but patient has payAmount, create initial record
+        if (patientPaymentRecords.length === 0 && patient.payAmount > 0) {
+          const initialPayment: PaymentRecord = {
+            id: `${patient.id}-initial`,
+            patientId: patient.id,
+            date: patient.admissionDate || new Date().toISOString(),
+            amount: patient.payAmount,
+            comment: 'Initial payment',
+            paymentMode: patient.paymentType || 'Cash',
+            balanceRemaining: Math.max(0, totalFees - patient.payAmount),
+            createdBy: 'System',
+            createdAt: new Date().toISOString()
+          };
+          patientPaymentRecords.push(initialPayment);
+        }
+
+        return {
+          patientId: patient.id,
+          name: patient.name,
+          registrationId: patient.id,
+          totalFees,
+          advancePaid,
+          payments: patientPaymentRecords
+        };
+      });
+      
+      setPatientPayments(paymentData);
+    } catch (error) {
+      console.error('Error loading patient payments:', error);
+      setPatientPayments([]);
+    }
+  };
+
+  const addPayment = (patientId: string, paymentData: Omit<PaymentRecord, 'id' | 'patientId' | 'createdBy' | 'createdAt'>) => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('healthcare_user') || '{}');
+      const newPayment: PaymentRecord = {
+        id: `${patientId}-${Date.now()}`,
+        patientId,
+        ...paymentData,
+        createdBy: currentUser.name || 'Unknown',
+        createdAt: new Date().toISOString()
+      };
+
+      // Update payment records in localStorage
+      const existingRecords = JSON.parse(localStorage.getItem('patientPaymentRecords') || '[]');
+      const updatedRecords = [...existingRecords, newPayment];
+      localStorage.setItem('patientPaymentRecords', JSON.stringify(updatedRecords));
+
+      // Update patient payments state
+      setPatientPayments(prev => prev.map(patient => 
+        patient.patientId === patientId 
+          ? { ...patient, payments: [...patient.payments, newPayment] }
+          : patient
+      ));
+
+      // Update patient record with new totals
+      const patients = JSON.parse(localStorage.getItem('patients') || '[]');
+      const updatedPatients = patients.map((patient: any) => {
+        if (patient.id === patientId) {
+          const patientData = patientPayments.find(p => p.patientId === patientId);
+          if (patientData) {
+            const totalPaid = [...patientData.payments, newPayment].reduce((sum, p) => sum + p.amount, 0);
+            return {
+              ...patient,
+              payAmount: totalPaid,
+              balance: Math.max(0, patientData.totalFees - totalPaid)
+            };
+          }
+        }
+        return patient;
+      });
+      localStorage.setItem('patients', JSON.stringify(updatedPatients));
+
+      return newPayment;
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      throw error;
+    }
+  };
+
+  const updatePatientPaymentConfig = (patientId: string, totalFees: number, advancePaid: number) => {
+    try {
+      const configs = JSON.parse(localStorage.getItem('patientPaymentConfigs') || '[]');
+      const existingConfigIndex = configs.findIndex((config: any) => config.patientId === patientId);
+      
+      const newConfig = {
+        patientId,
+        totalFees,
+        advancePaid,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (existingConfigIndex >= 0) {
+        configs[existingConfigIndex] = newConfig;
+      } else {
+        configs.push(newConfig);
+      }
+
+      localStorage.setItem('patientPaymentConfigs', JSON.stringify(configs));
+
+      // Update state
+      setPatientPayments(prev => prev.map(patient => 
+        patient.patientId === patientId 
+          ? { ...patient, totalFees, advancePaid }
+          : patient
+      ));
+
+      // Also update the main patient record
+      const patients = JSON.parse(localStorage.getItem('patients') || '[]');
+      const updatedPatients = patients.map((patient: any) => 
+        patient.id === patientId 
+          ? { ...patient, totalAmount: totalFees, payAmount: advancePaid }
+          : patient
+      );
+      localStorage.setItem('patients', JSON.stringify(updatedPatients));
+
+    } catch (error) {
+      console.error('Error updating patient payment config:', error);
+      throw error;
+    }
+  };
+
+  const getPatientPaymentSummary = () => {
+    return patientPayments.map(patient => {
+      const totalCollected = patient.payments.reduce((sum, payment) => sum + payment.amount, 0);
+      const balancePending = Math.max(0, patient.totalFees - totalCollected);
+      
+      return {
+        ...patient,
+        totalCollected,
+        balancePending,
+        status: balancePending <= 0 ? 'Paid' : balancePending < patient.totalFees ? 'Partial' : 'Pending'
+      };
+    });
+  };
+
+  const getOverallTotals = () => {
+    const summary = getPatientPaymentSummary();
+    return summary.reduce(
+      (totals, patient) => ({
+        totalPaid: totals.totalPaid + patient.totalCollected,
+        totalDue: totals.totalDue + patient.totalFees,
+        totalPending: totals.totalPending + patient.balancePending
+      }),
+      { totalPaid: 0, totalDue: 0, totalPending: 0 }
+    );
+  };
+
+  return {
+    patientPayments,
+    addPayment,
+    updatePatientPaymentConfig,
+    getPatientPaymentSummary,
+    getOverallTotals,
+    refreshData: loadPatientPayments
+  };
+};

@@ -1,0 +1,509 @@
+/* ===========================================
+   MODERN CRM FORM DESIGN SYSTEM
+   Global form styling for entire CRM project
+   Based on current blue gradient color scheme
+   =========================================== */
+
+/* ============ ROOT VARIABLES ============ */
+:root {
+  /* Primary Colors */
+  --primary-blue: #3b82f6;
+  --primary-blue-dark: #2563eb;
+  --primary-indigo: #6366f1;
+  --primary-indigo-dark: #4f46e5;
+  
+  /* Background Colors */
+  --bg-primary: linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #e0e7ff 100%);
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-input: rgba(255, 255, 255, 0.95);
+  --bg-hover: rgba(59, 130, 246, 0.05);
+  
+  /* Border Colors */
+  --border-light: #e2e8f0;
+  --border-focus: #3b82f6;
+  --border-error: #ef4444;
+  --border-success: #10b981;
+  
+  /* Text Colors */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-white: #ffffff;
+  
+  /* Shadow */
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-large: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Transitions */
+  --transition-fast: all 0.15s ease-in-out;
+  --transition-normal: all 0.3s ease-in-out;
+  --transition-slow: all 0.5s ease-in-out;
+}
+
+/* ============ GLOBAL FORM STYLES ============ */
+
+/* Form Container */
+.modern-form-container {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+/* Form Card */
+.modern-form-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-light);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--shadow-large);
+  transition: var(--transition-normal);
+}
+
+.modern-form-card:hover {
+  box-shadow: var(--shadow-large), 0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Form Header */
+.modern-form-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.modern-form-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-indigo));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.modern-form-subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* ============ INPUT FIELDS ============ */
+
+/* Form Group */
+.modern-form-group {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.modern-form-group-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Labels */
+.modern-form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  transition: var(--transition-fast);
+}
+
+.modern-form-label.required::after {
+  content: '*';
+  color: var(--border-error);
+  margin-left: 0.25rem;
+}
+
+/* Input Base Styles */
+.modern-form-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 2px solid var(--border-light);
+  border-radius: 0.75rem;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-soft);
+  outline: none;
+  backdrop-filter: blur(5px);
+}
+
+.modern-form-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.modern-form-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-medium), 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: rgba(255, 255, 255, 1);
+}
+
+.modern-form-input:hover:not(:focus) {
+  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 1);
+}
+
+/* Input States */
+.modern-form-input.error {
+  border-color: var(--border-error);
+  box-shadow: var(--shadow-soft), 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.modern-form-input.success {
+  border-color: var(--border-success);
+  box-shadow: var(--shadow-soft), 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.modern-form-input:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* ============ TEXTAREA ============ */
+.modern-form-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* ============ SELECT DROPDOWN ============ */
+.modern-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5rem 1.5rem;
+  padding-right: 3rem;
+}
+
+/* ============ BUTTONS ============ */
+
+/* Primary Button */
+.modern-form-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-white);
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-indigo));
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-medium);
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.modern-form-btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-blue-dark), var(--primary-indigo-dark));
+  box-shadow: var(--shadow-large);
+  transform: translateY(-1px);
+}
+
+.modern-form-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-soft);
+}
+
+.modern-form-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary Button */
+.modern-form-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary-blue);
+  background: var(--bg-input);
+  border: 2px solid var(--border-light);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.modern-form-btn-secondary:hover {
+  border-color: var(--primary-blue);
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-1px);
+}
+
+/* Danger Button */
+.modern-form-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-white);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-medium);
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.modern-form-btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: var(--shadow-large);
+  transform: translateY(-1px);
+}
+
+/* Button Group */
+.modern-form-btn-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.modern-form-btn-group.center {
+  justify-content: center;
+}
+
+.modern-form-btn-group.start {
+  justify-content: flex-start;
+}
+
+/* ============ CHECKBOX & RADIO ============ */
+.modern-form-checkbox-group,
+.modern-form-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.modern-form-checkbox,
+.modern-form-radio {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--primary-blue);
+  cursor: pointer;
+}
+
+.modern-form-checkbox-label,
+.modern-form-radio-label {
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ============ FILE UPLOAD ============ */
+.modern-form-file-upload {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 2rem;
+  border: 2px dashed var(--border-light);
+  border-radius: 0.75rem;
+  background: var(--bg-input);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.modern-form-file-upload:hover {
+  border-color: var(--primary-blue);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.modern-form-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.modern-form-file-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  color: var(--primary-blue);
+}
+
+.modern-form-file-text {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.modern-form-file-subtext {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* ============ FORM VALIDATION ============ */
+.modern-form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  color: var(--border-error);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.modern-form-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  color: var(--border-success);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ============ FORM SECTIONS ============ */
+.modern-form-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-light);
+}
+
+.modern-form-section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-light);
+}
+
+/* ============ LOADING STATES ============ */
+.modern-form-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-form-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), transparent);
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+@media (max-width: 768px) {
+  .modern-form-container {
+    padding: 1rem;
+  }
+  
+  .modern-form-card {
+    padding: 1.5rem;
+  }
+  
+  .modern-form-title {
+    font-size: 1.75rem;
+  }
+  
+  .modern-form-group-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .modern-form-btn-group {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .modern-form-btn-primary,
+  .modern-form-btn-secondary,
+  .modern-form-btn-danger {
+    width: 100%;
+  }
+}
+
+/* ============ UTILITY CLASSES ============ */
+.modern-form-hide {
+  display: none;
+}
+
+.modern-form-show {
+  display: block;
+}
+
+.modern-form-text-center {
+  text-align: center;
+}
+
+.modern-form-text-left {
+  text-align: left;
+}
+
+.modern-form-text-right {
+  text-align: right;
+}
+
+.modern-form-mb-0 {
+  margin-bottom: 0;
+}
+
+.modern-form-mb-1 {
+  margin-bottom: 0.5rem;
+}
+
+.modern-form-mb-2 {
+  margin-bottom: 1rem;
+}
+
+.modern-form-mb-3 {
+  margin-bottom: 1.5rem;
+}
+
+/* ============ DARK MODE SUPPORT ============ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    --bg-card: rgba(30, 41, 59, 0.9);
+    --bg-input: rgba(51, 65, 85, 0.8);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-light: #334155;
+  }
+}

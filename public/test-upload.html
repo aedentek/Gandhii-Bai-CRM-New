@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test File Upload</title>
+</head>
+<body>
+    <h1>Testing File Upload Endpoint</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testUploadEndpoint() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                resultsDiv.innerHTML += '<p>🧪 Testing upload endpoint accessibility...</p>';
+                
+                // Test the health endpoint first
+                const healthResponse = await fetch('http://localhost:4000/api/health');
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    resultsDiv.innerHTML += '<p>✅ Health endpoint working: ' + JSON.stringify(healthData) + '</p>';
+                } else {
+                    resultsDiv.innerHTML += '<p>❌ Health endpoint failed: ' + healthResponse.status + '</p>';
+                    return;
+                }
+                
+                // Test if upload endpoint exists (should return 400 for no file)
+                const uploadResponse = await fetch('http://localhost:4000/api/upload-patient-file', {
+                    method: 'POST',
+                    body: new FormData() // Empty form data
+                });
+                
+                resultsDiv.innerHTML += '<p>📤 Upload endpoint response status: ' + uploadResponse.status + '</p>';
+                const uploadResult = await uploadResponse.text();
+                resultsDiv.innerHTML += '<p>📄 Upload endpoint response: ' + uploadResult + '</p>';
+                
+            } catch (error) {
+                resultsDiv.innerHTML += '<p>❌ Test failed: ' + error.message + '</p>';
+                console.error('❌ Test failed:', error);
+            }
+        }
+        
+        // Run the test when page loads
+        testUploadEndpoint();
+    </script>
+</body>
+</html>

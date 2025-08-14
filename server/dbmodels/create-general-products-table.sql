@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS general_products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(255) NOT NULL,
+  supplier VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  quantity INT NOT NULL,
+  status ENUM('active', 'inactive') DEFAULT 'active',
+  created_at DATE DEFAULT (CURRENT_DATE),
+   purchase_date DATE,
+  current_stock INT DEFAULT 0,
+  used_stock INT DEFAULT 0,
+  balance_stock INT DEFAULT 0,
+  stock_status ENUM('active','inactive') DEFAULT 'active',
+  last_update DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  purchase_amount DECIMAL(10,2) DEFAULT 0.00,
+  settlement_amount DECIMAL(10,2) DEFAULT 0.00,
+  balance_amount DECIMAL(10,2) DEFAULT 0.00,
+  payment_status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+  payment_type ENUM('upi', 'cash', 'card', 'neft') DEFAULT NULL
+);

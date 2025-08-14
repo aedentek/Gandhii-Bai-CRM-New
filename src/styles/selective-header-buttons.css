@@ -1,0 +1,121 @@
+/* Selective Header Action Buttons Styles */
+/* Import this CSS file only on pages that need these button styles */
+
+@tailwind components;
+
+@layer components {
+  /* Container for header action buttons */
+  .header-actions-container {
+    @apply flex flex-col sm:flex-row gap-2 sm:items-center;
+  }
+
+  /* Base style for all header action buttons */
+  .header-action-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-all duration-200;
+    @apply h-9 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    @apply shadow-sm hover:shadow-md;
+  }
+
+  /* Refresh button specific styles */
+  .header-action-btn--refresh {
+    @apply header-action-btn;
+    @apply border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300;
+    @apply hover:shadow-blue-200/50;
+  }
+
+  /* Month/Date selector button styles */
+  .header-action-btn--date-selector {
+    @apply header-action-btn;
+    @apply border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300;
+    @apply hover:shadow-purple-200/50;
+  }
+
+  /* Export/Download button styles */
+  .header-action-btn--export {
+    @apply header-action-btn;
+    @apply border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300;
+    @apply hover:shadow-green-200/50;
+  }
+
+  /* Primary action button (Add Lead, Add Patient, etc.) */
+  .header-action-btn--primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-all duration-200;
+    @apply h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white;
+    @apply hover:from-blue-700 hover:to-purple-700 hover:shadow-lg hover:shadow-blue-500/25;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    @apply transform hover:scale-105 active:scale-95;
+  }
+
+  /* Clear/Reset button styles */
+  .header-action-btn--clear {
+    @apply header-action-btn;
+    @apply border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300;
+    @apply hover:shadow-gray-200/50;
+  }
+
+  /* Warning/Delete action buttons */
+  .header-action-btn--warning {
+    @apply header-action-btn;
+    @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:border-red-300;
+    @apply hover:shadow-red-200/50;
+  }
+
+  /* Icon styles within buttons */
+  .header-action-btn__icon {
+    @apply w-4 h-4 flex-shrink-0;
+  }
+
+  /* Text styles within buttons */
+  .header-action-btn__text {
+    @apply text-sm font-medium;
+  }
+
+  .header-action-btn__text--sm-hidden {
+    @apply hidden sm:inline;
+  }
+
+  /* Notification badge for buttons */
+  .header-action-btn__badge {
+    @apply absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs;
+    @apply flex items-center justify-center font-bold border-2 border-white;
+  }
+
+  /* Loading state for buttons */
+  .header-action-btn--loading {
+    @apply relative cursor-not-allowed opacity-70;
+  }
+
+  .header-action-btn--loading::after {
+    content: '';
+    @apply absolute inset-0 rounded-md bg-current opacity-20;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Dark mode support */
+  .dark .header-action-btn {
+    @apply border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700;
+  }
+
+  .dark .header-action-btn--refresh {
+    @apply border-blue-700 bg-blue-900 text-blue-300 hover:bg-blue-800;
+  }
+
+  .dark .header-action-btn--date-selector {
+    @apply border-purple-700 bg-purple-900 text-purple-300 hover:bg-purple-800;
+  }
+
+  .dark .header-action-btn--export {
+    @apply border-green-700 bg-green-900 text-green-300 hover:bg-green-800;
+  }
+
+  .dark .header-action-btn--clear {
+    @apply border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700;
+  }
+
+  .dark .header-action-btn--warning {
+    @apply border-red-700 bg-red-900 text-red-300 hover:bg-red-800;
+  }
+}

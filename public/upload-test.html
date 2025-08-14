@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px;
+        }
+        .success { border-color: #4CAF50; background-color: #f9fff9; }
+        .error { border-color: #f44336; background-color: #fff9f9; }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .log { 
+            background-color: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+            max-height: 300px; 
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Upload System Test</h1>
+    
+    <div class="test-section">
+        <h3>📋 Backend Server Test</h3>
+        <button class="btn-primary" onclick="testBackendConnection()">Test Backend Connection</button>
+        <button class="btn-primary" onclick="testPatientsAPI()">Test Patients API</button>
+        <div id="backend-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📤 File Upload Test</h3>
+        <input type="file" id="testFile" accept="image/*,.pdf" />
+        <br><br>
+        <button class="btn-success" onclick="testFileUpload()">Test Upload</button>
+        <button class="btn-warning" onclick="testUploadWithoutFile()">Test Without File</button>
+        <div id="upload-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📁 File Access Test</h3>
+        <button class="btn-primary" onclick="testFileAccess()">Test File Access</button>
+        <div id="file-access-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📜 Test Log</h3>
+        <button class="btn-warning" onclick="clearLog()">Clear Log</button>
+        <div class="log" id="test-log"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateResult(elementId, content, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = content;
+            element.className = isSuccess ? 'success' : 'error';
+        }
+
+        async function testBackendConnection() {
+            log('🔗 Testing backend connection...');
+            try {
+                const response = await fetch('/api/patients', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Backend connected! Found ${data.length} patients`);
+                    updateResult('backend-result', `✅ Backend connected! Status: ${response.status}<br>Patients found: ${data.length}`, true);
+                } else {
+                    log(`❌ Backend error: ${response.status} ${response.statusText}`);
+                    updateResult('backend-result', `❌ Backend error: ${response.status} ${response.statusText}`, false);
+                }
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`);
+                updateResult('backend-result', `❌ Connection failed: ${error.message}`, false);
+            }
+        }
+
+        async function testPatientsAPI() {
+            log('👥 Testing patients API...');
+            try {
+                const response = await fetch('/api/patients');
+                const data = await response.json();
+                const samplePatient = data[0];
+                
+                log(`✅ API working! Sample patient: ${samplePatient.name}`);
+                updateResult('backend-result', `✅ Patients API working!<br>Sample: ${samplePatient.name} (${samplePatient.phone})`, true);
+            } catch (error) {
+                log(`❌ API error: ${error.message}`);
+                updateResult('backend-result', `❌ API error: ${error.message}`, false);
+            }
+        }
+
+        async function testFileUpload() {
+            const fileInput = document.getElementById('testFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                log('❌ No file selected for upload test');
+                updateResult('upload-result', '❌ Please select a file first', false);
+                return;
+            }
+
+            log(`📤 Testing file upload: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('patientId', 'test-upload');
+                formData.append('fieldName', 'test-photo');
+
+                const response = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Upload successful! File path: ${result.filePath}`);
+                    updateResult('upload-result', `✅ Upload successful!<br>File: ${result.filename}<br>Path: ${result.filePath}<br>Size: ${result.size} bytes`, true);
+                } else {
+                    log(`❌ Upload failed: ${result.error}`);
+                    updateResult('upload-result', `❌ Upload failed: ${result.error}`, false);
+                }
+            } catch (error) {
+                log(`❌ Upload error: ${error.message}`);
+                updateResult('upload-result', `❌ Upload error: ${error.message}`, false);
+            }
+        }
+
+        async function testUploadWithoutFile() {
+            log('🚫 Testing upload without file...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('patientId', 'test-no-file');
+                formData.append('fieldName', 'test-empty');
+
+                const response = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    log(`✅ Correctly rejected empty upload: ${result.error}`);
+                    updateResult('upload-result', `✅ Validation working! Correctly rejected: ${result.error}`, true);
+                } else {
+                    log(`❌ Should have rejected empty upload`);
+                    updateResult('upload-result', `❌ Should have rejected empty upload`, false);
+                }
+            } catch (error) {
+                log(`❌ Test error: ${error.message}`);
+                updateResult('upload-result', `❌ Test error: ${error.message}`, false);
+            }
+        }
+
+        async function testFileAccess() {
+            log('📁 Testing file access...');
+            
+            // Test accessing an existing file
+            const testPaths = [
+                '/Photos/patient Admission/temp/photo_1755154601174.jpg',
+                '/Photos/patients/temp/general_1755153955144.png'
+            ];
+            
+            for (const path of testPaths) {
+                try {
+                    const response = await fetch(path);
+                    if (response.ok) {
+                        log(`✅ File accessible: ${path}`);
+                        updateResult('file-access-result', `✅ Files are accessible!<br>Test path: ${path}<br>Status: ${response.status}`, true);
+                        return;
+                    } else {
+                        log(`❌ File not accessible: ${path} (${response.status})`);
+                    }
+                } catch (error) {
+                    log(`❌ File access error: ${path} - ${error.message}`);
+                }
+            }
+            
+            updateResult('file-access-result', `❌ No test files accessible`, false);
+        }
+
+        function clearLog() {
+            document.getElementById('test-log').textContent = '';
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            log('🚀 Upload Test Page Loaded');
+            testBackendConnection();
+        };
+    </script>
+</body>
+</html>

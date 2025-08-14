@@ -1,0 +1,190 @@
+/* Selective Header Action Buttons Styles */
+/* Import this CSS file only on pages that need these button styles */
+
+/* Container for header action buttons */
+.header-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .header-actions-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+/* Base style for all header action buttons */
+.header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  height: 2.25rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #374151;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  cursor: pointer;
+}
+
+.header-action-btn:hover {
+  background-color: #f9fafb;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  transform: translateY(-1px);
+}
+
+.header-action-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.header-action-btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Refresh button specific styles */
+.header-action-btn--refresh {
+  border-color: #dbeafe;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.header-action-btn--refresh:hover {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  box-shadow: 0 4px 6px -1px rgb(59 130 246 / 0.3);
+}
+
+/* Date selector button styles */
+.header-action-btn--date-selector {
+  border-color: #e9d5ff;
+  background-color: #faf5ff;
+  color: #7c3aed;
+}
+
+.header-action-btn--date-selector:hover {
+  background-color: #e9d5ff;
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 6px -1px rgb(124 58 237 / 0.3);
+}
+
+/* Export button styles */
+.header-action-btn--export {
+  border-color: #dcfce7;
+  background-color: #f0fdf4;
+  color: #15803d;
+}
+
+.header-action-btn--export:hover {
+  background-color: #dcfce7;
+  border-color: #86efac;
+  box-shadow: 0 4px 6px -1px rgb(21 128 61 / 0.3);
+}
+
+/* Primary action button */
+.header-action-btn--primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.header-action-btn--primary:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 8px 15px -3px rgb(59 130 246 / 0.4);
+  transform: translateY(-2px);
+}
+
+/* Clear filter button */
+.header-action-btn--clear {
+  border-color: #fecaca;
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.header-action-btn--clear:hover {
+  background-color: #fecaca;
+  border-color: #fca5a5;
+  box-shadow: 0 4px 6px -1px rgb(220 38 38 / 0.3);
+}
+
+/* Warning button */
+.header-action-btn--warning {
+  border-color: #fde68a;
+  background-color: #fffbeb;
+  color: #d97706;
+}
+
+.header-action-btn--warning:hover {
+  background-color: #fde68a;
+  border-color: #fcd34d;
+  box-shadow: 0 4px 6px -1px rgb(217 119 6 / 0.3);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 639px) {
+  .header-action-btn {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    height: 2rem;
+    flex: 1;
+  }
+  
+  .header-actions-container {
+    width: 100%;
+  }
+}
+
+/* Loading state */
+.header-action-btn--loading {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.header-action-btn--loading:hover {
+  transform: none;
+}
+
+/* Text display helpers for responsive design */
+.header-action-btn__text {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .header-action-btn__text {
+    display: inline;
+  }
+}
+
+/* Icon animations */
+.header-action-btn svg {
+  transition: transform 0.2s ease-in-out;
+}
+
+.header-action-btn:hover svg {
+  transform: scale(1.1);
+}
+
+/* Loading spinner animation */
+.header-action-btn--loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
