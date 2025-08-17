@@ -209,46 +209,39 @@ router.post('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
-// GET /api/patient-attendance
-router.get('/patient-attendance', async (req, res) => {
-    try {
-        // First, let's check what columns exist in the patient_attendance table
-        const [columns] = await db.query(`
-            SHOW COLUMNS FROM patient_attendance
-        `);
-        
-        const columnNames = columns.map(col => col.Field);
-        console.log('Available columns in patient_attendance:', columnNames);
-        
-        // Build query based on available columns
-        const hasCheckOutTime = columnNames.includes('check_out_time');
-        
-        const query = `
-            SELECT 
-                attendance.id,
-                COALESCE(patients.patient_id, CONCAT('P', LPAD(patients.id, 4, '0'))) as patient_id,
-                patients.name as patient_name,
-                patients.phone as patient_phone,
-                patients.photo as patient_image,
-                DATE_FORMAT(attendance.date, '%Y-%m-%d') as attendance_date,
-                attendance.status,
-                TIME_FORMAT(attendance.check_in_time, '%H:%i:%s') as check_in_time,
-                ${hasCheckOutTime ? "TIME_FORMAT(attendance.check_out_time, '%H:%i:%s') as check_out_time," : "NULL as check_out_time,"}
-                attendance.notes,
-                attendance.created_at,
-                attendance.updated_at
-            FROM patient_attendance attendance
-            LEFT JOIN patients ON attendance.patient_id = patients.id
-            ORDER BY attendance.date DESC, attendance.check_in_time DESC
-        `;
-        
-        const [rows] = await db.query(query);
+// --- PATIENT ATTENDANCE CRUD ENDPOINTS ---
 
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching attendance records:', error);
-        res.status(500).json({ error: 'Failed to fetch attendance records' });
-    }
+// GET /api/patient-attendance - Get all attendance records
+router.get('/patient-attendance', async (req, res) => {
+  console.log('📊 GET /patient-attendance requested');
+  try {
+    // Query with proper JOIN to get patient information
+    const query = `
+      SELECT 
+        pa.id,
+        pa.patient_id,
+        COALESCE(p.name, pa.patient_name) as patient_name,
+        COALESCE(p.phone, '') as patient_phone,
+        p.photo as patient_image,
+        DATE_FORMAT(pa.date, '%Y-%m-%d') as date,
+        pa.status,
+        TIME_FORMAT(pa.check_in_time, '%H:%i') as check_in_time,
+        pa.notes,
+        pa.created_at,
+        pa.updated_at
+      FROM patient_attendance pa
+      LEFT JOIN patients p ON pa.patient_id = p.id
+      ORDER BY pa.date DESC, pa.check_in_time DESC
+    `;
+    
+    const [rows] = await db.query(query);
+    
+    console.log(`✅ Found ${rows.length} attendance records`);
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ Error fetching attendance records:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance records' });
+  }
 });
 
 // PUT /api/patient-attendance/:id
@@ -635,6 +628,7 @@ router.post('/patients', async (req, res) => {
       fees: Number(fees) || 0,
       bloodTest: Number(bloodTest) || 0,
       pickupCharge: Number(pickupCharge) || 0,
+      otherFees: (Number(bloodTest) || 0) + (Number(pickupCharge) || 0), // Auto-calculate otherFees
       totalAmount: Number(totalAmount) || 0,
       payAmount: Number(payAmount) || 0,
       balance: (Number(totalAmount) || 0) - (Number(payAmount) || 0), // Calculate balance automatically
@@ -661,8 +655,8 @@ router.post('/patients', async (req, res) => {
       sanitizedData.occupation, sanitizedData.marital_status, sanitizedData.language_preference,
       sanitizedData.photo, sanitizedData.patientAadhar, sanitizedData.patientPan, 
       sanitizedData.attenderAadhar, sanitizedData.attenderPan, sanitizedData.fees, 
-      sanitizedData.bloodTest, sanitizedData.pickupCharge, sanitizedData.totalAmount, 
-      sanitizedData.payAmount, sanitizedData.balance, sanitizedData.paymentType, 
+      sanitizedData.bloodTest, sanitizedData.pickupCharge, sanitizedData.otherFees,
+      sanitizedData.totalAmount, sanitizedData.payAmount, sanitizedData.balance, sanitizedData.paymentType, 
       sanitizedData.fatherName, sanitizedData.motherName, sanitizedData.dateOfBirth
     ];
     
@@ -677,8 +671,8 @@ router.post('/patients', async (req, res) => {
         attenderRelationship, marriageStatus, employeeStatus,
         guardian_name, guardian_phone, guardian_relation, occupation, marital_status, language_preference,
         photo, patientAadhar, patientPan, attenderAadhar, attenderPan, fees, bloodTest, pickupCharge, 
-        totalAmount, payAmount, balance, paymentType, fatherName, motherName, dateOfBirth
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        otherFees, totalAmount, payAmount, balance, paymentType, fatherName, motherName, dateOfBirth
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       sqlParams
     );
     
@@ -887,32 +881,140 @@ router.get('/patient-payments', async (req, res) => {
   }
 });
 
-// Add a payment record
+// Add a payment record with automatic balance update
 router.post('/patient-payments', async (req, res) => {
   const { patientId, date, amount, comment, paymentMode, balanceRemaining, createdBy, createdAt } = req.body;
+  
+  // Start a transaction for data consistency
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query(
+    await connection.beginTransaction();
+    
+    // Insert the payment record
+    const [result] = await connection.query(
       'INSERT INTO patient_payments (patientId, date, amount, comment, paymentMode, balanceRemaining, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [patientId, date, amount, comment, paymentMode, balanceRemaining, createdBy, createdAt]
     );
-    res.status(201).json({ id: result.insertId, ...req.body });
+    
+    // Calculate new balance automatically
+    const [totalPaidResult] = await connection.query(
+      'SELECT COALESCE(SUM(amount), 0) as totalPaid FROM patient_payments WHERE patientId = ?',
+      [patientId]
+    );
+    
+    const [patientData] = await connection.query(
+      'SELECT fees, otherFees, bloodTest, pickupCharge FROM patients WHERE id = ?',
+      [patientId]
+    );
+    
+    if (patientData.length > 0) {
+      const patient = patientData[0];
+      const totalFees = (Number(patient.fees) || 0) + (Number(patient.otherFees) || Number(patient.bloodTest) + Number(patient.pickupCharge) || 0);
+      const totalPaid = Number(totalPaidResult[0].totalPaid);
+      const newBalance = Math.max(0, totalFees - totalPaid);
+      
+      // Update patient record with new balance
+      await connection.query(
+        'UPDATE patients SET payAmount = ?, balance = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [totalPaid, newBalance, patientId]
+      );
+      
+      console.log(`💰 Auto-updated patient ${patientId} balance:`, {
+        totalFees,
+        totalPaid,
+        newBalance,
+        paymentAmount: amount
+      });
+    }
+    
+    await connection.commit();
+    res.status(201).json({ 
+      id: result.insertId, 
+      ...req.body,
+      balanceUpdated: true,
+      message: 'Payment added and patient balance updated automatically'
+    });
+    
   } catch (err) {
+    await connection.rollback();
+    console.error('Error adding payment and updating balance:', err);
     res.status(500).json({ error: err.message });
+  } finally {
+    connection.release();
   }
 });
 
-// Update a payment record
+// Update a payment record with automatic balance recalculation
 router.put('/patient-payments/:id', async (req, res) => {
   const { patientId, date, amount, comment, paymentMode, balanceRemaining, createdBy, createdAt } = req.body;
+  
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query(
+    await connection.beginTransaction();
+    
+    // Get the old payment data first
+    const [oldPayment] = await connection.query('SELECT patientId, amount FROM patient_payments WHERE id = ?', [req.params.id]);
+    
+    if (oldPayment.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Payment record not found' });
+    }
+    
+    // Update the payment record
+    const [result] = await connection.query(
       'UPDATE patient_payments SET patientId=?, date=?, amount=?, comment=?, paymentMode=?, balanceRemaining=?, createdBy=?, createdAt=? WHERE id=?',
       [patientId, date, amount, comment, paymentMode, balanceRemaining, createdBy, createdAt, req.params.id]
     );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Payment record not found' });
-    res.json({ id: req.params.id, ...req.body });
+    
+    // Function to update patient balance
+    const updatePatientBalance = async (patId) => {
+      const [totalPaidResult] = await connection.query(
+        'SELECT COALESCE(SUM(amount), 0) as totalPaid FROM patient_payments WHERE patientId = ?',
+        [patId]
+      );
+      
+      const [patientData] = await connection.query(
+        'SELECT fees, otherFees, bloodTest, pickupCharge FROM patients WHERE id = ?',
+        [patId]
+      );
+      
+      if (patientData.length > 0) {
+        const patient = patientData[0];
+        const totalFees = (Number(patient.fees) || 0) + (Number(patient.otherFees) || Number(patient.bloodTest) + Number(patient.pickupCharge) || 0);
+        const totalPaid = Number(totalPaidResult[0].totalPaid);
+        const newBalance = Math.max(0, totalFees - totalPaid);
+        
+        await connection.query(
+          'UPDATE patients SET payAmount = ?, balance = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [totalPaid, newBalance, patId]
+        );
+        
+        console.log(`💰 Auto-updated patient ${patId} balance: ₹${newBalance}`);
+      }
+    };
+    
+    // Update balance for current patient
+    await updatePatientBalance(patientId);
+    
+    // If patient ID changed, also update the old patient's balance
+    if (oldPayment[0].patientId !== patientId) {
+      await updatePatientBalance(oldPayment[0].patientId);
+    }
+    
+    await connection.commit();
+    res.json({ 
+      id: req.params.id, 
+      ...req.body,
+      balanceUpdated: true,
+      message: 'Payment updated and patient balance recalculated automatically'
+    });
+    
   } catch (err) {
+    await connection.rollback();
+    console.error('Error updating payment and balance:', err);
     res.status(500).json({ error: err.message });
+  } finally {
+    connection.release();
   }
 });
 
@@ -1003,55 +1105,120 @@ router.get('/patient-attendance/patient/:patientId', async (req, res) => {
   }
 });
 
-// Add new patient attendance record
+// POST /api/patient-attendance - Add new attendance record
 router.post('/patient-attendance', async (req, res) => {
-  const { patientId, patientName, date, status, checkInTime, notes } = req.body;
-  console.log('📥 Patient attendance API called with:', {
-    patientId, patientName, date, status, checkInTime, notes
-  });
+  console.log('📝 POST /patient-attendance requested');
+  console.log('📄 Request body:', req.body);
   
   try {
-    const [result] = await db.query(
-      'INSERT INTO patient_attendance (patient_id, patient_name, date, status, check_in_time, notes) VALUES (?, ?, ?, ?, ?, ?)',
-      [patientId, patientName, date, status, checkInTime, notes]
-    );
+    const { patientId, patientName, date, status, checkInTime, notes } = req.body;
     
-    const [rows] = await db.query('SELECT * FROM patient_attendance WHERE id=?', [result.insertId]);
-    console.log('✅ Successfully created attendance record:', rows[0]);
-    res.status(201).json(rows[0]);
-  } catch (err) {
-    console.error('❌ Error creating attendance record:', err);
-    if (err.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Attendance record for this patient on this date already exists' });
+    // Validate required fields
+    if (!patientId || !patientName || !date || !status) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: patientId, patientName, date, status' 
+      });
+    }
+
+    // Check if attendance record already exists for this patient on this date
+    const [existingRecord] = await db.query(
+      'SELECT id FROM patient_attendance WHERE patient_id = ? AND date = ?',
+      [patientId, date]
+    );
+
+    if (existingRecord.length > 0) {
+      return res.status(400).json({ 
+        error: 'Attendance record already exists for this patient on this date' 
+      });
+    }
+
+    // Insert new attendance record
+    const [result] = await db.query(
+      `INSERT INTO patient_attendance 
+       (patient_id, patient_name, date, status, check_in_time, notes, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [patientId, patientName, date, status, checkInTime || null, notes || '']
+    );
+
+    // Return the created record
+    const [newRecord] = await db.query(
+      `SELECT 
+        pa.id,
+        pa.patient_id,
+        pa.patient_name,
+        DATE_FORMAT(pa.date, '%Y-%m-%d') as date,
+        pa.status,
+        TIME_FORMAT(pa.check_in_time, '%H:%i') as check_in_time,
+        pa.notes,
+        pa.created_at,
+        pa.updated_at
+       FROM patient_attendance pa 
+       WHERE pa.id = ?`,
+      [result.insertId]
+    );
+
+    console.log('✅ Attendance record created:', newRecord[0]);
+    res.status(201).json(newRecord[0]);
+  } catch (error) {
+    console.error('❌ Error creating attendance record:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Attendance record already exists for this patient on this date' });
     } else {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'Failed to create attendance record' });
     }
   }
 });
 
-// Update patient attendance record
+// PUT /api/patient-attendance/:id - Update attendance record
 router.put('/patient-attendance/:id', async (req, res) => {
-  const { status, checkInTime, notes } = req.body;
-  console.log('🔄 Patient attendance UPDATE API called with:', {
-    id: req.params.id, status, checkInTime, notes
-  });
+  console.log('🔄 PUT /patient-attendance/:id requested');
+  console.log('📄 Request body:', req.body);
   
   try {
+    const { id } = req.params;
+    const { status, checkInTime, notes } = req.body;
+    
+    // Validate that record exists
+    const [existingRecord] = await db.query(
+      'SELECT id FROM patient_attendance WHERE id = ?',
+      [id]
+    );
+
+    if (existingRecord.length === 0) {
+      return res.status(404).json({ error: 'Attendance record not found' });
+    }
+
+    // Build update query dynamically
     let updateFields = [];
     let values = [];
     
-    if (status !== undefined) { updateFields.push('status=?'); values.push(status); }
-    if (checkInTime !== undefined) { updateFields.push('check_in_time=?'); values.push(checkInTime); }
-    if (notes !== undefined) { updateFields.push('notes=?'); values.push(notes); }
+    if (status !== undefined) {
+      updateFields.push('status = ?');
+      values.push(status);
+    }
     
-    if (updateFields.length === 0) {
+    if (checkInTime !== undefined) {
+      updateFields.push('check_in_time = ?');
+      values.push(checkInTime);
+    }
+    
+    if (notes !== undefined) {
+      updateFields.push('notes = ?');
+      values.push(notes);
+    }
+    
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = NOW()');
+    
+    if (updateFields.length === 1) { // Only updated_at
       return res.status(400).json({ error: 'No fields to update' });
     }
     
-    values.push(req.params.id);
+    values.push(id);
     
+    // Execute update
     const [result] = await db.query(
-      `UPDATE patient_attendance SET ${updateFields.join(', ')} WHERE id=?`,
+      `UPDATE patient_attendance SET ${updateFields.join(', ')} WHERE id = ?`,
       values
     );
     
@@ -1059,25 +1226,64 @@ router.put('/patient-attendance/:id', async (req, res) => {
       return res.status(404).json({ error: 'Attendance record not found' });
     }
     
-    const [rows] = await db.query('SELECT * FROM patient_attendance WHERE id=?', [req.params.id]);
-    console.log('✅ Successfully updated attendance record:', rows[0]);
-    res.json(rows[0]);
-  } catch (err) {
-    console.error('❌ Error updating attendance record:', err);
-    res.status(500).json({ error: err.message });
+    // Return updated record
+    const [updatedRecord] = await db.query(
+      `SELECT 
+        pa.id,
+        pa.patient_id,
+        pa.patient_name,
+        DATE_FORMAT(pa.date, '%Y-%m-%d') as date,
+        pa.status,
+        TIME_FORMAT(pa.check_in_time, '%H:%i') as check_in_time,
+        pa.notes,
+        pa.created_at,
+        pa.updated_at
+       FROM patient_attendance pa 
+       WHERE pa.id = ?`,
+      [id]
+    );
+    
+    console.log('✅ Attendance record updated:', updatedRecord[0]);
+    res.json(updatedRecord[0]);
+  } catch (error) {
+    console.error('❌ Error updating attendance record:', error);
+    res.status(500).json({ error: 'Failed to update attendance record' });
   }
 });
 
-// Delete patient attendance record
+// DELETE /api/patient-attendance/:id - Delete attendance record by ID
 router.delete('/patient-attendance/:id', async (req, res) => {
+  console.log('🗑️ DELETE /patient-attendance/:id requested');
+  
   try {
-    const [result] = await db.query('DELETE FROM patient_attendance WHERE id=?', [req.params.id]);
+    const { id } = req.params;
+    
+    // Check if record exists
+    const [existingRecord] = await db.query(
+      'SELECT id, patient_name, date FROM patient_attendance WHERE id = ?',
+      [id]
+    );
+
+    if (existingRecord.length === 0) {
+      return res.status(404).json({ error: 'Attendance record not found' });
+    }
+
+    // Delete the record
+    const [result] = await db.query('DELETE FROM patient_attendance WHERE id = ?', [id]);
+    
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Attendance record not found' });
     }
-    res.json({ message: 'Attendance record deleted successfully', id: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    
+    console.log('✅ Attendance record deleted:', existingRecord[0]);
+    res.json({ 
+      success: true, 
+      message: 'Attendance record deleted successfully',
+      deletedRecord: existingRecord[0]
+    });
+  } catch (error) {
+    console.error('❌ Error deleting attendance record:', error);
+    res.status(500).json({ error: 'Failed to delete attendance record' });
   }
 });
 

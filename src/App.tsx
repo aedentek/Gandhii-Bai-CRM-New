@@ -6,6 +6,7 @@ import PatientCallRecord from '@/components/patients/PatientCallRecord';
 import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
 import PatientFullyHistory from '@/components/patients/PatientFullyHistory';
 import PatientFullDetails from '@/components/patients/PatientFullDetailsSimple';
+import TestReportAmount from '@/components/patients/TestReportAmount';
 import TestRoute from '@/components/TestRoute';
 import StaffCategoryManagement from './components/management/StaffCategory';
 import AddStaff from './components/management/AddStaff';
@@ -175,6 +176,7 @@ function App() {
                   <Route path="/test/:testId" element={<TestRoute />} />
                   <Route path="/patients/add" element={<AddPatient />} />
                   <Route path="/patients/list" element={<PatientList />} />
+                  <Route path="/patients/test-report-amount" element={<TestReportAmount />} />
                   <Route path="/patients/deleted" element={<DeletedPatients />} />
                   <Route path="/patients/attendance" element={<PatientAttendance />} />
                   <Route path="/patients/history" element={<PatientHistory />} />

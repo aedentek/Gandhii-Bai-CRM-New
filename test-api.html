@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Reports CRUD Operations Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        .button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+        .input-group { margin: 10px 0; }
+        input, select, textarea { margin: 5px; padding: 8px; width: 200px; }
+        label { display: inline-block; width: 120px; }
+    </style>
+</head>
+<body>
+    <h1>Test Reports CRUD Operations Test</h1>
+    
+    <div>
+        <h2>1. CREATE Test Report</h2>
+        <div class="input-group">
+            <label>Patient ID:</label>
+            <input type="text" id="patientId" value="P0001" />
+        </div>
+        <div class="input-group">
+            <label>Patient Name:</label>
+            <input type="text" id="patientName" value="Sabarish T" />
+        </div>
+        <div class="input-group">
+            <label>Test Type:</label>
+            <select id="testType">
+                <option value="Blood Test">Blood Test</option>
+                <option value="Urine Test">Urine Test</option>
+                <option value="X-Ray">X-Ray</option>
+                <option value="CT Scan">CT Scan</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Test Date:</label>
+            <input type="date" id="testDate" />
+        </div>
+        <div class="input-group">
+            <label>Amount:</label>
+            <input type="number" id="amount" value="1500" step="0.01" />
+        </div>
+        <div class="input-group">
+            <label>Notes:</label>
+            <textarea id="notes" placeholder="Test notes..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>Status:</label>
+            <select id="status">
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <button class="button" onclick="createTestReport()">CREATE Test Report</button>
+    </div>
+    
+    <div>
+        <h2>2. READ Test Reports</h2>
+        <button class="button" onclick="getAllTestReports()">GET All Test Reports</button>
+        <button class="button" onclick="getPatientTestReports()">GET Patient Test Reports (P0001)</button>
+    </div>
+    
+    <div>
+        <h2>3. UPDATE Test Report</h2>
+        <div class="input-group">
+            <label>Report ID:</label>
+            <input type="number" id="updateId" placeholder="Enter report ID to update" />
+        </div>
+        <button class="button" onclick="updateTestReport()">UPDATE Test Report</button>
+    </div>
+    
+    <div>
+        <h2>4. DELETE Test Report</h2>
+        <div class="input-group">
+            <label>Report ID:</label>
+            <input type="number" id="deleteId" placeholder="Enter report ID to delete" />
+        </div>
+        <button class="button" onclick="deleteTestReport()">DELETE Test Report</button>
+    </div>
+
+    <div id="result" class="result">
+        <h3>Results will appear here...</h3>
+    </div>
+
+    <script>
+        // Set today's date as default
+        document.getElementById('testDate').value = new Date().toISOString().split('T')[0];
+
+        function showResult(title, data, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = isError ? 'result error' : 'result success';
+            resultDiv.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+                <small>Time: ${new Date().toLocaleString()}</small>
+            `;
+        }
+
+        async function createTestReport() {
+            try {
+                const testData = {
+                    patient_id: document.getElementById('patientId').value,
+                    patient_name: document.getElementById('patientName').value,
+                    test_type: document.getElementById('testType').value,
+                    test_date: document.getElementById('testDate').value,
+                    amount: parseFloat(document.getElementById('amount').value),
+                    notes: document.getElementById('notes').value,
+                    status: document.getElementById('status').value
+                };
+                
+                const response = await fetch('http://localhost:4000/api/test-reports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                showResult('CREATE Success', result);
+            } catch (error) {
+                showResult('CREATE Error', { error: error.message }, true);
+            }
+        }
+
+        async function getAllTestReports() {
+            try {
+                const response = await fetch('http://localhost:4000/api/test-reports');
+                const result = await response.json();
+                showResult('READ All Test Reports', result);
+            } catch (error) {
+                showResult('READ Error', { error: error.message }, true);
+            }
+        }
+
+        async function getPatientTestReports() {
+            try {
+                const response = await fetch('http://localhost:4000/api/test-reports/patient/P0001');
+                const result = await response.json();
+                showResult('READ Patient Test Reports', result);
+            } catch (error) {
+                showResult('READ Error', { error: error.message }, true);
+            }
+        }
+
+        async function updateTestReport() {
+            try {
+                const reportId = document.getElementById('updateId').value;
+                if (!reportId) {
+                    alert('Please enter a report ID to update');
+                    return;
+                }
+
+                const updateData = {
+                    test_type: document.getElementById('testType').value,
+                    test_date: document.getElementById('testDate').value,
+                    amount: parseFloat(document.getElementById('amount').value),
+                    notes: document.getElementById('notes').value + ' [UPDATED]',
+                    status: document.getElementById('status').value
+                };
+                
+                const response = await fetch(`http://localhost:4000/api/test-reports/${reportId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                showResult('UPDATE Success', result);
+            } catch (error) {
+                showResult('UPDATE Error', { error: error.message }, true);
+            }
+        }
+
+        async function deleteTestReport() {
+            try {
+                const reportId = document.getElementById('deleteId').value;
+                if (!reportId) {
+                    alert('Please enter a report ID to delete');
+                    return;
+                }
+
+                if (!confirm(`Are you sure you want to delete report ID ${reportId}?`)) {
+                    return;
+                }
+                
+                const response = await fetch(`http://localhost:4000/api/test-reports/${reportId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                showResult('DELETE Success', result);
+            } catch (error) {
+                showResult('DELETE Error', { error: error.message }, true);
+            }
+        }
+
+        // Auto-load all test reports on page load
+        window.onload = function() {
+            getAllTestReports();
+        };
+    </script>
+</body>
+</html>

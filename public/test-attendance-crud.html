@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Attendance CRUD Operations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Patient Attendance CRUD Test</h1>
+        
+        <div class="test-section">
+            <h3>1. Test CREATE (POST)</h3>
+            <button onclick="testCreate()">Create Attendance Record</button>
+            <div id="createResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test READ (GET)</h3>
+            <button onclick="testRead()">Get All Attendance Records</button>
+            <div id="readResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test UPDATE (PUT)</h3>
+            <input type="text" id="updateId" placeholder="Record ID to update">
+            <button onclick="testUpdate()">Update Attendance Record</button>
+            <div id="updateResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Test DELETE</h3>
+            <input type="text" id="deleteId" placeholder="Record ID to delete">
+            <button onclick="testDelete()">Delete Attendance Record</button>
+            <div id="deleteResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Console Logs</h3>
+            <div id="logs" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        async function testCreate() {
+            log('🧪 Testing CREATE operation...');
+            
+            const testData = {
+                patientId: 'P0001',
+                patientName: 'Test Patient',
+                date: '2025-08-18',
+                status: 'Present',
+                checkInTime: '10:30',
+                notes: 'Test attendance record'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/patient-attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ CREATE SUCCESS: ${JSON.stringify(result)}`);
+                    showResult('createResult', `Created record with ID: ${result.id}`);
+                    document.getElementById('updateId').value = result.id;
+                    document.getElementById('deleteId').value = result.id;
+                } else {
+                    log(`❌ CREATE FAILED: ${result.error}`);
+                    showResult('createResult', `Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                log(`❌ CREATE ERROR: ${error.message}`);
+                showResult('createResult', `Network Error: ${error.message}`, true);
+            }
+        }
+
+        async function testRead() {
+            log('🧪 Testing READ operation...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/patient-attendance`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ READ SUCCESS: Found ${result.length} records`);
+                    showResult('readResult', `Found ${result.length} attendance records`);
+                    
+                    if (result.length > 0) {
+                        log(`📋 Sample record: ${JSON.stringify(result[0])}`);
+                    }
+                } else {
+                    log(`❌ READ FAILED: ${result.error}`);
+                    showResult('readResult', `Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                log(`❌ READ ERROR: ${error.message}`);
+                showResult('readResult', `Network Error: ${error.message}`, true);
+            }
+        }
+
+        async function testUpdate() {
+            const recordId = document.getElementById('updateId').value;
+            if (!recordId) {
+                showResult('updateResult', 'Please enter a record ID to update', true);
+                return;
+            }
+            
+            log(`🧪 Testing UPDATE operation for ID: ${recordId}...`);
+            
+            const updateData = {
+                status: 'Late',
+                checkInTime: '10:45',
+                notes: 'Updated to Late status via test'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/patient-attendance/${recordId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ UPDATE SUCCESS: ${JSON.stringify(result)}`);
+                    showResult('updateResult', `Updated record ID: ${recordId}`);
+                } else {
+                    log(`❌ UPDATE FAILED: ${result.error}`);
+                    showResult('updateResult', `Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                log(`❌ UPDATE ERROR: ${error.message}`);
+                showResult('updateResult', `Network Error: ${error.message}`, true);
+            }
+        }
+
+        async function testDelete() {
+            const recordId = document.getElementById('deleteId').value;
+            if (!recordId) {
+                showResult('deleteResult', 'Please enter a record ID to delete', true);
+                return;
+            }
+            
+            log(`🧪 Testing DELETE operation for ID: ${recordId}...`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/patient-attendance/${recordId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ DELETE SUCCESS: ${JSON.stringify(result)}`);
+                    showResult('deleteResult', `Deleted record ID: ${recordId}`);
+                } else {
+                    log(`❌ DELETE FAILED: ${result.error}`);
+                    showResult('deleteResult', `Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                log(`❌ DELETE ERROR: ${error.message}`);
+                showResult('deleteResult', `Network Error: ${error.message}`, true);
+            }
+        }
+
+        // Auto-load attendance records on page load
+        window.onload = function() {
+            log('🚀 Page loaded, running initial READ test...');
+            testRead();
+        };
+    </script>
+</body>
+</html>

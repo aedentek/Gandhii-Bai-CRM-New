@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Automatic Balance Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Automatic Balance Update</h1>
+        <p>This page tests whether the patient balance updates automatically when payments are made.</p>
+
+        <div class="test-section info">
+            <h3>🎯 What we're testing:</h3>
+            <ul>
+                <li><strong>Frontend Logic:</strong> Balance updates in usePatientPayments hook</li>
+                <li><strong>Backend API:</strong> Balance recalculation in payment endpoints</li>
+                <li><strong>Database Triggers:</strong> Automatic balance updates via MySQL triggers</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 1: Check Current Patient Data</h3>
+            <button onclick="testCurrentData()">Get Current Patient Balances</button>
+            <div id="currentDataResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Add Test Payment (Frontend + Backend)</h3>
+            <button onclick="testAddPayment()">Add Test Payment</button>
+            <div id="addPaymentResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Verify Balance Auto-Update</h3>
+            <button onclick="testBalanceVerification()">Verify Balance Updates</button>
+            <div id="balanceVerificationResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: Apply Database Triggers</h3>
+            <button onclick="applyTriggers()">Apply Auto-Balance Triggers</button>
+            <div id="triggersResults" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testCurrentData() {
+            const resultsEl = document.getElementById('currentDataResults');
+            resultsEl.textContent = '🔍 Fetching current patient data...\n';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/patients');
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                
+                const patients = await response.json();
+                resultsEl.textContent += `✅ Found ${patients.length} patients\n\n`;
+                
+                // Show first few patients with balance info
+                const patientsWithBalance = patients.filter(p => p.fees > 0 || p.payAmount > 0).slice(0, 5);
+                
+                resultsEl.textContent += '📊 Patient Balance Data:\n';
+                patientsWithBalance.forEach(patient => {
+                    const totalFees = (Number(patient.fees) || 0) + (Number(patient.otherFees) || Number(patient.bloodTest) + Number(patient.pickupCharge) || 0);
+                    const calculatedBalance = Math.max(0, totalFees - (Number(patient.payAmount) || 0));
+                    const storedBalance = Number(patient.balance) || 0;
+                    const balanceMatch = Math.abs(storedBalance - calculatedBalance) < 0.01 ? '✅' : '❌';
+                    
+                    resultsEl.textContent += `\n  👤 ${patient.name} (ID: ${patient.id}):\n`;
+                    resultsEl.textContent += `     Total Fees: ₹${totalFees}\n`;
+                    resultsEl.textContent += `     Paid Amount: ₹${patient.payAmount || 0}\n`;
+                    resultsEl.textContent += `     Stored Balance: ₹${storedBalance}\n`;
+                    resultsEl.textContent += `     Calculated Balance: ₹${calculatedBalance} ${balanceMatch}\n`;
+                });
+                
+            } catch (error) {
+                resultsEl.textContent += `❌ Error: ${error.message}\n`;
+            }
+        }
+
+        async function testAddPayment() {
+            const resultsEl = document.getElementById('addPaymentResults');
+            resultsEl.textContent = '💰 Testing add payment functionality...\n';
+            
+            try {
+                // First get a patient to test with
+                const patientsResponse = await fetch('http://localhost:3001/api/patients');
+                if (!patientsResponse.ok) throw new Error('Failed to fetch patients');
+                
+                const patients = await patientsResponse.json();
+                const testPatient = patients.find(p => p.fees > 0) || patients[0];
+                
+                if (!testPatient) {
+                    resultsEl.textContent += '❌ No patients found for testing\n';
+                    return;
+                }
+                
+                resultsEl.textContent += `📋 Using test patient: ${testPatient.name} (ID: ${testPatient.id})\n`;
+                resultsEl.textContent += `   Current Balance: ₹${testPatient.balance || 0}\n`;
+                resultsEl.textContent += `   Current Paid: ₹${testPatient.payAmount || 0}\n\n`;
+                
+                // Add a test payment
+                const testPayment = {
+                    patientId: testPatient.id,
+                    date: new Date().toISOString().split('T')[0],
+                    amount: 250,
+                    comment: 'Test payment for balance auto-update verification',
+                    paymentMode: 'Cash',
+                    balanceRemaining: 0,
+                    createdBy: 'Test User',
+                    createdAt: new Date().toISOString()
+                };
+                
+                resultsEl.textContent += `💳 Adding test payment of ₹${testPayment.amount}...\n`;
+                
+                const paymentResponse = await fetch('http://localhost:3001/api/patients/patient-payments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testPayment)
+                });
+                
+                if (!paymentResponse.ok) {
+                    const error = await paymentResponse.json();
+                    throw new Error(`Payment failed: ${JSON.stringify(error)}`);
+                }
+                
+                const paymentResult = await paymentResponse.json();
+                resultsEl.textContent += `✅ Payment added successfully!\n`;
+                resultsEl.textContent += `   Payment ID: ${paymentResult.id}\n`;
+                resultsEl.textContent += `   Balance Updated: ${paymentResult.balanceUpdated ? '✅' : '❌'}\n`;
+                resultsEl.textContent += `   Message: ${paymentResult.message || 'No message'}\n\n`;
+                
+                // Check if patient balance was updated
+                const updatedPatientResponse = await fetch(`http://localhost:3001/api/patients/${testPatient.id}`);
+                if (updatedPatientResponse.ok) {
+                    const updatedPatient = await updatedPatientResponse.json();
+                    const expectedPaid = (Number(testPatient.payAmount) || 0) + testPayment.amount;
+                    const expectedBalance = Math.max(0, (Number(testPatient.fees) || 0) + (Number(testPatient.otherFees) || 0) - expectedPaid);
+                    
+                    resultsEl.textContent += `🔍 Updated patient data:\n`;
+                    resultsEl.textContent += `   New Paid Amount: ₹${updatedPatient.payAmount} (expected: ₹${expectedPaid})\n`;
+                    resultsEl.textContent += `   New Balance: ₹${updatedPatient.balance} (expected: ₹${expectedBalance})\n`;
+                    
+                    const payMatch = Math.abs(updatedPatient.payAmount - expectedPaid) < 0.01;
+                    const balanceMatch = Math.abs(updatedPatient.balance - expectedBalance) < 0.01;
+                    
+                    if (payMatch && balanceMatch) {
+                        resultsEl.textContent += `✅ AUTOMATIC BALANCE UPDATE WORKING CORRECTLY!\n`;
+                    } else {
+                        resultsEl.textContent += `❌ Balance update not working as expected\n`;
+                    }
+                }
+                
+            } catch (error) {
+                resultsEl.textContent += `❌ Error: ${error.message}\n`;
+            }
+        }
+
+        async function testBalanceVerification() {
+            const resultsEl = document.getElementById('balanceVerificationResults');
+            resultsEl.textContent = '🔍 Verifying balance calculations...\n';
+            
+            try {
+                // Get all patients and their payments
+                const patientsResponse = await fetch('http://localhost:3001/api/patients');
+                const paymentsResponse = await fetch('http://localhost:3001/api/patients/patient-payments');
+                
+                if (!patientsResponse.ok || !paymentsResponse.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                
+                const patients = await patientsResponse.json();
+                const payments = await paymentsResponse.json();
+                
+                resultsEl.textContent += `📊 Analyzing ${patients.length} patients and ${payments.length} payments...\n\n`;
+                
+                let correctCount = 0;
+                let incorrectCount = 0;
+                
+                // Check balance accuracy for each patient
+                patients.slice(0, 10).forEach(patient => {
+                    const patientPayments = payments.filter(p => p.patientId == patient.id);
+                    const totalPaid = patientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                    const totalFees = (Number(patient.fees) || 0) + (Number(patient.otherFees) || Number(patient.bloodTest) + Number(patient.pickupCharge) || 0);
+                    const calculatedBalance = Math.max(0, totalFees - totalPaid);
+                    const storedBalance = Number(patient.balance) || 0;
+                    const payAmountStored = Number(patient.payAmount) || 0;
+                    
+                    const balanceCorrect = Math.abs(storedBalance - calculatedBalance) < 0.01;
+                    const payAmountCorrect = Math.abs(payAmountStored - totalPaid) < 0.01;
+                    
+                    if (balanceCorrect && payAmountCorrect) {
+                        correctCount++;
+                    } else {
+                        incorrectCount++;
+                        resultsEl.textContent += `❌ ${patient.name}: Stored=₹${storedBalance}, Calculated=₹${calculatedBalance}\n`;
+                    }
+                });
+                
+                resultsEl.textContent += `\n📈 Results:\n`;
+                resultsEl.textContent += `  ✅ Correct balances: ${correctCount}\n`;
+                resultsEl.textContent += `  ❌ Incorrect balances: ${incorrectCount}\n`;
+                resultsEl.textContent += `  📊 Accuracy: ${((correctCount / (correctCount + incorrectCount)) * 100).toFixed(1)}%\n`;
+                
+            } catch (error) {
+                resultsEl.textContent += `❌ Error: ${error.message}\n`;
+            }
+        }
+
+        async function applyTriggers() {
+            const resultsEl = document.getElementById('triggersResults');
+            resultsEl.textContent = '⚙️ Database triggers need to be applied server-side...\n\n';
+            resultsEl.textContent += '📝 To apply the automatic balance triggers:\n';
+            resultsEl.textContent += '1. Run: cd "d:\\CRM Final editing\\Gandhii Bai CRM - 1\\server"\n';
+            resultsEl.textContent += '2. Run: node query/apply-auto-balance-triggers.js\n\n';
+            resultsEl.textContent += '✅ This will create MySQL triggers that automatically update patient balances\n';
+            resultsEl.textContent += '   whenever payments are added, updated, or deleted.\n';
+        }
+    </script>
+</body>
+</html>

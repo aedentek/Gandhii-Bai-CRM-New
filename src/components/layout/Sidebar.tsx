@@ -27,7 +27,8 @@ import {
   ShoppingBag,
   Trash2,
   Shield,
-  FileText
+  FileText,
+  TestTube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -131,6 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onCollapsedChange }) 
         // { title: 'Add Role', href: '/management/user-role/add', icon: Plus },
         { title: 'Add Patient', href: '/patients/add', icon: UserPlus },
         { title: 'Patient List', href: '/patients/list', icon: List },
+        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: TestTube },
         { title: 'Patient Attendance', href: '/patients/attendance', icon: Calendar },
         { title: 'Patient Medical Record', href: '/patients/medical-records', icon: FileText },
         { title: 'Patient History', href: '/patients/history', icon: History },

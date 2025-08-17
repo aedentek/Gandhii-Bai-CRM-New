@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { usePatientPayments } from '@/hooks/usePatientPayments';
 import { useNavigate } from 'react-router-dom';
 import { DatabaseService } from '@/services/databaseService';
+import { patientsAPI } from '@/utils/api';
 
 interface Patient {
   id: string;
@@ -31,6 +32,8 @@ interface Patient {
   bloodTest?: number;
   blood_test?: number;
   blood?: number;
+  otherFees?: number; // New field for auto-calculated other fees
+  totalAmount?: number; // Database total amount field
   admissionDate?: string;
   admission_date?: string;
   created_at?: string;
@@ -146,9 +149,14 @@ export default function PatientPaymentFees() {
     // Other Fees (only in joining month)
     let otherFees = 0;
     if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
-      const pickup = Number(patientData?.pickupCharge || 0);
-      const blood = Number(patientData?.bloodTest || 0);
-      otherFees = pickup + blood;
+      // Use the database otherFees column if available, otherwise calculate manually
+      otherFees = Number(patientData?.otherFees || 0);
+      if (otherFees === 0) {
+        // Fallback to manual calculation for existing data
+        const pickup = Number(patientData?.pickupCharge || 0);
+        const blood = Number(patientData?.bloodTest || 0);
+        otherFees = pickup + blood;
+      }
     }
 
     // Carry Forward (previous month's balance, 0 for joining month)
@@ -168,29 +176,26 @@ export default function PatientPaymentFees() {
       }
     }
 
-    // Paid Amount for this month
+    // Paid Amount: Only for joining month
     let paidAmount = 0;
-    if (patient.payments) {
-      const monthPayments = patient.payments.filter((p) => {
-        const d = new Date(p.date);
-        return d.getFullYear() === yearValue && d.getMonth() === monthIndex;
-      });
-      paidAmount = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-      
-      // Add PatientList pay amount if this is the joining month
-      if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
-        const payAmount = Number(patientData?.payAmount || 0);
-        if (payAmount > 0) {
-          const alreadyIncluded = monthPayments.some((p) => Number(p.amount) === payAmount);
-          if (!alreadyIncluded) {
-            paidAmount += payAmount;
-          }
-        }
-      }
+    
+    // Only use paid amount for joining month
+    if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
+      paidAmount = Number(patientData?.payAmount || 0);
     }
+    // For subsequent months, no current paid amount (paidAmount remains 0)
 
-    // Calculate total balance: Monthly Fees + Other Fees + Carry Forward - Paid Amount
-    return Math.max(0, monthlyFees + otherFees + carryForward - paidAmount);
+    // Calculate total balance based on month type
+    let totalBalance = 0;
+    if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
+      // JOINING MONTH: Monthly Fees + Other Fees - Paid Amount (no carry forward)
+      totalBalance = Math.max(0, monthlyFees + otherFees - paidAmount);
+    } else {
+      // SUBSEQUENT MONTHS: Monthly Fees + Carry Forward (no other fees, no paid amount)
+      totalBalance = Math.max(0, monthlyFees + carryForward);
+    }
+    
+    return totalBalance;
   };
 
   // Select patient from dropdown
@@ -252,73 +257,175 @@ export default function PatientPaymentFees() {
     }
   };
 
-  // Load patients from database with localStorage fallback
-  useEffect(() => {
-    const loadPatients = async () => {
+  // Load patients using the same logic as PatientList for consistency
+  const loadPatients = async () => {
+    try {
+      console.log('🔗 Loading patients via unified API...');
+      // Try unified API first, fall back to DatabaseService if needed
+      let data;
       try {
-        // Try to load from database first
-        const dbPatients = await DatabaseService.getAllPatients();
-        setPatients(dbPatients.map((p: any) => ({
-          id: p.id.toString(),
+        data = await patientsAPI.getAll();
+        console.log('✅ Patients loaded via unified API:', data.length, 'patients');
+      } catch (apiError) {
+        console.warn('⚠️ Unified API failed, falling back to DatabaseService:', apiError.message);
+        data = await DatabaseService.getAllPatients();
+        console.log('✅ Patients loaded via DatabaseService:', data.length, 'patients');
+      }
+      
+      if (!data || !Array.isArray(data)) {
+        console.warn('⚠️ Invalid patient data received:', data);
+        setPatients([]);
+        toast({
+          title: "Warning",
+          description: "No patient data received from server",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Parse dates using the same logic as PatientList
+      const parseDateFromDDMMYYYY = (dateStr: any): Date | null => {
+        if (!dateStr) return null;
+        
+        if (dateStr instanceof Date) {
+          if (isNaN(dateStr.getTime())) return null;
+          const year = dateStr.getFullYear();
+          if (year < 1900 || year > 2100) return null;
+          return dateStr;
+        }
+        
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+          const [day, month, year] = dateStr.split('-');
+          const parsedYear = parseInt(year);
+          if (parsedYear < 1900 || parsedYear > 2100) return null;
+          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+        }
+        
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const [year, month, day] = dateStr.split('-');
+          const parsedYear = parseInt(year);
+          if (parsedYear < 1900 || parsedYear > 2100) return null;
+          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+        }
+        
+        try {
+          const parsed = new Date(dateStr);
+          if (isNaN(parsed.getTime())) return null;
+          const year = parsed.getFullYear();
+          if (year < 1900 || year > 2100) return null;
+          return parsed;
+        } catch {
+          return null;
+        }
+      };
+
+      const parsedPatients = data.map((p: any) => {
+        const patientId = p.id && String(p.id).startsWith('P') 
+          ? p.id 
+          : `P${(p.originalId || p.id || 1).toString().padStart(4, '0')}`;
+        
+        const fees = parseFloat(p.fees) || 0;
+        const bloodTest = parseFloat(p.bloodTest) || 0;
+        const pickupCharge = parseFloat(p.pickupCharge) || 0;
+        const otherFees = parseFloat(p.otherFees) || (bloodTest + pickupCharge); // Use DB value or fallback to calculation
+        const payAmount = parseFloat(p.payAmount) || 0;
+        const totalAmount = parseFloat(p.totalAmount) || (fees + otherFees);
+        const balance = parseFloat(p.balance) || (totalAmount - payAmount);
+        
+        return {
+          id: patientId,
           name: p.name,
           phone: p.phone || '',
           email: p.email || '',
-          fees: p.fees || p.monthlyFees || p.totalFees || 0,
-          pickupCharge: p.pickup_charge || p.pickupCharge || 0,
-          bloodTest: p.blood_test || p.bloodTest || 0,
-          admissionDate: p.admission_date || p.admissionDate || p.created_at,
-          payAmount: p.pay_amount || p.payAmount || 0,
-          balance: p.balance || 0,
-          registrationId: p.registration_id || p.registrationId || p.id,
+          fees: fees,
+          monthlyFees: fees,
+          totalFees: totalAmount,
+          pickupCharge: pickupCharge,
+          pickup_charge: pickupCharge,
+          pickup: pickupCharge,
+          bloodTest: bloodTest,
+          blood_test: bloodTest,
+          blood: bloodTest,
+          otherFees: otherFees, // Add the otherFees field from database
+          admissionDate: formatDateForBackend(parseDateFromDDMMYYYY(p.admissionDate)),
+          admission_date: formatDateForBackend(parseDateFromDDMMYYYY(p.admissionDate)),
+          created_at: p.created_at,
+          payAmount: payAmount,
+          pay_amount: payAmount,
+          balance: balance, // Use database balance value
+          totalAmount: totalAmount, // Use database totalAmount
+          registrationId: p.originalId || parseInt(String(p.id || patientId).replace(/\D/g, '')) || 1,
+          registration_id: p.originalId || parseInt(String(p.id || patientId).replace(/\D/g, '')) || 1,
           photo: p.photo || '',
-          photoUrl: p.photo_url || p.photoUrl || ''
-        })));
-      } catch (dbError) {
-        console.warn('Database error, falling back to localStorage:', dbError);
-        // Fallback to localStorage
-        const storedPatients = localStorage.getItem('patients');
-        if (storedPatients) {
-          try {
-            const parsedPatients = JSON.parse(storedPatients);
-            setPatients(parsedPatients.map((p: any) => ({
-              id: p.id.toString(),
-              name: p.name,
-              phone: p.phone || '',
-              email: p.email || '',
-              fees: p.fees || p.monthlyFees || p.totalFees || 0,
-              pickupCharge: p.pickup_charge || p.pickupCharge || 0,
-              bloodTest: p.blood_test || p.bloodTest || 0,
-              admissionDate: p.admission_date || p.admissionDate || p.created_at,
-              payAmount: p.pay_amount || p.payAmount || 0,
-              balance: p.balance || 0,
-              registrationId: p.registration_id || p.registrationId || p.id,
-              photo: p.photo || '',
-              photoUrl: p.photo_url || p.photoUrl || ''
-            })));
-          } catch (error) {
-            console.error('Error loading patients from localStorage:', error);
-          }
-        }
-      }
-      setCurrentPage(1); // Always reset to first page when loading patients
-    };
-    
+          photoUrl: p.photo || '',
+          status: p.status || 'Active'
+        };
+      });
+
+      // Filter to only show active patients
+      const activePatients = parsedPatients.filter(patient => 
+        patient.status === 'Active' || !patient.status || patient.status === ''
+      );
+      
+      setPatients(activePatients);
+      setCurrentPage(1);
+      console.log(`✅ Loaded ${activePatients.length} active patients out of ${parsedPatients.length} total patients`);
+      
+    } catch (error) {
+      console.error('❌ Error loading patients:', error);
+      setPatients([]);
+      toast({
+        title: "Error",
+        description: `Failed to load patients: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Utility function to format date for backend (DD-MM-YYYY)
+  const formatDateForBackend = (date: Date | null): string => {
+    if (!date) return '';
+    if (date instanceof Date && !isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      if (year < 1900 || year > 2100) return '';
+      return format(date, 'dd-MM-yyyy');
+    }
+    return '';
+  };
+
+  useEffect(() => {
     loadPatients();
+  }, []);
+
+  // Refresh data when window gains focus (user returns from another tab/page)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 PatientPaymentFees: Window focused, refreshing patient data...');
+      loadPatients();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Auto-refresh every 30 seconds to stay synchronized with PatientList
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 PatientPaymentFees: Auto-refreshing patient data...');
+      loadPatients();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Add effect to refresh data when component becomes visible or localStorage changes
   useEffect(() => {
-    const handleFocus = () => {
-      console.log('PatientPaymentFees: Window focused, refreshing data...');
-      setLocalStorageVersion(prev => prev + 1); // Force useMemo recalculation
-      refreshData();
-    };
-
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log('PatientPaymentFees: Page became visible, refreshing data...');
         setLocalStorageVersion(prev => prev + 1); // Force useMemo recalculation
         refreshData();
+        loadPatients(); // Also refresh patients list
       }
     };
 
@@ -327,38 +434,16 @@ export default function PatientPaymentFees() {
         console.log('PatientPaymentFees: localStorage changed, refreshing data...');
         setLocalStorageVersion(prev => prev + 1); // Trigger useMemo recalculation
         refreshData();
-        // Also reload patients list
-        const storedPatients = localStorage.getItem('patients');
-        if (storedPatients) {
-          try {
-            const parsedPatients = JSON.parse(storedPatients);
-            setPatients(parsedPatients.map((p: any) => ({
-              id: p.id.toString(),
-              name: p.name,
-              phone: p.phone || '',
-              email: p.email || '',
-              fees: p.fees || p.monthlyFees || p.totalFees || 0,
-              pickupCharge: p.pickup_charge || p.pickupCharge || 0,
-              bloodTest: p.blood_test || p.bloodTest || 0,
-              admissionDate: p.admission_date || p.admissionDate || p.created_at,
-              payAmount: p.pay_amount || p.payAmount || 0,
-              balance: p.balance || 0,
-              registrationId: p.registration_id || p.registrationId || p.id
-            })));
-          } catch (error) {
-            console.error('Error reloading patients from localStorage:', error);
-          }
-        }
+        // Also reload patients list using the same logic
+        loadPatients();
       }
     };
 
     // Add event listeners
-    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -369,79 +454,96 @@ export default function PatientPaymentFees() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    return getPatientPaymentSummary().map(patient => {
-      // Find patient admission date and monthly fees from localStorage PatientList
-      const patientsData = JSON.parse(localStorage.getItem('patients') || '[]');
-      const patientData = patientsData.find((p: any) => p.id === patient.patientId);
-      const admissionDate = patientData?.admissionDate || patientData?.created_at || patientData?.admission_date;
-      const admission = admissionDate ? new Date(admissionDate) : null;
+    
+    // Use the patients state instead of getPatientPaymentSummary to include all active patients
+    return patients.map(patientData => {
+      // Parse admission date with multiple format support
+      const parseDateFromMultipleFormats = (dateStr: any): Date | null => {
+        if (!dateStr) return null;
+        
+        if (dateStr instanceof Date) {
+          if (isNaN(dateStr.getTime())) return null;
+          const year = dateStr.getFullYear();
+          if (year < 1900 || year > 2100) return null;
+          return dateStr;
+        }
+        
+        // Handle DD-MM-YYYY format
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+          const [day, month, year] = dateStr.split('-');
+          const parsedYear = parseInt(year);
+          if (parsedYear < 1900 || parsedYear > 2100) return null;
+          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+        }
+        
+        // Handle DD/MM/YYYY format
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          const [day, month, year] = dateStr.split('/');
+          const parsedYear = parseInt(year);
+          if (parsedYear < 1900 || parsedYear > 2100) return null;
+          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+        }
+        
+        // Handle YYYY-MM-DD format
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const [year, month, day] = dateStr.split('-');
+          const parsedYear = parseInt(year);
+          if (parsedYear < 1900 || parsedYear > 2100) return null;
+          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+        }
+        
+        try {
+          const parsed = new Date(dateStr);
+          if (isNaN(parsed.getTime())) return null;
+          const year = parsed.getFullYear();
+          if (year < 1900 || year > 2100) return null;
+          return parsed;
+        } catch {
+          return null;
+        }
+      };
+
+      const admissionDate = patientData.admissionDate || patientData.created_at || patientData.admission_date;
+      const admission = parseDateFromMultipleFormats(admissionDate);
       const admissionMonth = admission ? admission.getMonth() : null;
       const admissionYear = admission ? admission.getFullYear() : null;
-      // Get monthly fees from PatientList (localStorage)
-      const monthlyFeesFromList = Number(patientData?.fees || patientData?.monthlyFees || patientData?.totalFees || 0);
-      const bloodTestFromList = Number(patientData?.bloodTest || patientData?.blood_test || 0);
-      const pickupChargeFromList = Number(patientData?.pickupCharge || patientData?.pickup_charge || 0);
-      const totalFeesFromList = monthlyFeesFromList + bloodTestFromList + pickupChargeFromList;
+      
+      // Find any existing payment summary for this patient
+      const existingPaymentSummary = getPatientPaymentSummary().find(p => 
+        p.patientId === patientData.id || 
+        p.patientId === patientData.registrationId ||
+        p.name === patientData.name
+      );
 
-      // Calculate unpaid from previous months
-      let carryForward = 0;
-      let currentMonthPaid = 0;
-      let currentMonthFees = totalFeesFromList || patient.totalFees;
-      let status = patient.status;
-      let balance = patient.balancePending;
-      let totalFees = totalFeesFromList || patient.totalFees;
-      let showFees = 0;
-      let showBalance = 0;
-      let showTotal = 0;
-      let monthLabel = `${monthNames[currentMonth]} ${currentYear}`;
-
-      // If patient added this month, show only balance
-      if (admission && admissionMonth === currentMonth && admissionYear === currentYear) {
-        showFees = 0;
-        showBalance = balance;
-        showTotal = balance;
-      } else {
-        // Patient from previous month: show only fees
-        // Carry forward unpaid from previous months
-        // Find all payments before this month
-        const prevPayments = patient.payments.filter((p: any) => {
-          const d = new Date(p.date);
-          return d.getFullYear() < currentYear || (d.getFullYear() === currentYear && d.getMonth() < currentMonth);
-        });
-        const paidPrev = prevPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
-        const prevMonthFees = totalFeesFromList || patient.totalFees;
-        carryForward = Math.max(0, prevMonthFees - paidPrev);
-        // Current month fees
-        currentMonthFees = totalFeesFromList || patient.totalFees;
-        // Current month payments
-        const currPayments = patient.payments.filter((p: any) => {
-          const d = new Date(p.date);
-          return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-        });
-        currentMonthPaid = currPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
-        showFees = currentMonthFees;
-        showBalance = carryForward;
-        showTotal = currentMonthFees + carryForward;
-        balance = Math.max(0, showTotal - (currentMonthPaid + paidPrev));
-        status = balance <= 0 ? 'Paid' : (currentMonthPaid > 0 ? 'Partial' : 'Pending');
-      }
+      // Get fees and costs from database values
+      const monthlyFees = Number(patientData.fees || 0);
+      const bloodTest = Number(patientData.bloodTest || 0);
+      const pickupCharge = Number(patientData.pickupCharge || 0);
+      const otherFees = Number(patientData.otherFees || 0) || (bloodTest + pickupCharge); // Use DB value or fallback
+      const totalFees = Number(patientData.totalAmount || 0) || (monthlyFees + otherFees); // Use DB value or fallback
+      const balance = Number(patientData.balance || 0);
+      const payAmount = Number(patientData.payAmount || 0); // Use database payAmount directly
 
       return {
-        ...patient,
+        patientId: patientData.id,
+        registrationId: patientData.registrationId || patientData.id,
+        name: patientData.name,
+        phone: patientData.phone,
         admissionDate: admission ? admission.toISOString().split('T')[0] : '',
-        currentMonth: monthLabel,
-        fees: currentMonthFees, // Use calculated total fees
-        monthlyFees: monthlyFeesFromList, // Monthly fees only
-        bloodTest: bloodTestFromList, // Blood test fees
-        pickupCharge: pickupChargeFromList, // Pickup charge fees
-        totalFees: totalFeesFromList || patient.totalFees, // Total of all fees
-        balance: showBalance,
-        total: showTotal,
-        status,
-        displayBalance: balance
+        admissionMonth,
+        admissionYear,
+        monthlyFees,
+        bloodTest,
+        pickupCharge,
+        otherFees,
+        totalFees,
+        balance,
+        paidAmount: payAmount, // Use database payAmount directly
+        payments: existingPaymentSummary?.payments || [],
+        status: 'Active'
       };
     });
-  }, [getPatientPaymentSummary, monthNames, patientPayments, localStorageVersion]);
+  }, [patients, getPatientPaymentSummary, monthNames, patientPayments, localStorageVersion]);
 
   // Filter and search logic for enhanced summary
   const filteredPatients = useMemo(() => {
@@ -467,18 +569,30 @@ export default function PatientPaymentFees() {
         return matchesSearch;
       }
       
-      // If month/year filter is selected, only show patients who were admitted on or before the selected month/year
+      console.log(`🔍 Filtering by month ${selectedMonthIndex} (${months[selectedMonthIndex]}) and year ${selectedYear}`);
+      console.log(`📅 Will show all patients from beginning up to ${months[selectedMonthIndex]} ${selectedYear}`);
+      
+      // If month/year filter is selected, show patients who were admitted from beginning up to the selected month/year
       let includePatient = true;
       let admissionDate = patient.admissionDate;
       if (admissionDate) {
         const admission = new Date(admissionDate);
-        // Only include if admission is in or before selected month/year
+        console.log(`👤 ${patient.name}: Admitted ${admission.getMonth()}/${admission.getFullYear()} vs Filter up to ${selectedMonthIndex}/${selectedYear}`);
+        
+        // Include if admission is on or before the selected month/year
         if (
           admission.getFullYear() > selectedYear ||
           (admission.getFullYear() === selectedYear && admission.getMonth() > selectedMonthIndex)
         ) {
           includePatient = false;
+          console.log(`❌ ${patient.name}: Excluded - admitted after ${months[selectedMonthIndex]} ${selectedYear}`);
+        } else {
+          console.log(`✅ ${patient.name}: Included - admitted on or before ${months[selectedMonthIndex]} ${selectedYear}`);
         }
+      } else {
+        // If no admission date, exclude from filtered results when month filter is active
+        includePatient = false;
+        console.log(`❌ ${patient.name}: Excluded - no admission date`);
       }
       
       return includePatient && matchesSearch;
@@ -560,9 +674,14 @@ export default function PatientPaymentFees() {
         admission.getMonth() === selectedMonthIndex &&
         admission.getFullYear() === selectedYear
       ) {
-        const pickup = Number(patientData?.pickupCharge || 0);
-        const blood = Number(patientData?.bloodTest || 0);
-        otherFeesValue = pickup + blood;
+        // Use the database otherFees column if available, otherwise calculate manually
+        otherFeesValue = Number(patientData?.otherFees || 0);
+        if (otherFeesValue === 0) {
+          // Fallback to manual calculation for existing data
+          const pickup = Number(patientData?.pickupCharge || 0);
+          const blood = Number(patientData?.bloodTest || 0);
+          otherFeesValue = pickup + blood;
+        }
       }
 
       // Carry Forward (previous month's balance)
@@ -784,9 +903,9 @@ export default function PatientPaymentFees() {
                 <CreditCard className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-green-600">Patient Payment Fees</h1>
+                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-green-600">Patient Payment Fees - Active Patients</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  
+                  Showing {patients.length} active patients with payment records
                 </p>
               </div>
             </div>
@@ -860,6 +979,33 @@ export default function PatientPaymentFees() {
           </Card>
         </div>
 
+        {/* Month Filter Summary Card - Show when filter is active */}
+        {(filterMonth !== null && filterYear !== null) && (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-sm border border-green-200 p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <User className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Patients up to {months[filterMonth]} {filterYear}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} admitted from start to {months[filterMonth]} {filterYear}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Cumulative Monthly Revenue</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ₹{filteredPatients.reduce((sum, p) => sum + (p.monthlyFees || 0), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search and Filter Controls */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -903,10 +1049,50 @@ export default function PatientPaymentFees() {
           </div>
         </div>
 
+        {/* Carry Forward Information Card */}
+        {filterMonth !== null && filterYear !== null && (
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-orange-600 text-sm font-semibold">💰</span>
+              </div>
+              <div>
+                <h3 className="text-orange-800 font-semibold text-sm mb-1">Carry Forward Balance System</h3>
+                <p className="text-orange-700 text-sm leading-relaxed">
+                  Unpaid amounts from previous months are automatically carried forward. 
+                  For example: If a patient joined in March and didn't pay the March fees, 
+                  that amount will be added to April's balance, and so on until payment is made.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Patient Payment Table */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800">Patient Payment Summary</h2>
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Patient Payment Summary
+                  {(filterMonth !== null && filterYear !== null) && (
+                    <span className="text-green-600 ml-2">
+                      - Up to {months[filterMonth]} {filterYear}
+                    </span>
+                  )}
+                </h2>
+                {(filterMonth !== null && filterYear !== null) && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Showing all patients admitted from beginning up to {months[filterMonth]} {filterYear} ({filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''})
+                  </p>
+                )}
+                {(filterMonth === null || filterYear === null) && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Showing all active patients ({filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''})
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="p-6">
@@ -918,9 +1104,12 @@ export default function PatientPaymentFees() {
                     <TableHead className="text-gray-700 font-semibold text-center">Photo</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Patient ID</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Patient Name</TableHead>
+                    <TableHead className="text-gray-700 font-semibold text-center">Admission Date</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Monthly Fees</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Other Fees</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Carry Forward</TableHead>
+                    <TableHead className="text-gray-700 font-semibold text-center" title="Unpaid amounts carried forward from previous months">
+                      Carry Forward 💰
+                    </TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Paid Amount</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Total Balance</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Status</TableHead>
@@ -931,168 +1120,224 @@ export default function PatientPaymentFees() {
                   {filteredPatients
                     .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
                     .map((patient, idx) => {
-                    // Get patient data from loaded patients state (from database)
-                    const patientData = patients.find((p) =>
-                      (p.id && p.id === patient.patientId) ||
-                      (p.registrationId && p.registrationId === patient.patientId) ||
-                      (p.name && p.name === patient.name)
-                    );
-
-
-                    // --- Use selected month/year for all calculations ---
-                    // Get selected month/year from filter or current month/year
-                    let selectedMonthIndex = filterMonth;
-                    let selectedYear = filterYear;
-                    
-                    if (selectedMonthIndex === null || selectedYear === null) {
-                      // If no filter selected, use current month/year
-                      selectedMonthIndex = today.getMonth();
-                      selectedYear = today.getFullYear();
-                    }
-
-                    // Admission date
-                    const admissionDateRaw = patientData?.admissionDate || patientData?.created_at || patientData?.admission_date;
-                    const admission = admissionDateRaw ? new Date(admissionDateRaw) : null;
-
-                    // Monthly Fees: Always show the correct per-month fee from PatientList
-                    const monthlyFees = Number(patientData?.fees || patientData?.monthlyFees || patientData?.totalFees || 0);
-
-                    // Other Fees: Show sum only if this row is for the joining month
-                    let otherFeesValue = 0;
-                    let otherFees = '₹0';
-                    if (
-                      admission &&
-                      admission.getMonth() === selectedMonthIndex &&
-                      admission.getFullYear() === selectedYear
-                    ) {
-                      const pickup = Number(
-                        patientData?.pickupCharge ??
-                        patientData?.pickup_charge ??
-                        patientData?.pickup ??
-                        0
+                      // Use patient data directly from enhancedPatientSummary (it already has all the database values)
+                      const patientData = patient; // This already contains all the fields we need
+                      
+                      // Get original patient data for photo and other properties not in enhancedPatientSummary
+                      const originalPatientData = patients.find((p) =>
+                        (p.id && p.id === patient.patientId) ||
+                        (p.name && p.name === patient.name)
                       );
-                      const blood = Number(
-                        patientData?.bloodTest ??
-                        patientData?.blood_test ??
-                        patientData?.blood ??
-                        0
-                      );
-                      otherFeesValue = pickup + blood;
-                      otherFees = `₹${otherFeesValue.toLocaleString()}`;
-                    }
 
-                    // Carry Forward: previous month's total balance (0 for joining month)
-                    let carryForward = 0;
-                    if (patientData && patient.payments && admission) {
-                      // If joining month, carry forward is 0
-                      if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                        carryForward = 0;
-                      } else {
-                        // Calculate previous month
-                        let prevMonth = selectedMonthIndex - 1;
-                        let prevYear = selectedYear;
-                        if (prevMonth < 0) {
-                          prevMonth = 11;
-                          prevYear -= 1;
-                        }
-                        
-                        // Carry Forward = Previous Month's Total Balance (exact same amount)
-                        carryForward = calculateMonthBalance(patientData, patient, admission, prevMonth, prevYear);
+                      // --- Use selected month/year for all calculations ---
+                      // Get selected month/year from filter or current month/year
+                      let selectedMonthIndex = filterMonth;
+                      let selectedYear = filterYear;
+                      
+                      if (selectedMonthIndex === null || selectedYear === null) {
+                        // If no filter selected, use current month/year
+                        selectedMonthIndex = today.getMonth();
+                        selectedYear = today.getFullYear();
                       }
-                    }
 
-                    // Paid Amount: sum of payments in selected month
-                    let paidAmount = 0;
-                    if (patientData && patient.payments && admission) {
-                      // If selected month is joining month, show all payments in that month (including PatientList Pay Amount)
-                      if (
-                        admission.getMonth() === selectedMonthIndex &&
-                        admission.getFullYear() === selectedYear
-                      ) {
-                        const joinMonthPayments = patient.payments.filter((p) => {
-                          const d = new Date(p.date);
-                          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
-                        });
-                        paidAmount = joinMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                        // Add PatientList Pay Amount if present and not already in payments
-                        const payAmount = Number(patientData?.payAmount || 0);
-                        // Only add if not already included in payments (avoid double count)
-                        if (payAmount > 0) {
-                          // Check if any payment in joinMonthPayments matches payAmount
-                          const alreadyIncluded = joinMonthPayments.some((p) => Number(p.amount) === payAmount);
-                          if (!alreadyIncluded) {
-                            paidAmount += payAmount;
+                      // Admission date - use the parsed date from enhancedPatientSummary
+                      let admission = null;
+                      try {
+                        if (patient.admissionDate) {
+                          admission = new Date(patient.admissionDate);
+                          if (isNaN(admission.getTime())) {
+                            admission = null;
                           }
                         }
-                      } else {
-                        // For other months, show payments in selected month as before
-                        const currPayments = patient.payments.filter((p) => {
-                          const d = new Date(p.date);
-                          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
+                      } catch (error) {
+                        console.error(`Admission date error for ${patient.name}:`, error);
+                        admission = null;
+                      }
+
+                      // Debug for Sabarish
+                      if (patient.name.includes('Sabarish')) {
+                        console.log(`🔍 Debug for ${patient.name} (using enhancedPatientSummary):`, {
+                          patientId: patient.patientId,
+                          name: patient.name,
+                          admissionDate: patient.admissionDate,
+                          monthlyFees: patient.monthlyFees,
+                          otherFees: patient.otherFees,
+                          pickupCharge: patient.pickupCharge,
+                          bloodTest: patient.bloodTest,
+                          paidAmount: patient.paidAmount,
+                          balance: patient.balance,
+                          filterMonth,
+                          filterYear,
+                          selectedMonthIndex,
+                          selectedYear,
+                          isJoiningMonth: admission ? (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) : false
                         });
-                        paidAmount = currPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
                       }
-                    }
-
-                    // Balance: (monthlyFees * months up to selected) + otherFees (if joining month) + carryForward - totalPaid
-                    let balance = 0;
-                    if (patientData && patient.payments && admission) {
-                      // Always calculate: (Monthly Fees + Other Fees + Carry Forward) - Paid Amount
-                      let thisOtherFees = 0;
-                      if (
-                        admission.getMonth() === selectedMonthIndex &&
-                        admission.getFullYear() === selectedYear
-                      ) {
-                        const pickup = Number(patientData?.pickupCharge || 0);
-                        const blood = Number(patientData?.bloodTest || 0);
-                        thisOtherFees = pickup + blood;
+                      if (patient.name.includes('Sabarish')) {
+                        console.log(`🔍 Debug for ${patient.name}:`, {
+                          filterMonth,
+                          filterYear,
+                          selectedMonthIndex,
+                          selectedYear,
+                          admissionRaw: patient.admissionDate,
+                          admission: admission ? `${admission.getMonth()}/${admission.getFullYear()}` : 'null',
+                          isJoiningMonth: admission ? (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) : false,
+                          patientData: {
+                            otherFees: patientData?.otherFees,
+                            paidAmount: patientData?.paidAmount,
+                            pickupCharge: patientData?.pickupCharge,
+                            bloodTest: patientData?.bloodTest
+                          }
+                        });
                       }
-                      balance = Math.max(0, monthlyFees + thisOtherFees + carryForward - paidAmount);
-                    } else {
-                      balance = Number(patientData?.balance || 0);
-                    }
 
-                    return (
-                      <TableRow key={patient.patientId} className="hover:bg-gray-50 border-b border-gray-100">
-                        <TableCell className="font-medium text-gray-900 text-center">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center items-center">
-                            {(() => {
-                              // Construct proper photo URL
-                              let imageUrl = '';
+                      // Monthly Fees: Use value from enhancedPatientSummary 
+                      const monthlyFees = patient.monthlyFees || 0;
+
+                      // Other Fees: Only show for joining month
+                      let otherFeesValue = 0;
+                      let otherFees = '₹0';
+                      
+                      // Only show Other Fees if this is the joining month
+                      if (admission && admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
+                        otherFeesValue = patient.otherFees || 0;
+                        otherFees = `₹${otherFeesValue.toLocaleString()}`;
+                        
+                        // Debug for Sabarish
+                        if (patient.name.includes('Sabarish')) {
+                          console.log(`💰 Other Fees calculation for ${patient.name}:`, {
+                            isJoiningMonth: true,
+                            otherFeesFromSummary: patient.otherFees,
+                            calculated: otherFeesValue,
+                            final: otherFees
+                          });
+                        }
+                      }
+
+                      // Carry Forward: previous month's total balance (0 for joining month)
+                      let carryForward = 0;
+                      if (patient && admission) {
+                        // If joining month, carry forward is 0
+                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
+                          carryForward = 0;
+                        } else {
+                          // Calculate continuous carry forward from joining month to current viewing month
+                          let totalCarryForward = 0;
+                          
+                          // Start from joining month and accumulate balance month by month
+                          let currentMonth = admission.getMonth();
+                          let currentYear = admission.getFullYear();
+                          
+                          // Loop through months from joining month to the month before selected month
+                          while (currentYear < selectedYear || (currentYear === selectedYear && currentMonth < selectedMonthIndex)) {
+                            let monthBalance = 0;
+                            
+                            if (currentMonth === admission.getMonth() && currentYear === admission.getFullYear()) {
+                              // Joining month: Monthly Fees + Other Fees - Paid Amount
+                              const joiningMonthOtherFees = patient.otherFees || 0;
+                              const joiningMonthPaidAmount = patient.paidAmount || 0;
+                              monthBalance = monthlyFees + joiningMonthOtherFees - joiningMonthPaidAmount;
+                            } else {
+                              // Subsequent months: Monthly Fees (no payments in subsequent months yet)
+                              monthBalance = monthlyFees;
+                            }
+                            
+                            totalCarryForward += Math.max(0, monthBalance);
+                            
+                            // Move to next month
+                            currentMonth++;
+                            if (currentMonth > 11) {
+                              currentMonth = 0;
+                              currentYear++;
+                            }
+                          }
+                          
+                          carryForward = totalCarryForward;
+                          
+                          // Debug for Sabarish
+                          if (patient.name.includes('Sabarish')) {
+                            console.log(`📊 Continuous Carry Forward for ${patient.name}:`, {
+                              joiningMonth: `${admission.getMonth() + 1}/${admission.getFullYear()}`,
+                              viewingMonth: `${selectedMonthIndex + 1}/${selectedYear}`,
+                              monthlyFees,
+                              otherFees: patient.otherFees,
+                              paidAmount: patient.paidAmount,
+                              totalCarryForward,
+                              finalCarryForward: carryForward
+                            });
+                          }
+                        }
+                      }
+
+                      // Paid Amount: Only show for current viewing month (joining month)
+                      let paidAmount = 0;
+                      if (patient && admission) {
+                        // Only show paid amount if this is the joining month (current input month)
+                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
+                          paidAmount = patient.paidAmount || 0;
+                          
+                          // Debug for Sabarish
+                          if (patient.name.includes('Sabarish')) {
+                            console.log(`💳 Paid Amount for ${patient.name}:`, {
+                              isJoiningMonth: true,
+                              paidAmountFromSummary: patient.paidAmount,
+                              calculated: paidAmount
+                            });
+                          }
+                        }
+                        // For subsequent months, paid amount remains 0 (no current month input)
+                      }
+
+                      // Balance: Calculate based on month type
+                      let balance = 0;
+                      if (patient && admission) {
+                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
+                          // JOINING MONTH: Monthly Fees + Other Fees - Paid Amount (no carry forward)
+                          balance = Math.max(0, monthlyFees + otherFeesValue - paidAmount);
+                        } else {
+                          // SUBSEQUENT MONTHS: Monthly Fees + Carry Forward - Paid Amount (no other fees, no current paid amount)
+                          balance = Math.max(0, monthlyFees + carryForward);
+                        }
+                      } else {
+                        balance = patient.balance || 0;
+                      }
+
+                      return (
+                        <TableRow key={patient.patientId} className="hover:bg-gray-50 border-b border-gray-100">
+                          <TableCell className="font-medium text-gray-900 text-center">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center items-center">
+                              {(() => {
+                                // Construct proper photo URL
+                                let imageUrl = '';
                               
-                              // Debug logging
-                              console.log('Photo debug for patient:', patient.name, {
-                                patientData: patientData ? { id: patientData.id, photo: patientData.photo, photoUrl: patientData.photoUrl } : 'not found',
-                                patient: { patientId: patient.patientId, name: patient.name }
-                              });
-                              
-                              if (patientData?.photo) {
+                              // Use originalPatientData for photo
+                              if (originalPatientData?.photo) {
                                 // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                                if (patientData.photo.startsWith('http')) {
-                                  imageUrl = patientData.photo;
+                                if (originalPatientData.photo.startsWith('http')) {
+                                  imageUrl = originalPatientData.photo;
                                 } else {
                                   // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
                                   // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
                                   // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
-                                  if (patientData.photo.includes('Photos/patient Admission/')) {
+                                  if (originalPatientData.photo.includes('Photos/patient Admission/')) {
                                     // Photo path is already in correct format from database
-                                    imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
+                                    imageUrl = `/${originalPatientData.photo.replace(/\s/g, '%20')}`;
                                   } else {
                                     // Assume it's just filename and build full path using formatted Patient ID
                                     const formattedId = formatPatientId(patient.patientId);
-                                    imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
+                                    imageUrl = `/Photos/patient%20Admission/${formattedId}/${originalPatientData.photo}`;
                                   }
                                 }
-                              } else if (patientData?.photoUrl) {
-                                if (patientData.photoUrl.startsWith('http')) {
-                                  imageUrl = patientData.photoUrl;
-                                } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
-                                  imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
+                              } else if (originalPatientData?.photoUrl) {
+                                if (originalPatientData.photoUrl.startsWith('http')) {
+                                  imageUrl = originalPatientData.photoUrl;
+                                } else if (originalPatientData.photoUrl.includes('Photos/patient Admission/')) {
+                                  imageUrl = `/${originalPatientData.photoUrl.replace(/\s/g, '%20')}`;
                                 } else {
                                   // Use formatted Patient ID for photo URL construction
                                   const formattedId = formatPatientId(patient.patientId);
-                                  imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
+                                  imageUrl = `/Photos/patient%20Admission/${formattedId}/${originalPatientData.photoUrl}`;
                                 }
                               }
 
@@ -1136,9 +1381,45 @@ export default function PatientPaymentFees() {
                           <span className="font-medium text-blue-600">{formatPatientId(patient.patientId)}</span>
                         </TableCell>
                         <TableCell className="text-gray-900 text-center">{patient.name}</TableCell>
+                        <TableCell className="text-center">
+                          {(() => {
+                            if (patient.admissionDate) {
+                              try {
+                                const admissionDate = new Date(patient.admissionDate);
+                                // Check if date is valid
+                                if (isNaN(admissionDate.getTime())) {
+                                  return <span className="text-gray-400 text-sm">Invalid Date</span>;
+                                }
+                                
+                                const isWithinFilter = filterMonth !== null && filterYear !== null && (
+                                  admissionDate.getFullYear() < filterYear || 
+                                  (admissionDate.getFullYear() === filterYear && admissionDate.getMonth() <= filterMonth)
+                                );
+                                
+                                return (
+                                  <span className={`text-sm font-medium ${isWithinFilter ? 'text-green-600 bg-green-50 px-2 py-1 rounded' : 'text-gray-600'}`}>
+                                    {format(admissionDate, 'dd/MM/yyyy')}
+                                  </span>
+                                );
+                              } catch (error) {
+                                return <span className="text-gray-400 text-sm">Invalid Date</span>;
+                              }
+                            }
+                            return <span className="text-gray-400 text-sm">-</span>;
+                          })()}
+                        </TableCell>
                         <TableCell className="text-gray-900 text-center">₹{monthlyFees.toLocaleString()}</TableCell>
                         <TableCell className="text-gray-900 text-center">{otherFees}</TableCell>
-                        <TableCell className="text-gray-900 text-center">₹{carryForward.toLocaleString()}</TableCell>
+                        <TableCell className="text-center">
+                          {carryForward > 0 ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="text-orange-600 font-medium">₹{carryForward.toLocaleString()}</span>
+                              <span className="text-xs text-orange-500" title="Amount carried forward from previous month(s)">⬆️</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">₹0</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-gray-900 text-center">₹{paidAmount.toLocaleString()}</TableCell>
                         <TableCell className="text-gray-900 text-center">₹{balance.toLocaleString()}</TableCell>
                         <TableCell className="text-center">
@@ -1366,195 +1647,51 @@ export default function PatientPaymentFees() {
             )}
             {/* Total Balance Field */}
             {selectedPatient && (
-              <div>
-                <Label className="text-gray-700">Total Balance</Label>
+              <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                <Label className="text-green-800 font-semibold">Total Balancess</Label>
                 <Input
                   type="text"
                   value={(() => {
-                    // Use selected month/year or current month/year for balance calculation
-                    const selectedMonthIndex = filterMonth !== null ? filterMonth : today.getMonth();
-                    const selectedYear = filterYear !== null ? filterYear : today.getFullYear();
+                    console.log('🔍 Selected Patient for balance calculation:', selectedPatient);
+                    console.log('🔍 Enhanced Patient Summary:', enhancedPatientSummary);
                     
-                    const patientsData = JSON.parse(localStorage.getItem('patients') || '[]');
-                    const patientData = patientsData.find((p) =>
-                      (p.id && p.id === selectedPatient.id) ||
-                      (p.registrationId && p.registrationId === selectedPatient.id) ||
-                      (p.name && p.name === selectedPatient.name)
-                    );
-                    const monthlyFees = Number(patientData?.fees || patientData?.monthlyFees || patientData?.totalFees || 0);
-                    const patientSummary = patientPayments.find((p) =>
+                    // Find the patient's current balance from enhancedPatientSummary
+                    const patientSummaryData = enhancedPatientSummary.find((p) =>
                       (p.patientId && p.patientId === selectedPatient.id) ||
                       (p.registrationId && p.registrationId === selectedPatient.id) ||
-                      (p.name && p.name === selectedPatient.name)
+                      (p.name && p.name === selectedPatient.name) ||
+                      String(p.patientId) === String(selectedPatient.id)
                     );
-                    // Admission date
-                    const admissionDateRaw = patientData?.admissionDate || patientData?.created_at || patientData?.admission_date;
-                    const admission = admissionDateRaw ? new Date(admissionDateRaw) : null;
-                    // Other Fees (joining month only)
-                    let otherFeesValue = 0;
-                    if (
-                      admission &&
-                      admission.getMonth() === selectedMonthIndex &&
-                      admission.getFullYear() === selectedYear
-                    ) {
-                      const pickup = Number(
-                        patientData?.pickupCharge ??
-                        patientData?.pickup_charge ??
-                        patientData?.pickup ??
-                        0
-                      );
-                      const blood = Number(
-                        patientData?.bloodTest ??
-                        patientData?.blood_test ??
-                        patientData?.blood ??
-                        0
-                      );
-                      otherFeesValue = pickup + blood;
+                    
+                    console.log('🔍 Found patient summary data:', patientSummaryData);
+                    
+                    if (patientSummaryData) {
+                      const balance = patientSummaryData.balance || 0;
+                      console.log('✅ Using balance from summary:', balance);
+                      return `₹${balance.toLocaleString()}`;
                     }
-                    // Carry Forward (use same logic as table, but for selected month)
-                    let carryForward = 0;
-                    if (patientData && patientSummary && admission) {
-                      if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                        carryForward = 0;
-                      } else {
-                        let prevMonth = selectedMonthIndex - 1;
-                        let prevYear = selectedYear;
-                        if (prevMonth < 0) {
-                          prevMonth = 11;
-                          prevYear -= 1;
-                        }
-                        // Monthly Fees for prev month
-                        const prevMonthlyFees = Number(patientData?.fees || patientData?.monthlyFees || patientData?.totalFees || 0);
-                        let prevOtherFees = 0;
-                        if (
-                          admission.getMonth() === prevMonth &&
-                          admission.getFullYear() === prevYear
-                        ) {
-                          const pickup = Number(
-                            patientData?.pickupCharge ??
-                            patientData?.pickup_charge ??
-                            patientData?.pickup ??
-                            0
-                          );
-                          const blood = Number(
-                            patientData?.bloodTest ??
-                            patientData?.blood_test ??
-                            patientData?.blood ??
-                            0
-                          );
-                          prevOtherFees = pickup + blood;
-                        }
-                        // Carry Forward for prev month (recursive, but only one level for popup)
-                        let prevCarryForward = 0;
-                        if (!(admission.getFullYear() === prevYear && admission.getMonth() === prevMonth)) {
-                          let prevPrevMonth = prevMonth - 1;
-                          let prevPrevYear = prevYear;
-                          if (prevPrevMonth < 0) {
-                            prevPrevMonth = 11;
-                            prevPrevYear -= 1;
-                          }
-                          let monthsSinceAdmissionPrev = (prevPrevYear - admission.getFullYear()) * 12 + (prevPrevMonth - admission.getMonth()) + 1;
-                          if (monthsSinceAdmissionPrev >= 1) {
-                            let prevPrevOtherFees = 0;
-                            if (
-                              admission.getMonth() === prevPrevMonth &&
-                              admission.getFullYear() === prevPrevYear
-                            ) {
-                              const pickup = Number(
-                                patientData?.pickupCharge ??
-                                patientData?.pickup_charge ??
-                                patientData?.pickup ??
-                                0
-                              );
-                              const blood = Number(
-                                patientData?.bloodTest ??
-                                patientData?.blood_test ??
-                                patientData?.blood ??
-                                0
-                              );
-                              prevPrevOtherFees = pickup + blood;
-                            }
-                            let prevPrevPaidAmount = 0;
-                            if (patientSummary.payments) {
-                              const prevPrevPayments = patientSummary.payments.filter((p) => {
-                                const d = new Date(p.date);
-                                return d.getFullYear() === prevPrevYear && d.getMonth() === prevPrevMonth;
-                              });
-                              prevPrevPaidAmount = prevPrevPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                              if (
-                                admission.getMonth() === prevPrevMonth &&
-                                admission.getFullYear() === prevPrevYear
-                              ) {
-                                const payAmount = Number(patientData?.payAmount || patientData?.pay_amount || 0);
-                                if (payAmount > 0) {
-                                  const alreadyIncluded = prevPrevPayments.some((p) => Number(p.amount) === payAmount);
-                                  if (!alreadyIncluded) {
-                                    prevPrevPaidAmount += payAmount;
-                                  }
-                                }
-                              }
-                            }
-                            prevCarryForward = Math.max(0, prevMonthlyFees + prevPrevOtherFees + 0 - prevPrevPaidAmount);
-                          }
-                        }
-                        // Paid Amount for prev month
-                        let prevPaidAmount = 0;
-                        if (patientSummary.payments) {
-                          const prevPayments = patientSummary.payments.filter((p) => {
-                            const d = new Date(p.date);
-                            return d.getFullYear() === prevYear && d.getMonth() === prevMonth;
-                          });
-                          prevPaidAmount = prevPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                          if (
-                            admission.getMonth() === prevMonth &&
-                            admission.getFullYear() === prevYear
-                          ) {
-                            const payAmount = Number(patientData?.payAmount || patientData?.pay_amount || 0);
-                            if (payAmount > 0) {
-                              const alreadyIncluded = prevPayments.some((p) => Number(p.amount) === payAmount);
-                              if (!alreadyIncluded) {
-                                prevPaidAmount += payAmount;
-                              }
-                            }
-                          }
-                        }
-                        // Final Carry Forward for this month is exactly previous month's Total Balance
-                        carryForward = Math.max(0, prevMonthlyFees + prevOtherFees + prevCarryForward - prevPaidAmount);
-                      }
+                    
+                    // Fallback calculation if not found in summary
+                    const patientData = patients.find((p) =>
+                      (p.id && p.id === selectedPatient.id) ||
+                      (p.registrationId && p.registrationId === selectedPatient.id) ||
+                      (p.name && p.name === selectedPatient.name) ||
+                      String(p.id) === String(selectedPatient.id)
+                    );
+                    
+                    console.log('🔍 Found patient data:', patientData);
+                    
+                    if (patientData) {
+                      const balance = patientData.balance || 0;
+                      console.log('✅ Using balance from patient data:', balance);
+                      return `₹${balance.toLocaleString()}`;
                     }
-                    // Paid Amount for selected month
-                    let paidAmount = 0;
-                    if (patientData && patientSummary && admission) {
-                      if (
-                        admission.getMonth() === selectedMonthIndex &&
-                        admission.getFullYear() === selectedYear
-                      ) {
-                        const joinMonthPayments = patientSummary.payments.filter((p) => {
-                          const d = new Date(p.date);
-                          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
-                        });
-                        paidAmount = joinMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                        const payAmount = Number(patientData?.payAmount || patientData?.pay_amount || 0);
-                        if (payAmount > 0) {
-                          const alreadyIncluded = joinMonthPayments.some((p) => Number(p.amount) === payAmount);
-                          if (!alreadyIncluded) {
-                            paidAmount += payAmount;
-                          }
-                        }
-                      } else {
-                        const currPayments = patientSummary.payments.filter((p) => {
-                          const d = new Date(p.date);
-                          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
-                        });
-                        paidAmount = currPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                      }
-                    }
-                    // Total Balance calculation for selected month
-                    const totalBalance = Math.max(0, monthlyFees + otherFeesValue + carryForward - paidAmount);
-                    return `₹${totalBalance.toLocaleString()}`;
+                    
+                    console.log('⚠️ No balance found, defaulting to ₹0');
+                    return '₹0';
                   })()}
                   readOnly
-                  className="bg-gray-100 font-semibold"
+                  className="bg-white font-bold text-lg text-green-700 border-green-300 mt-2"
                 />
               </div>
             )}
@@ -1665,7 +1802,7 @@ export default function PatientPaymentFees() {
                 <TableBody>
                   {viewingPatient?.payments.map((payment: any) => (
                     <TableRow key={payment.id}>
-                      <TableCell>{format(new Date(payment.date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>{payment.date ? format(new Date(payment.date), 'dd/MM/yyyy') : 'Invalid Date'}</TableCell>
                       <TableCell>₹{payment.amount.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
@@ -1757,7 +1894,7 @@ export default function PatientPaymentFees() {
           <DialogHeader>
             <DialogTitle>Filter by Month & Year</DialogTitle>
             <DialogDescription>
-              Select month and year to filter payment records
+              Select month and year to show all patients admitted from the beginning up to that month
             </DialogDescription>
           </DialogHeader>
           

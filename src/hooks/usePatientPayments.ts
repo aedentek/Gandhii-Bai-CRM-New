@@ -187,24 +187,43 @@ export const usePatientPayments = () => {
           : patient
       ));
 
-      // Update patient record balance
+      // Update patient record balance - ENHANCED VERSION
       try {
         const patientData = patientPayments.find(p => p.patientId === patientId);
         if (patientData) {
           const newTotalPaid = [...patientData.payments, savedPayment].reduce((sum, p) => sum + Number(p.amount), 0);
           const newBalance = Math.max(0, patientData.totalFees - newTotalPaid);
           
+          console.log(`💰 Updating patient balance for ${patientId}:`, {
+            totalFees: patientData.totalFees,
+            previousPaid: patientData.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+            newPayment: savedPayment.amount,
+            newTotalPaid,
+            newBalance
+          });
+          
           try {
+            // Update patient record in database
             await DatabaseService.updatePatient(patientId, {
               payAmount: newTotalPaid,
               balance: newBalance
             });
+            console.log(`✅ Successfully updated patient balance in database`);
+            
+            // Also update the patient in patients state if you have it
+            // This ensures immediate UI refresh
+            const event = new CustomEvent('patientBalanceUpdated', {
+              detail: { patientId, newTotalPaid, newBalance }
+            });
+            window.dispatchEvent(event);
+            
           } catch (dbError) {
-            console.warn('Failed to update patient balance in database:', dbError);
+            console.warn('⚠️ Failed to update patient balance in database, using localStorage fallback:', dbError);
             // Update localStorage fallback
             const patients = JSON.parse(localStorage.getItem('patients') || '[]');
             const updatedPatients = patients.map((patient: any) => {
               if (patient.id == patientId) {
+                console.log(`💾 Updating localStorage for patient ${patientId}`);
                 return {
                   ...patient,
                   payAmount: newTotalPaid,

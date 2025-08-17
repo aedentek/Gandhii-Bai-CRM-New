@@ -515,7 +515,10 @@ export class DatabaseService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Failed to add patient attendance record');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || 'Failed to add patient attendance record');
+    }
     return res.json();
   }
   
@@ -529,7 +532,10 @@ export class DatabaseService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Failed to update patient attendance record');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || 'Failed to update patient attendance record');
+    }
     return res.json();
   }
   
@@ -560,6 +566,18 @@ export class DatabaseService {
       })
     });
     if (!res.ok) throw new Error('Failed to delete patient attendance');
+    return res.json();
+  }
+
+  // Delete patient attendance by record ID
+  static async deletePatientAttendanceById(id: string | number) {
+    const res = await fetch(`${this.apiBaseUrl}/patient-attendance/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || 'Failed to delete patient attendance record');
+    }
     return res.json();
   }
 

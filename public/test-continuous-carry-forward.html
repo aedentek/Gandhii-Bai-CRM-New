@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Continuous Carry Forward</title>
+</head>
+<body>
+    <h1>Continuous Carry Forward Test</h1>
+    <p>Testing the continuous carry forward calculation for Sabarish T:</p>
+    
+    <div>
+        <h3>Patient Details:</h3>
+        <ul>
+            <li><strong>Name:</strong> Sabarish T</li>
+            <li><strong>Admission Date:</strong> April 30, 2025</li>
+            <li><strong>Monthly Fees:</strong> ₹15,000</li>
+            <li><strong>Other Fees (one-time):</strong> ₹600</li>
+            <li><strong>Paid Amount:</strong> ₹1,000</li>
+        </ul>
+    </div>
+
+    <div>
+        <h3>Expected Carry Forward by Month:</h3>
+        <ul>
+            <li><strong>April 2025 (Joining Month):</strong> ₹0</li>
+            <li><strong>May 2025:</strong> ₹14,600 (15,000 + 600 - 1,000)</li>
+            <li><strong>June 2025:</strong> ₹29,600 (14,600 + 15,000)</li>
+            <li><strong>July 2025:</strong> ₹44,600 (29,600 + 15,000)</li>
+            <li><strong>August 2025:</strong> ₹59,600 (44,600 + 15,000)</li>
+        </ul>
+    </div>
+
+    <div>
+        <h3>Testing Instructions:</h3>
+        <ol>
+            <li>Go to the Patient Payment Fees page</li>
+            <li>Use the month filter to test different months</li>
+            <li>Check the Carry Forward column for Sabarish T</li>
+            <li>Verify the values match the expected amounts above</li>
+        </ol>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="http://localhost:5173/patients/payment-fees" target="_blank" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Test in Patient Payment Fees Page
+        </a>
+    </div>
+
+    <script>
+        // Open the patient payment fees page
+        setTimeout(() => {
+            console.log("🧪 Test the continuous carry forward by changing the month filter!");
+            console.log("Expected values:");
+            console.log("April 2025: ₹0");
+            console.log("May 2025: ₹14,600");
+            console.log("June 2025: ₹29,600");
+            console.log("July 2025: ₹44,600");
+            console.log("August 2025: ₹59,600");
+        }, 1000);
+    </script>
+</body>
+</html>

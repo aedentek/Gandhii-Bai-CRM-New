@@ -18,6 +18,7 @@ import PatientHistory from '@/components/patients/PatientHistory';
 import PatientPaymentFees from '@/components/patients/PatientPaymentFees';
 import PatientCallRecord from '@/components/patients/PatientCallRecord';
 import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
+import TestReportAmount from '@/components/patients/TestReportAmount';
 import StaffManagement from '@/components/management/StaffManagement';
 import DeletedStaff from '@/components/management/DeletedStaff';
 import AddStaff from '@/components/management/AddStaff';
@@ -155,6 +156,7 @@ function ModernApp() {
                     {/* Patient Management Routes */}
                     <Route path="/patients/add" element={<AddPatient />} />
                     <Route path="/patients/list" element={<PatientList />} />
+                    <Route path="/patients/test-report-amount" element={<TestReportAmount />} />
                     <Route path="/patients/deleted" element={<DeletedPatients />} />
                     <Route path="/patients/attendance" element={<PatientAttendance />} />
                     <Route path="/patients/medical-records" element={<PatientMedicalRecord />} />

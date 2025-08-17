@@ -35,7 +35,8 @@ import {
   MessageSquare,
   Bell,
   MapPin,
-  BarChart3
+  BarChart3,
+  TestTube
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +77,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
       submenu: [
         { title: 'Add Patient', href: '/patients/add', icon: UserPlus },
         { title: 'Patient List', href: '/patients/list', icon: List },
+        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: TestTube },
         { title: 'Attendance', href: '/patients/attendance', icon: Calendar },
         { title: 'Medical Record', href: '/patients/medical-records', icon: FileText },
         { title: 'Patient History', href: '/patients/history', icon: History },

@@ -82,6 +82,7 @@ const AddPatient: React.FC = () => {
     fees: '',
     bloodTest: '',
     pickupCharge: '',
+    otherFees: '',
     totalAmount: '',
     payAmount: '',
     balance: '',
@@ -120,6 +121,11 @@ const AddPatient: React.FC = () => {
         const fees = parseFloat(newData.fees) || 0;
         const bloodTest = parseFloat(newData.bloodTest) || 0;
         const pickupCharge = parseFloat(newData.pickupCharge) || 0;
+        
+        // Calculate otherFees (bloodTest + pickupCharge)
+        const otherFees = bloodTest + pickupCharge;
+        newData.otherFees = otherFees.toString();
+        
         const total = fees + bloodTest + pickupCharge;
         newData.totalAmount = total.toString();
         
@@ -423,6 +429,7 @@ const AddPatient: React.FC = () => {
         fees: parseFloat(formData.fees) || 0,
         bloodTest: parseFloat(formData.bloodTest) || 0,
         pickupCharge: parseFloat(formData.pickupCharge) || 0,
+        otherFees: (parseFloat(formData.bloodTest) || 0) + (parseFloat(formData.pickupCharge) || 0),
         totalAmount: parseFloat(formData.totalAmount) || 0,
         payAmount: parseFloat(formData.payAmount) || 0,
         balance: parseFloat(formData.balance) || 0,
@@ -1068,6 +1075,25 @@ const AddPatient: React.FC = () => {
                 min="0"
                 step="0.01"
                 className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="otherFees" className="text-sm font-medium text-blue-600">
+                Other Fees (Auto-calculated)
+              </Label>
+              <Input
+                id="otherFees"
+                type="number"
+                placeholder="Blood Test + Pickup Charge"
+                value={(() => {
+                  const bloodTest = parseFloat(formData.bloodTest) || 0;
+                  const pickupCharge = parseFloat(formData.pickupCharge) || 0;
+                  return (bloodTest + pickupCharge).toString();
+                })()}
+                readOnly
+                className="bg-blue-50 border-blue-200 text-blue-800 font-medium h-11"
+                title="This field is automatically calculated as Blood Test + Pickup Charge"
               />
             </div>
 

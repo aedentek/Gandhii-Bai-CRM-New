@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Attendance CRUD Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .section { 
+            margin-bottom: 30px; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .btn { 
+            padding: 8px 16px; 
+            margin: 5px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .btn:hover { background: #0056b3; }
+        .btn.success { background: #28a745; }
+        .btn.danger { background: #dc3545; }
+        .btn.warning { background: #ffc107; color: #212529; }
+        .result { 
+            margin-top: 10px; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+        }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        input, select, textarea { 
+            padding: 5px; 
+            margin: 5px; 
+            border: 1px solid #ddd; 
+            border-radius: 3px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Patient Attendance CRUD Operations Test</h1>
+        <p><strong>Server:</strong> <span id="server-url">http://localhost:4000</span></p>
+        
+        <!-- Server Status Check -->
+        <div class="section">
+            <h2>🔌 Server Connection Test</h2>
+            <button class="btn" onclick="testServerConnection()">Test Server Connection</button>
+            <div id="server-result" class="result"></div>
+        </div>
+
+        <!-- READ Operations -->
+        <div class="section">
+            <h2>📖 READ Operations</h2>
+            <button class="btn success" onclick="getAllAttendance()">Get All Attendance Records</button>
+            <button class="btn success" onclick="getAllPatients()">Get All Patients</button>
+            <div id="read-result" class="result"></div>
+        </div>
+
+        <!-- CREATE Operation -->
+        <div class="section">
+            <h2>➕ CREATE Operation</h2>
+            <div>
+                <label>Patient ID: <input type="text" id="create-patient-id" placeholder="P0111 or 111" value="111"></label>
+                <label>Patient Name: <input type="text" id="create-patient-name" placeholder="Test Patient" value="Test Patient"></label>
+                <label>Date: <input type="date" id="create-date"></label>
+                <label>Status: 
+                    <select id="create-status">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                    </select>
+                </label>
+                <label>Check-in Time: <input type="time" id="create-time"></label>
+                <label>Notes: <input type="text" id="create-notes" placeholder="Test notes" value="Test attendance record"></label>
+            </div>
+            <button class="btn success" onclick="createAttendance()">Create Attendance Record</button>
+            <div id="create-result" class="result"></div>
+        </div>
+
+        <!-- UPDATE Operation -->
+        <div class="section">
+            <h2>🔄 UPDATE Operation</h2>
+            <div>
+                <label>Record ID: <input type="text" id="update-id" placeholder="Enter record ID to update"></label>
+                <label>Status: 
+                    <select id="update-status">
+                        <option value="">-- Keep Current --</option>
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                    </select>
+                </label>
+                <label>Check-in Time: <input type="time" id="update-time"></label>
+                <label>Notes: <input type="text" id="update-notes" placeholder="Updated notes"></label>
+            </div>
+            <button class="btn warning" onclick="updateAttendance()">Update Attendance Record</button>
+            <div id="update-result" class="result"></div>
+        </div>
+
+        <!-- DELETE Operation -->
+        <div class="section">
+            <h2>🗑️ DELETE Operation</h2>
+            <div>
+                <label>Record ID: <input type="text" id="delete-id" placeholder="Enter record ID to delete"></label>
+            </div>
+            <button class="btn danger" onclick="deleteAttendance()">Delete Attendance Record</button>
+            <div id="delete-result" class="result"></div>
+        </div>
+
+        <!-- Last Results Table -->
+        <div class="section">
+            <h2>📋 Latest Attendance Records</h2>
+            <button class="btn" onclick="refreshAttendanceTable()">Refresh Table</button>
+            <div id="attendance-table"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:4000/api';
+        
+        // Set current date and time as defaults
+        document.getElementById('create-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('create-time').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
+        
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        }
+
+        async function testServerConnection() {
+            try {
+                showResult('server-result', 'Testing server connection...', 'info');
+                const response = await fetch(`${API_BASE_URL}/patients`, { method: 'GET' });
+                if (response.ok) {
+                    showResult('server-result', '✅ Server connection successful!', 'success');
+                } else {
+                    showResult('server-result', `❌ Server responded with status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showResult('server-result', `❌ Server connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function getAllAttendance() {
+            try {
+                showResult('read-result', 'Fetching all attendance records...', 'info');
+                const response = await fetch(`${API_BASE_URL}/patient-attendance`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const data = await response.json();
+                showResult('read-result', `✅ Found ${data.length} attendance records:\n${JSON.stringify(data, null, 2)}`, 'success');
+                return data;
+            } catch (error) {
+                showResult('read-result', `❌ Failed to fetch attendance records: ${error.message}`, 'error');
+            }
+        }
+
+        async function getAllPatients() {
+            try {
+                showResult('read-result', 'Fetching all patients...', 'info');
+                const response = await fetch(`${API_BASE_URL}/patients`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const data = await response.json();
+                showResult('read-result', `✅ Found ${data.length} patients:\n${JSON.stringify(data.slice(0, 3), null, 2)}${data.length > 3 ? '\n... and ' + (data.length - 3) + ' more' : ''}`, 'success');
+                return data;
+            } catch (error) {
+                showResult('read-result', `❌ Failed to fetch patients: ${error.message}`, 'error');
+            }
+        }
+
+        async function createAttendance() {
+            try {
+                const data = {
+                    patientId: document.getElementById('create-patient-id').value,
+                    patientName: document.getElementById('create-patient-name').value,
+                    date: document.getElementById('create-date').value,
+                    status: document.getElementById('create-status').value,
+                    checkInTime: document.getElementById('create-time').value,
+                    notes: document.getElementById('create-notes').value
+                };
+
+                showResult('create-result', `Creating attendance record...\nData: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/patient-attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+                }
+
+                const result = await response.json();
+                showResult('create-result', `✅ Attendance record created successfully!\nResult: ${JSON.stringify(result, null, 2)}`, 'success');
+                
+                // Auto-fill update and delete forms with the new record ID
+                if (result.id) {
+                    document.getElementById('update-id').value = result.id;
+                    document.getElementById('delete-id').value = result.id;
+                }
+                
+                refreshAttendanceTable();
+            } catch (error) {
+                showResult('create-result', `❌ Failed to create attendance record: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateAttendance() {
+            try {
+                const id = document.getElementById('update-id').value;
+                if (!id) {
+                    showResult('update-result', '❌ Please enter a record ID to update', 'error');
+                    return;
+                }
+
+                const data = {};
+                const status = document.getElementById('update-status').value;
+                const time = document.getElementById('update-time').value;
+                const notes = document.getElementById('update-notes').value;
+
+                if (status) data.status = status;
+                if (time) data.checkInTime = time;
+                if (notes) data.notes = notes;
+
+                if (Object.keys(data).length === 0) {
+                    showResult('update-result', '❌ Please provide at least one field to update', 'error');
+                    return;
+                }
+
+                showResult('update-result', `Updating record ${id}...\nData: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/patient-attendance/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+                }
+
+                const result = await response.json();
+                showResult('update-result', `✅ Attendance record updated successfully!\nResult: ${JSON.stringify(result, null, 2)}`, 'success');
+                refreshAttendanceTable();
+            } catch (error) {
+                showResult('update-result', `❌ Failed to update attendance record: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteAttendance() {
+            try {
+                const id = document.getElementById('delete-id').value;
+                if (!id) {
+                    showResult('delete-result', '❌ Please enter a record ID to delete', 'error');
+                    return;
+                }
+
+                if (!confirm(`Are you sure you want to delete attendance record ${id}?`)) {
+                    showResult('delete-result', '🚫 Delete operation cancelled', 'info');
+                    return;
+                }
+
+                showResult('delete-result', `Deleting record ${id}...`, 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/patient-attendance/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+                }
+
+                const result = await response.json();
+                showResult('delete-result', `✅ Attendance record deleted successfully!\nResult: ${JSON.stringify(result, null, 2)}`, 'success');
+                
+                // Clear the delete form
+                document.getElementById('delete-id').value = '';
+                refreshAttendanceTable();
+            } catch (error) {
+                showResult('delete-result', `❌ Failed to delete attendance record: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshAttendanceTable() {
+            try {
+                const records = await getAllAttendance();
+                if (!records) return;
+
+                let tableHtml = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient ID</th>
+                                <th>Patient Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Check-in Time</th>
+                                <th>Notes</th>
+                                <th>Created</th>
+                                <th>Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                records.slice(0, 10).forEach(record => {
+                    tableHtml += `
+                        <tr>
+                            <td>${record.id}</td>
+                            <td>${record.patient_id}</td>
+                            <td>${record.patient_name}</td>
+                            <td>${record.attendance_date || record.date}</td>
+                            <td><span style="color: ${record.status === 'Present' ? 'green' : record.status === 'Absent' ? 'red' : 'orange'}">${record.status}</span></td>
+                            <td>${record.check_in_time || 'N/A'}</td>
+                            <td>${record.notes || 'N/A'}</td>
+                            <td>${record.created_at ? new Date(record.created_at).toLocaleString() : 'N/A'}</td>
+                            <td>${record.updated_at ? new Date(record.updated_at).toLocaleString() : 'N/A'}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                        </tbody>
+                    </table>
+                    <p><em>${records.length > 10 ? `Showing first 10 of ${records.length} records` : `Total: ${records.length} records`}</em></p>
+                `;
+
+                document.getElementById('attendance-table').innerHTML = tableHtml;
+            } catch (error) {
+                document.getElementById('attendance-table').innerHTML = `<div class="result error">❌ Failed to load table: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-load table on page load
+        window.onload = function() {
+            testServerConnection();
+            refreshAttendanceTable();
+        };
+    </script>
+</body>
+</html>

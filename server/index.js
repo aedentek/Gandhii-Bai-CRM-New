@@ -20,6 +20,7 @@ import payment from './routes/settlement.js';
 import roles from './routes/roles.js';
 import fees from './routes/Fees.js';
 import medicalRecords from './routes/medical-records.js';
+import testReports from './routes/test-reports.js';
 // import uploads from './routes/uploads.js';
 import dotenv from 'dotenv';
 
@@ -33,6 +34,12 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
 
 
 // Serve static files from uploads directory
@@ -77,6 +84,8 @@ app.use('/api', payment);
 app.use('/api', roles);
 app.use('/api', medicalRecords);
 app.use('/api', fees);
+app.use('/api', testReports);
+console.log('🧪 Test Reports middleware registered at /api');
 // app.use('/api', uploads);
 
 // Fallback to index.html for SPA (must be after all routes)
