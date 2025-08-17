@@ -12,6 +12,31 @@ const __dirname = dirname(__filename);
 
 import multer from 'multer';
 
+// Helper function to convert dd-MM-yyyy to yyyy-MM-dd for MySQL
+const convertDateFormat = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    // Check if already in yyyy-MM-dd format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    
+    // Convert dd-MM-yyyy to yyyy-MM-dd
+    if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+      const [day, month, year] = dateStr.split('-');
+      return `${year}-${month}-${day}`;
+    }
+    
+    // If it's a Date object, convert to yyyy-MM-dd
+    if (dateStr instanceof Date) {
+      return dateStr.toISOString().split('T')[0];
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Date conversion error:', error);
+    return null;
+  }
+};
+
 // Configure multer for patient file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -472,6 +497,19 @@ router.get('/patients', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM patients WHERE is_deleted = FALSE ORDER BY created_at DESC');
     
+    // Debug: Log first few patients' date information
+    console.log('📅 [DEBUG] Sample patient date data:');
+    rows.slice(0, 3).forEach((patient, idx) => {
+      console.log(`  Patient ${idx + 1}:`, {
+        id: patient.id,
+        name: patient.name,
+        admissionDate: patient.admissionDate,
+        dateOfBirth: patient.dateOfBirth,
+        admissionDateType: typeof patient.admissionDate,
+        dateOfBirthType: typeof patient.dateOfBirth
+      });
+    });
+    
     // Normalize photo paths for web use (convert backslashes to forward slashes)
     const normalizedPatients = rows.map(patient => ({
       ...patient,
@@ -563,31 +601,6 @@ router.post('/patients', async (req, res) => {
     
     console.log('🔍 Generated patient ID:', patientId);
     
-    // Helper function to convert dd-MM-yyyy to yyyy-MM-dd for MySQL
-    const convertDateFormat = (dateStr) => {
-      if (!dateStr) return null;
-      try {
-        // Check if already in yyyy-MM-dd format
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-        
-        // Convert dd-MM-yyyy to yyyy-MM-dd
-        if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
-          const [day, month, year] = dateStr.split('-');
-          return `${year}-${month}-${day}`;
-        }
-        
-        // If it's a Date object, convert to yyyy-MM-dd
-        if (dateStr instanceof Date) {
-          return dateStr.toISOString().split('T')[0];
-        }
-        
-        return null;
-      } catch (error) {
-        console.error('Date conversion error:', error);
-        return null;
-      }
-    };
-
     // Sanitize and prepare data for insertion - CORRECTED COLUMN NAMES!
     const sanitizedData = {
       patient_id: patientId,
@@ -713,6 +726,11 @@ router.put('/patients/:id', async (req, res) => {
   console.log('🔄 [UPDATE] Patient ID:', req.params.id);
   console.log('🔄 [UPDATE] Request body:', JSON.stringify(req.body, null, 2));
   
+  // Specifically check date fields in request
+  console.log('🔄 [UPDATE] Date fields in request:');
+  console.log('  - admissionDate:', req.body.admissionDate, '(type:', typeof req.body.admissionDate, ')');
+  console.log('  - dateOfBirth:', req.body.dateOfBirth, '(type:', typeof req.body.dateOfBirth, ')');
+  
   try {
     // Build dynamic UPDATE query to only update provided fields
     const updates = [];
@@ -736,9 +754,28 @@ router.put('/patients/:id', async (req, res) => {
           continue;
         }
         
+        let fieldValue = req.body[field];
+        
+        // Special handling for date fields
+        if (field === 'admissionDate' || field === 'dateOfBirth') {
+          console.log(`📅 [UPDATE] Processing date field: ${field} = ${fieldValue}`);
+          if (fieldValue && fieldValue !== '') {
+            const convertedDate = convertDateFormat(fieldValue);
+            console.log(`📅 [UPDATE] Converted ${field}: ${fieldValue} → ${convertedDate}`);
+            fieldValue = convertedDate;
+            if (!fieldValue) {
+              console.log(`⚠️ [UPDATE] Invalid date format for ${field}: ${req.body[field]}, skipping...`);
+              continue; // Skip invalid dates
+            }
+          } else {
+            console.log(`📅 [UPDATE] Setting ${field} to NULL (empty value)`);
+            fieldValue = null; // Set to NULL for empty dates
+          }
+        }
+        
         updates.push(`${field}=?`);
-        values.push(req.body[field]);
-        console.log(`🔄 [UPDATE] Adding field: ${field} = ${req.body[field]}`);
+        values.push(fieldValue);
+        console.log(`🔄 [UPDATE] Adding field: ${field} = ${fieldValue}`);
         
         // Track if financial fields are being updated
         if (field === 'totalAmount' || field === 'payAmount') {
@@ -795,6 +832,20 @@ router.put('/patients/:id', async (req, res) => {
       affectedRows: result.affectedRows,
       fieldsUpdated: updates.length - 1 // Exclude updated_at from count
     });
+    
+    // Verify date fields were saved correctly
+    if (req.body.admissionDate || req.body.dateOfBirth) {
+      console.log('🔍 [UPDATE] Verifying date updates...');
+      const [verifyResult] = await db.query(
+        'SELECT admissionDate, dateOfBirth FROM patients WHERE id = ?', 
+        [req.params.id]
+      );
+      if (verifyResult.length > 0) {
+        console.log('🔍 [UPDATE] Current dates in database:');
+        console.log('  - admissionDate:', verifyResult[0].admissionDate);
+        console.log('  - dateOfBirth:', verifyResult[0].dateOfBirth);
+      }
+    }
     
     res.json({ 
       id: req.params.id, 
