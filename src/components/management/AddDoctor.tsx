@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { DatabaseService } from '@/services/databaseService';
+import { uploadDoctorFile, uploadMultipleDoctorFiles, preGenerateDoctorId } from '@/services/doctorFileUpload';
 import '../../styles/selective-header-buttons-new.css';
 
 const AddDoctor: React.FC = () => {
@@ -23,6 +24,7 @@ const AddDoctor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [joinDate, setJoinDate] = useState<Date>();
   const [photo, setPhoto] = useState<File | null>(null);
+  const [preGeneratedDoctorId, setPreGeneratedDoctorId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,6 +39,10 @@ const AddDoctor: React.FC = () => {
 
   useEffect(() => {
     loadSpecializations();
+    // Pre-generate doctor ID for consistent photo uploads
+    const doctorId = preGenerateDoctorId();
+    setPreGeneratedDoctorId(doctorId);
+    console.log('🆔 Pre-generated doctor ID for uploads:', doctorId);
   }, []);
 
   // Test function to fill form with sample data
@@ -114,36 +120,97 @@ const AddDoctor: React.FC = () => {
     return true;
   };
 
-  // Handle photo upload with validation (matches AddPatient)
-  const handlePhotoUpload = (file: File | null) => {
+  // Handle photo upload with validation and file upload service
+  const handlePhotoUpload = async (file: File | null) => {
     if (!validateFileSize(file)) {
       return; // Don't update state if file is too large
     }
     
-    setPhoto(file);
-    
-    if (file) {
+    if (!file) {
+      setPhoto(null);
+      return;
+    }
+
+    // Ensure we have a doctor ID for upload
+    if (!preGeneratedDoctorId) {
       toast({
-        title: "Photo Selected",
-        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) selected successfully`,
+        title: "Upload Error",
+        description: "Doctor ID not generated yet. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('📤 Starting photo upload for doctor ID:', preGeneratedDoctorId);
+      
+      // Upload photo immediately using the file upload service
+      const photoPath = await uploadDoctorFile(file, preGeneratedDoctorId, 'photo');
+      
+      console.log('✅ Photo uploaded successfully:', photoPath);
+      
+      setPhoto(file);
+      
+      toast({
+        title: "Photo Uploaded",
+        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) uploaded successfully to ${photoPath}`,
+      });
+    } catch (error) {
+      console.error('❌ Photo upload failed:', error);
+      toast({
+        title: "Photo Upload Failed",
+        description: error.message || "Failed to upload photo",
+        variant: "destructive",
       });
     }
   };
 
-  const handleFileUpload = (field: keyof typeof documents, file: File | null) => {
+  const handleFileUpload = async (field: keyof typeof documents, file: File | null) => {
     if (!validateFileSize(file)) {
       return; // Don't update state if file is too large
     }
     
-    setDocuments(prev => ({
-      ...prev,
-      [field]: file
-    }));
+    if (!file) {
+      setDocuments(prev => ({
+        ...prev,
+        [field]: null
+      }));
+      return;
+    }
 
-    if (file) {
+    // Ensure we have a doctor ID for upload
+    if (!preGeneratedDoctorId) {
       toast({
-        title: "File Selected",
-        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) selected successfully`,
+        title: "Upload Error",
+        description: "Doctor ID not generated yet. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log(`📤 Starting ${field} upload for doctor ID:`, preGeneratedDoctorId);
+      
+      // Upload document immediately using the file upload service
+      const filePath = await uploadDoctorFile(file, preGeneratedDoctorId, field);
+      
+      console.log(`✅ ${field} uploaded successfully:`, filePath);
+      
+      setDocuments(prev => ({
+        ...prev,
+        [field]: file
+      }));
+
+      toast({
+        title: "Document Uploaded",
+        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) uploaded successfully`,
+      });
+    } catch (error) {
+      console.error(`❌ ${field} upload failed:`, error);
+      toast({
+        title: "Document Upload Failed",
+        description: error.message || `Failed to upload ${field}`,
+        variant: "destructive",
       });
     }
   };
@@ -294,33 +361,31 @@ const AddDoctor: React.FC = () => {
         return;
       }
 
-      console.log('Getting next doctor ID...');
-      // Get next doctor ID from the database
-      const { nextId } = await DatabaseService.getNextDoctorId();
-      console.log('Next ID received:', nextId);
+      console.log('✅ Validation passed - proceeding with form submission');
+
+      // Use the pre-generated doctor ID for consistency
+      const doctorId = preGeneratedDoctorId;
+      console.log('Using pre-generated doctor ID:', doctorId);
       
-      // Convert files to base64
-      console.log('Converting files to base64...');
-      const photoBase64 = photo ? await convertFileToBase64(photo) : '';
-      console.log('Photo conversion completed, size:', photoBase64.length);
+      // Build file paths for database (files already uploaded via file upload handlers)
+      const photoPath = photo ? `Photos/Doctor Admission/${doctorId}/photo_${Date.now()}.${photo.name.split('.').pop()}` : '';
       
-      const documentsBase64: Record<string, string> = {};
+      const documentPaths: Record<string, string> = {};
       if (documents.aadharFront) {
-        documentsBase64.aadharFront = await convertFileToBase64(documents.aadharFront);
+        documentPaths.aadharFront = `Photos/Doctor Admission/${doctorId}/aadharFront_${Date.now()}.${documents.aadharFront.name.split('.').pop()}`;
       }
       if (documents.aadharBack) {
-        documentsBase64.aadharBack = await convertFileToBase64(documents.aadharBack);
+        documentPaths.aadharBack = `Photos/Doctor Admission/${doctorId}/aadharBack_${Date.now()}.${documents.aadharBack.name.split('.').pop()}`;
       }
       if (documents.panFront) {
-        documentsBase64.panFront = await convertFileToBase64(documents.panFront);
+        documentPaths.panFront = `Photos/Doctor Admission/${doctorId}/panFront_${Date.now()}.${documents.panFront.name.split('.').pop()}`;
       }
       if (documents.panBack) {
-        documentsBase64.panBack = await convertFileToBase64(documents.panBack);
+        documentPaths.panBack = `Photos/Doctor Admission/${doctorId}/panBack_${Date.now()}.${documents.panBack.name.split('.').pop()}`;
       }
-      console.log('Documents conversion completed');
       
       const doctorData = {
-        id: nextId,
+        id: doctorId,
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
@@ -330,18 +395,15 @@ const AddDoctor: React.FC = () => {
         join_date: joinDate ? format(joinDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         salary: formData.salary ? parseFloat(formData.salary) : 0,
         status: formData.status as 'Active' | 'Inactive',
-        photo: photoBase64,
+        photo: photoPath,
         // Only include documents if there are actual documents
-        ...(Object.keys(documentsBase64).length > 0 && { documents: documentsBase64 })
+        ...(Object.keys(documentPaths).length > 0 && { documents: documentPaths })
       };
 
       console.log('Final doctor data prepared:', { 
         ...doctorData, 
-        photo: photoBase64 ? `[BASE64 DATA - ${photoBase64.length} chars]` : '[NO PHOTO]',
-        documents: Object.keys(documentsBase64).reduce((acc, key) => ({
-          ...acc,
-          [key]: documentsBase64[key] ? `[BASE64 DATA - ${documentsBase64[key].length} chars]` : '[NO FILE]'
-        }), {})
+        photo: photoPath || '[NO PHOTO]',
+        documents: documentPaths
       });
       
       console.log('Calling DatabaseService.addDoctor...');
@@ -351,7 +413,7 @@ const AddDoctor: React.FC = () => {
         
         toast({
           title: 'Doctor Added Successfully!',
-          description: `Doctor ${nextId} has been registered.`,
+          description: `Doctor ${doctorId} has been registered with file uploads.`,
         });
         
         setTimeout(() => {

@@ -21,6 +21,7 @@ const AddStaff: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [joinDate, setJoinDate] = useState<Date>();
   const [photo, setPhoto] = useState<File | null>(null);
+  const [preGeneratedStaffId, setPreGeneratedStaffId] = useState<string>(''); // Store the staff ID for upload
 
   // Helper function to generate next staff ID
   const generateNextStaffId = async (): Promise<string> => {
@@ -147,8 +148,8 @@ const AddStaff: React.FC = () => {
     return true;
   };
 
-  // Handle photo upload with validation (matches AddPatient)
-  const handlePhotoUpload = (file: File | null) => {
+  // Handle photo upload with validation
+  const handlePhotoUpload = async (file: File | null) => {
     if (!validateFileSize(file)) {
       return; // Don't update state if file is too large
     }
@@ -156,10 +157,21 @@ const AddStaff: React.FC = () => {
     setPhoto(file);
     
     if (file) {
+      // Generate and store the staff ID that will be used
+      let staffIdToUse = preGeneratedStaffId;
+      if (!staffIdToUse) {
+        staffIdToUse = await generateNextStaffId();
+        setPreGeneratedStaffId(staffIdToUse);
+        console.log('📋 Generated Staff ID for upload:', staffIdToUse);
+      }
+      
       toast({
         title: "Photo Selected",
-        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) selected successfully`,
+        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) selected. Will upload with Staff ID: ${staffIdToUse}`,
       });
+    } else {
+      // Clear photo and staff ID when no file is selected
+      setPreGeneratedStaffId('');
     }
   };
 
@@ -280,15 +292,19 @@ const AddStaff: React.FC = () => {
         return;
       }
 
-      // Generate next staff ID
-      const nextId = await generateNextStaffId();
+      // Use pre-generated staff ID if photo was selected, otherwise generate new one
+      const nextId = preGeneratedStaffId || await generateNextStaffId();
+      
+      console.log('🆔 Using Staff ID for form submission:', nextId);
+      console.log('🆔 Pre-generated ID:', preGeneratedStaffId);
 
       // Upload photo if selected
-      let photoPath = '';
+      let finalPhotoPath = '';
       if (photo) {
         try {
-          photoPath = await uploadStaffFile(photo, nextId, 'photo');
-          console.log('✅ Photo uploaded:', photoPath);
+          console.log('📤 Uploading photo with Staff ID:', nextId);
+          finalPhotoPath = await uploadStaffFile(photo, nextId, 'profile_photo');
+          console.log('✅ Photo uploaded to:', finalPhotoPath);
         } catch (error) {
           console.error('❌ Photo upload failed:', error);
           toast({
@@ -389,7 +405,7 @@ const AddStaff: React.FC = () => {
         joinDate: (joinDate || new Date()).toISOString(),
         salary: formData.salary ? parseFloat(formData.salary) : undefined,
         status: formData.status,
-        photo: photoPath,
+        photo: finalPhotoPath,
         documents: documentPaths
       };
 
@@ -648,25 +664,25 @@ const AddStaff: React.FC = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setPhoto(null)}
+                      onClick={() => {
+                        setPhoto(null);
+                        setPreGeneratedStaffId(''); // Clear the pre-generated ID when removing photo
+                      }}
                       className="flex-1 sm:flex-none h-11"
                     >
                       Remove
                     </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={testUpload}
-                      className="flex-1 sm:flex-none h-11"
-                    >
-                      Test Upload
-                    </Button>
                   </div>
                 )}
               </div>
+              {preGeneratedStaffId && (
+                <div className="flex items-center space-x-2 text-xs text-blue-600">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span>Photo will be saved with Staff ID: {preGeneratedStaffId}</span>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Accepted formats: JPG, JPEG, PNG, GIF. Maximum file size: 5MB
+                Accepted formats: JPG, JPEG, PNG, GIF. Maximum file size: 5MB. Photos will be saved to server/photos/Staff Admission/{'{'}STF_ID{'}'}.
               </p>
             </div>
 

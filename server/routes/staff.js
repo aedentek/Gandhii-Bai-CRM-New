@@ -13,19 +13,26 @@ const router = express.Router();
 // Configure multer for staff file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const { staffId = 'temp' } = req.body;
-    // Create staff-specific directory: server/Photos/Staff Admission/{staffId}
-    const uploadPath = path.join(__dirname, '../Photos/Staff Admission', staffId.toString());
+    // For FormData uploads, body parameters are available in req.body during multer processing
+    // But we need to ensure we handle the case where staffId might not be available yet
+    console.log('📂 Multer destination - Processing file:', file.fieldname);
+    console.log('📂 Request body during destination:', req.body);
     
-    // Create directory if it doesn't exist
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
+    // Use temp directory initially - we'll move files to proper directory after upload
+    const tempPath = path.join(__dirname, '../Photos/Staff Admission/temp');
+    
+    console.log('📂 Using temp upload path:', tempPath);
+    
+    // Create temp directory if it doesn't exist
+    fs.mkdirSync(tempPath, { recursive: true });
+    cb(null, tempPath);
   },
   filename: function (req, file, cb) {
     const { fieldName = 'general' } = req.body;
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     const filename = `${fieldName}_${timestamp}${ext}`;
+    console.log('📂 Generating filename:', filename);
     cb(null, filename);
   }
 });
@@ -70,7 +77,8 @@ router.post('/upload-staff-file', upload.single('file'), async (req, res) => {
       file: req.file ? {
         originalname: req.file.originalname,
         size: req.file.size,
-        mimetype: req.file.mimetype
+        mimetype: req.file.mimetype,
+        path: req.file.path
       } : 'No file'
     });
 
@@ -81,10 +89,43 @@ router.post('/upload-staff-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Return the relative path from server root
-    const relativePath = path.join('Photos', 'Staff Admission', req.body.staffId || 'temp', req.file.filename);
+    const { staffId, fieldName = 'general' } = req.body;
     
-    console.log('✅ Staff file uploaded successfully:', relativePath);
+    console.log('📤 Extracted from body:', { staffId, fieldName });
+    
+    if (!staffId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Staff ID is required for file upload'
+      });
+    }
+
+    // Move file from temp to proper staff directory
+    const properStaffPath = path.join(__dirname, '../Photos/Staff Admission', staffId);
+    console.log('📂 Creating staff directory:', properStaffPath);
+    fs.mkdirSync(properStaffPath, { recursive: true });
+    
+    const newFilePath = path.join(properStaffPath, req.file.filename);
+    
+    console.log('📂 Moving file from temp to proper directory...');
+    console.log('📂 From:', req.file.path);
+    console.log('📂 To:', newFilePath);
+    console.log('📂 Source file exists:', fs.existsSync(req.file.path));
+    
+    // Move file from temp to staff directory
+    try {
+      fs.renameSync(req.file.path, newFilePath);
+      console.log('✅ File moved successfully');
+      console.log('📂 Destination file exists:', fs.existsSync(newFilePath));
+    } catch (moveError) {
+      console.error('❌ File move failed:', moveError);
+      throw new Error(`Failed to move file: ${moveError.message}`);
+    }
+    
+    // Return the relative path from server root
+    const relativePath = path.join('Photos', 'Staff Admission', staffId, req.file.filename);
+    
+    console.log('✅ Staff file uploaded and moved successfully:', relativePath);
     
     res.json({
       success: true,
@@ -93,8 +134,8 @@ router.post('/upload-staff-file', upload.single('file'), async (req, res) => {
       filename: req.file.filename,
       originalName: req.file.originalname,
       size: req.file.size,
-      fieldName: req.body.fieldName || 'general',
-      staffId: req.body.staffId || 'temp'
+      fieldName: fieldName,
+      staffId: staffId
     });
     
   } catch (error) {

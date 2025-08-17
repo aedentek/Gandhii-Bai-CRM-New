@@ -13,13 +13,19 @@ const router = express.Router();
 // Configure multer for doctor file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const { doctorId = 'temp' } = req.body;
-    // Create doctor-specific directory: server/Photos/Doctor Admission/{doctorId}
-    const uploadPath = path.join(__dirname, '../Photos/Doctor Admission', doctorId.toString());
+    // For FormData uploads, body parameters are available in req.body during multer processing
+    // But we need to ensure we handle the case where doctorId might not be available yet
+    console.log('📂 Multer destination - Processing file:', file.fieldname);
+    console.log('📂 Request body during destination:', req.body);
     
-    // Create directory if it doesn't exist
-    fs.mkdir(uploadPath, { recursive: true }).then(() => {
-      cb(null, uploadPath);
+    // Use temp directory initially - we'll move files to proper directory after upload
+    const tempPath = path.join(__dirname, '../Photos/Doctor Admission/temp');
+    
+    console.log('📂 Using temp upload path:', tempPath);
+    
+    // Create temp directory if it doesn't exist
+    fs.mkdir(tempPath, { recursive: true }).then(() => {
+      cb(null, tempPath);
     }).catch(err => {
       console.error('Error creating directory:', err);
       cb(err);
@@ -30,6 +36,7 @@ const storage = multer.diskStorage({
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     const filename = `${fieldName}_${timestamp}${ext}`;
+    console.log('📂 Generating filename:', filename);
     cb(null, filename);
   }
 });
@@ -66,7 +73,8 @@ router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
       file: req.file ? {
         originalname: req.file.originalname,
         size: req.file.size,
-        mimetype: req.file.mimetype
+        mimetype: req.file.mimetype,
+        path: req.file.path
       } : 'No file'
     });
 
@@ -77,10 +85,43 @@ router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Return the relative path from server root
-    const relativePath = path.join('Photos', 'Doctor Admission', req.body.doctorId || 'temp', req.file.filename);
+    const { doctorId, fieldName = 'general' } = req.body;
     
-    console.log('✅ Doctor file uploaded successfully:', relativePath);
+    console.log('📤 Extracted from body:', { doctorId, fieldName });
+    
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Doctor ID is required for file upload'
+      });
+    }
+
+    // Move file from temp to proper doctor directory
+    const properDoctorPath = path.join(__dirname, '../Photos/Doctor Admission', doctorId);
+    console.log('📂 Creating doctor directory:', properDoctorPath);
+    await fs.mkdir(properDoctorPath, { recursive: true });
+    
+    const newFilePath = path.join(properDoctorPath, req.file.filename);
+    
+    console.log('📂 Moving file from temp to proper directory...');
+    console.log('📂 From:', req.file.path);
+    console.log('📂 To:', newFilePath);
+    console.log('📂 Source file exists:', await fs.access(req.file.path).then(() => true).catch(() => false));
+    
+    // Move file from temp to doctor directory
+    try {
+      await fs.rename(req.file.path, newFilePath);
+      console.log('✅ File moved successfully');
+      console.log('📂 Destination file exists:', await fs.access(newFilePath).then(() => true).catch(() => false));
+    } catch (moveError) {
+      console.error('❌ File move failed:', moveError);
+      throw new Error(`Failed to move file: ${moveError.message}`);
+    }
+
+    // Return the relative path from server root
+    const relativePath = path.join('Photos', 'Doctor Admission', doctorId, req.file.filename);
+    
+    console.log('✅ Doctor file uploaded and moved successfully:', relativePath);
     
     res.json({
       success: true,
@@ -89,8 +130,8 @@ router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
       filename: req.file.filename,
       originalName: req.file.originalname,
       size: req.file.size,
-      fieldName: req.body.fieldName || 'general',
-      doctorId: req.body.doctorId || 'temp'
+      fieldName: fieldName,
+      doctorId: doctorId
     });
     
   } catch (error) {
@@ -102,7 +143,7 @@ router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
   }
 });
 
-  // Get monthly salary records for all doctors
+// Get monthly salary records for all doctors
 router.get('/doctor/monthly-salary/:month/:year', async (req, res) => {
   let connection;
   try {

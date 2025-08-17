@@ -1,18 +1,18 @@
-// Staff file upload service
-export const uploadStaffFile = async (
+// Doctor file upload service
+export const uploadDoctorFile = async (
   file: File, 
-  staffId: string = 'new', 
+  doctorId: string = 'new', 
   fieldName: string = 'photo'
 ): Promise<string> => {
   try {
-    console.log('📤 Starting staff file upload...');
+    console.log('📤 Starting doctor file upload...');
     console.log('📤 File details:', {
       name: file.name,
       size: file.size,
       type: file.type,
       lastModified: file.lastModified
     });
-    console.log('📤 Upload params:', { staffId, fieldName });
+    console.log('📤 Upload params:', { doctorId, fieldName });
     
     // Validate file
     if (!file) {
@@ -60,22 +60,22 @@ export const uploadStaffFile = async (
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('staffId', staffId);
+    formData.append('doctorId', doctorId);
     formData.append('fieldName', fieldName);
 
     console.log('📤 FormData contents:');
     console.log('📤 - file:', file.name, file.size, 'bytes');
-    console.log('📤 - staffId:', staffId, 'type:', typeof staffId);
+    console.log('📤 - doctorId:', doctorId, 'type:', typeof doctorId);
     console.log('📤 - fieldName:', fieldName);
 
-    // Use dedicated staff upload endpoint
-    const uploadUrl = '/api/upload-staff-file';
+    // Use dedicated doctor upload endpoint
+    const uploadUrl = '/api/upload-doctor-file';
     
     console.log('📤 Sending upload request to backend...');
     console.log('📤 Request URL:', uploadUrl);
     console.log('📤 FormData contents:', {
       file: file.name,
-      staffId: staffId,
+      doctorId: doctorId,
       fieldName: fieldName
     });
     
@@ -98,45 +98,60 @@ export const uploadStaffFile = async (
       }
       throw new Error(`Upload failed: ${errorMessage}`);
     }
-
+    
     const result = await response.json();
     console.log('✅ Upload successful:', result);
     
-    if (!result.filePath) {
-      throw new Error('Upload succeeded but no file path returned');
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed');
     }
     
+    // Return the file path for database storage
     return result.filePath;
+    
   } catch (error) {
-    console.error('❌ Staff file upload error:', error);
+    console.error('❌ Doctor file upload error:', error);
     throw error;
   }
 };
 
-export const getStaffFileUrl = (filePath: string): string => {
-  if (!filePath) return '';
+// Helper function to upload multiple doctor files
+export const uploadMultipleDoctorFiles = async (
+  files: Record<string, File | null>,
+  doctorId: string
+): Promise<Record<string, string>> => {
+  const uploadedPaths: Record<string, string> = {};
   
-  // If it's already a full URL, return as is
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-    return filePath;
+  console.log('📤 Starting multiple doctor file uploads...');
+  console.log('📤 Files to upload:', Object.keys(files).filter(key => files[key] !== null));
+  
+  for (const [fieldName, file] of Object.entries(files)) {
+    if (file) {
+      try {
+        console.log(`📤 Uploading ${fieldName}:`, file.name);
+        const filePath = await uploadDoctorFile(file, doctorId, fieldName);
+        uploadedPaths[fieldName] = filePath;
+        console.log(`✅ ${fieldName} uploaded successfully:`, filePath);
+      } catch (error) {
+        console.error(`❌ Failed to upload ${fieldName}:`, error);
+        throw new Error(`Failed to upload ${fieldName}: ${error.message}`);
+      }
+    }
   }
   
-  // If it's a base64 string, return as is
-  if (filePath.startsWith('data:image/')) {
-    return filePath;
-  }
-  
-  // If it starts with /Photos, use proxy
-  if (filePath.startsWith('/Photos')) {
-    return filePath;
-  }
-  
-  // If it starts with /uploads, use proxy (legacy support)
-  if (filePath.startsWith('/uploads')) {
-    return filePath;
-  }
-  
-  // Otherwise, construct the full URL using environment variable
-  const baseUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
-  return `${baseUrl}${filePath.startsWith('/') ? '' : '/'}${filePath}`;
+  console.log('✅ All doctor files uploaded successfully:', uploadedPaths);
+  return uploadedPaths;
+};
+
+// Doctor ID generation utilities
+export const generateDoctorId = (): string => {
+  const timestamp = Date.now().toString();
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `DOC${timestamp.slice(-6)}${random}`;
+};
+
+export const preGenerateDoctorId = (): string => {
+  const id = generateDoctorId();
+  console.log('🆔 Pre-generated doctor ID:', id);
+  return id;
 };

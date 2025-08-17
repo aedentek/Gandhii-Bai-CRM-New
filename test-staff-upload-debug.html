@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Staff Upload Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background-color: #0056b3; }
+        .result { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin-top: 10px; white-space: pre-wrap; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Staff Upload Debug Test</h1>
+    
+    <div class="container">
+        <h3>Test Staff Upload</h3>
+        <input type="file" id="testFile" accept="image/*">
+        <br><br>
+        <input type="text" id="testStaffId" placeholder="Staff ID" value="STF009" style="padding: 8px; margin: 5px;">
+        <input type="text" id="testFieldName" placeholder="Field Name" value="profile_photo" style="padding: 8px; margin: 5px;">
+        <br><br>
+        <button onclick="testUpload()">Test Upload</button>
+        <div id="result" class="result">Ready to test...</div>
+    </div>
+
+    <script>
+        async function testUpload() {
+            const fileInput = document.getElementById('testFile');
+            const staffIdInput = document.getElementById('testStaffId');
+            const fieldNameInput = document.getElementById('testFieldName');
+            const resultDiv = document.getElementById('result');
+            
+            const file = fileInput.files[0];
+            const staffId = staffIdInput.value.trim();
+            const fieldName = fieldNameInput.value.trim();
+            
+            if (!file) {
+                showResult('❌ Please select a file first.', 'error');
+                return;
+            }
+            
+            if (!staffId) {
+                showResult('❌ Please enter a Staff ID.', 'error');
+                return;
+            }
+
+            showResult('📤 Testing upload...\n\nFile: ' + file.name + '\nStaff ID: ' + staffId + '\nField Name: ' + fieldName, '');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('staffId', staffId);
+                formData.append('fieldName', fieldName);
+
+                console.log('📤 Sending FormData with:');
+                console.log('- file:', file.name);
+                console.log('- staffId:', staffId);
+                console.log('- fieldName:', fieldName);
+
+                const response = await fetch('/api/upload-staff-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('📡 Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Upload successful:', result);
+
+                const successMessage = `✅ Upload successful!
+
+📁 File Path: ${result.filePath}
+📄 File Name: ${result.filename}
+👤 Staff ID: ${result.staffId}
+🔧 Field Name: ${result.fieldName}
+📦 Size: ${result.size} bytes
+
+Expected directory: Photos/Staff Admission/${staffId}/
+Actual file path: ${result.filePath}`;
+
+                showResult(successMessage, 'success');
+
+            } catch (error) {
+                console.error('❌ Upload failed:', error);
+                showResult('❌ Upload failed: ' + error.message, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+        }
+    </script>
+</body>
+</html>
