@@ -13,20 +13,28 @@ const router = express.Router();
 // Configure multer for medical record images
 const medicalRecordStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'medical-records');
+    // Get patient ID from request body or form data
+    const patientId = req.body.patientId || 'unknown';
+    
+    // Create path: server/Photos/Patient Medical Records/{patientId}/
+    const uploadPath = path.join(__dirname, '..', 'Photos', 'Patient Medical Records', patientId.toString());
+    
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
+      console.log(`📁 Created directory: ${uploadPath}`);
     }
+    
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    // Create unique filename: patientId_recordType_timestamp.ext
-    const patientId = req.body.patientId || 'unknown';
+    // Create unique filename: recordType_timestamp.ext
     const recordType = (req.body.recordType || 'record').replace(/[^a-zA-Z0-9]/g, '_');
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
-    cb(null, `${patientId}_${recordType}_${timestamp}${ext}`);
+    const filename = `${recordType}_${timestamp}${ext}`;
+    console.log(`📄 Saving file as: ${filename}`);
+    cb(null, filename);
   }
 });
 
@@ -88,8 +96,11 @@ router.post('/medical-records', uploadMedicalImages.array('images', 10), async (
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Process uploaded images
-    const imagePaths = req.files ? req.files.map(file => `/uploads/medical-records/${file.filename}`) : [];
+    // Process uploaded images - update paths to match new folder structure
+    const imagePaths = req.files ? req.files.map(file => {
+      // Generate path relative to server root: /Photos/Patient Medical Records/{patientId}/{filename}
+      return `/Photos/Patient Medical Records/${patientId}/${file.filename}`;
+    }) : [];
     
     const query = `
       INSERT INTO patient_medical_records 
@@ -260,8 +271,11 @@ router.post('/patient-medical-records', uploadMedicalImages.array('images', 10),
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Process uploaded images
-    const imagePaths = req.files ? req.files.map(file => `/uploads/medical-records/${file.filename}`) : [];
+    // Process uploaded images - update paths to match new folder structure
+    const imagePaths = req.files ? req.files.map(file => {
+      // Generate path relative to server root: /Photos/Patient Medical Records/{patientId}/{filename}
+      return `/Photos/Patient Medical Records/${patientId}/${file.filename}`;
+    }) : [];
     
     const query = `
       INSERT INTO patient_medical_records 
@@ -313,8 +327,11 @@ router.put('/patient-medical-records/:id', uploadMedicalImages.array('images', 1
       existingImages = JSON.parse(existingRows[0].images);
     }
     
-    // Process new uploaded images
-    const newImagePaths = req.files ? req.files.map(file => `/uploads/medical-records/${file.filename}`) : [];
+    // Process new uploaded images - update paths to match new folder structure
+    const newImagePaths = req.files ? req.files.map(file => {
+      // Generate path relative to server root: /Photos/Patient Medical Records/{patientId}/{filename}
+      return `/Photos/Patient Medical Records/${patientId}/${file.filename}`;
+    }) : [];
     
     // Combine existing and new images (for this implementation, we'll replace all images)
     const finalImagePaths = newImagePaths.length > 0 ? newImagePaths : existingImages;
@@ -384,6 +401,50 @@ router.delete('/patient-medical-records/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ Error deleting patient medical record:', error);
     res.status(500).json({ error: 'Failed to delete patient medical record' });
+  }
+});
+
+// POST /patient-medical-records/json - Add new medical record with JSON data (files already uploaded)
+router.post('/patient-medical-records/json', express.json(), async (req, res) => {
+  console.log('✅ Add patient medical record (JSON) requested');
+  try {
+    const { patient_id, patient_name, date, record_type, description, images, created_by } = req.body;
+    
+    // Validate required fields
+    if (!patient_id || !patient_name || !record_type || !description || !date) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const query = `
+      INSERT INTO patient_medical_records 
+      (patient_id, patient_name, date, record_type, description, images, created_at, created_by) 
+      VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+    `;
+    
+    const values = [
+      patient_id,
+      patient_name,
+      date,
+      record_type,
+      description,
+      JSON.stringify(images || []),
+      created_by || 'system'
+    ];
+    
+    const [result] = await db.execute(query, values);
+    
+    console.log(`✅ Patient medical record added successfully (JSON) - ID: ${result.insertId}`);
+    console.log(`📁 Images saved: ${images?.length || 0} files`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Patient medical record added successfully',
+      id: result.insertId,
+      images: images || []
+    });
+  } catch (error) {
+    console.error('❌ Error adding patient medical record (JSON):', error);
+    res.status(500).json({ error: 'Failed to add patient medical record' });
   }
 });
 

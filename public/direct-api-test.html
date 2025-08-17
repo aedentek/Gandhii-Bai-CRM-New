@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct API Test</title>
+</head>
+<body>
+    <h1>Patient API Test</h1>
+    <button onclick="testAPI()">Test Patient Creation</button>
+    <div id="result"></div>
+    
+    <script>
+    async function testAPI() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = 'Testing...';
+        
+        try {
+            const response = await fetch('http://localhost:4000/api/patients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: 'Browser Test Patient',
+                    age: 30,
+                    gender: 'Male',
+                    phone: '8888888888',
+                    marriageStatus: 'Married',
+                    employeeStatus: 'Self Employed', 
+                    attenderRelationship: 'Son'
+                })
+            });
+            
+            const result = await response.json();
+            resultDiv.innerHTML = '<h2>Result:</h2><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        } catch (error) {
+            resultDiv.innerHTML = '<h2>Error:</h2>' + error.message;
+        }
+    }
+    </script>
+</body>
+</html>

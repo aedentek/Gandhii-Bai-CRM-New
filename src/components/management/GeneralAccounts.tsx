@@ -461,68 +461,72 @@ const GeneralAccounts: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
         <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
                 <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Accounts</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Accounts</h1>
               </div>
             </div>
-          
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
-                onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  handleGlobalRefresh();
-                }}
-                disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => {
+                    const currentMonth = new Date().getMonth();
+                    const currentYear = new Date().getFullYear();
+                    
+                    setStatusFilter('all');
+                    setSearchTerm('');
+                    setFilterMonth(currentMonth);
+                    setFilterYear(currentYear);
+                    setSelectedMonth(currentMonth);
+                    setSelectedYear(currentYear);
+                    setPage(1);
+                    
+                    handleGlobalRefresh();
+                  }}
+                  disabled={loading}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                >
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">↻</span>
+                </Button>
+                
+                <Button 
+                  onClick={() => setShowMonthYearDialog(true)}
+                  variant="outline"
+                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth]} ${filterYear}`
+                      : `${months[selectedMonth]} ${selectedYear}`
+                    }
+                  </span>
+                  <span className="sm:hidden">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                      : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                    }
+                  </span>
+                </Button>
+              </div>
               
-              <Button 
-                onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
-              
-              <Button 
-                onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">CSV</span>
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleExportCSV}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                  <span className="sm:hidden">CSV</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

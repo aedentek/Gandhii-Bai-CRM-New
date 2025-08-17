@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { DatabaseService } from '@/services/databaseService';
 import { patientsAPI } from '@/utils/api';
-import { uploadPatientFile, getFileUrl, deletePatientFile } from '@/services/simpleFileUpload';
+import { uploadPatientFile, deletePatientFile } from '@/services/simpleFileUpload';
 import { getPatientPhotoUrl, PatientPhoto } from '@/utils/photoUtils';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Download, Upload, RefreshCw, UserCheck, Activity, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
@@ -80,11 +80,16 @@ const FileUploadField: React.FC<FileUploadFieldProps> = ({
       {currentFile && currentFile.trim() !== '' && !uploadedFile && (
         <div className="relative">
           <img 
-            src={currentFile.startsWith('data:') ? currentFile : `data:image/jpeg;base64,${currentFile}`}
+            src={currentFile.startsWith('data:') ? currentFile : getPatientPhotoUrl(currentFile)}
             alt={label}
             className="w-full h-32 object-cover rounded-md border"
             onError={(e) => {
+              console.error('❌ Failed to load image in FileUploadField:', currentFile);
+              console.error('❌ Constructed URL:', currentFile.startsWith('data:') ? 'data URL' : getPatientPhotoUrl(currentFile));
               (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+            onLoad={() => {
+              console.log('✅ Image loaded successfully in FileUploadField:', currentFile);
             }}
           />
           <div className="text-xs text-muted-foreground mt-1">Current {label}</div>
@@ -139,7 +144,6 @@ const PatientList: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [viewPatient, setViewPatient] = useState<Patient | null>(null);
@@ -248,13 +252,11 @@ const PatientList: React.FC = () => {
           return isNaN(parsed.getTime()) ? new Date() : parsed;
         };
         
-        // Handle mixed database structure:
-        // - p.id is always numeric (67, 68, 70...)
-        // - p.patient_id might be P-prefixed (P0067, P0068) or NULL
-        const patientId = p.patient_id && String(p.patient_id).trim() 
-          ? String(p.patient_id).trim()  // Use existing patient_id if available (P0067)
-          : `P${String(p.id).padStart(4, '0')}`; // Generate P-format from numeric id (P0067)
-        const numericId = p.id || parseInt(String(patientId).replace(/\D/g, '')) || 1;
+        // Use the ID directly from backend (already in P0001 format)
+        const patientId = p.id && String(p.id).startsWith('P') 
+          ? p.id 
+          : `P${(p.originalId || p.id || 1).toString().padStart(4, '0')}`;
+        const numericId = p.originalId || parseInt(String(p.id || patientId).replace(/\D/g, '')) || 1;
         
         // Log individual patient payment data for debugging
         console.log(`Patient ${p.name} payment data:`, {
@@ -759,153 +761,129 @@ const PatientList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-blue-700 hover:scale-110">
-                <Users className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-blue-600">Patient Management</h1>
-                {/* <p className="text-sm text-gray-600 mt-1">Comprehensive patient records and management system</p> */}
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient Management</h1>
+                {/* <p className="modern-page-subtitle">
+                  Manage and view all registered patients in your healthcare system
+                </p> */}
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button 
+          
+            <div className="header-actions-container">
+              <button 
                 onClick={() => {
                   console.log('🔄 Manual refresh triggered');
                   loadPatients();
                 }}
                 disabled={loading}
-                variant="outline"
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md border-blue-300 hover:border-blue-500 hover:bg-blue-50"
+                className="header-action-btn--refresh"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} transition-transform duration-300 hover:rotate-180 text-blue-600`} />
-                <span className="font-medium">Refresh</span>
-              </Button>
-              
-              <Button 
+                <RefreshCw className={`header-action-btn__icon ${loading ? 'animate-spin' : ''}`} />
+                <span className="header-action-btn__text">Refresh</span>
+              </button>
+              <button 
                 onClick={exportToCSV}
-                variant="outline"
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md border-green-300 hover:border-green-500 hover:bg-green-50"
+                className="header-action-btn--export"
               >
-                <Download className="h-4 w-4 transition-transform duration-300 hover:scale-110 text-green-600" />
-                <span className="font-medium">Export</span>
-              </Button>
-              
-              <Button
+                <Download className="header-action-btn__icon" />
+                <span className="header-action-btn__text header-action-btn__text--sm-hidden">Export CSV</span>
+              </button>
+              <button 
                 onClick={() => navigate('/patients/add')}
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md bg-blue-600 hover:bg-blue-700 text-white"
+                className="header-action-btn--primary"
               >
-                <Plus className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
-                <span className="font-medium">Add Patient</span>
-              </Button>
+                <Plus className="header-action-btn__icon" />
+                <span className="header-action-btn__text">Add Patient</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Patients</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{filteredPatients.length}</p>
-                </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="bg-white/90 backdrop-blur-sm border border-blue-100 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
               </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredPatients.length}</div>
+                <div className="text-xs text-gray-600">Total Patients</div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <UserCheck className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white/90 backdrop-blur-sm border border-green-100 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <UserCheck className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredPatients.filter(p => p.status === 'Active').length}
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Patients</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">
-                    {filteredPatients.filter(p => p.status === 'Active').length}
-                  </p>
+                <div className="text-xs text-gray-600">Active Patients</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white/90 backdrop-blur-sm border border-orange-100 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredPatients.filter(p => p.status === 'Critical').length}
                 </div>
+                <div className="text-xs text-gray-600">Critical Cases</div>
               </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+            </div>
+          </div>
+          
+          <div className="bg-white/90 backdrop-blur-sm border border-purple-100 rounded-xl p-3 sm:p-4 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-300">
-                  <Activity className="h-6 w-6 text-orange-600" />
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {new Date().toLocaleDateString()}
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Critical Cases</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">
-                    {filteredPatients.filter(p => p.status === 'Critical').length}
-                  </p>
-                </div>
+                <div className="text-xs text-gray-600">Last Updated</div>
               </div>
-              <div className="mt-4 h-1 bg-orange-200 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Today's Date</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">
-                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
+        {/* Search and Filter Controls */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search patients by name, ID, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full lg:w-48">
+            
+            <div className="w-full sm:w-auto min-w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -920,43 +898,77 @@ const PatientList: React.FC = () => {
           </div>
         </div>
 
-        {/* Patient Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center text-lg font-semibold text-gray-900">
-              <Users className="h-5 w-5 mr-2" />
-              <span>Patients List ({filteredPatients.length})</span>
+        {/* Patients Table */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
+            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="hidden sm:inline">Patients List ({filteredPatients.length})</span>
+              <span className="sm:hidden">Patients ({filteredPatients.length})</span>
             </div>
           </div>
         
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-600">Loading patients...</p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-12 text-red-600">{error}</div>
-          ) : filteredPatients.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {searchTerm || statusFilter !== 'All' ? 'No patients match your search criteria.' : 'No patients found.'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="w-full min-w-[800px]">
-                <TableHeader>
-                  <TableRow className="bg-gray-50 border-b">
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">S No</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Photo</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Patient ID</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Name</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Age</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Gender</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Phone</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Admission Date</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Status</TableHead>
-                    <TableHead className="px-4 py-3 text-center font-medium text-gray-700 text-sm">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+        {/* Scrollable Table View for All Screen Sizes */}
+        <div className="overflow-x-auto">
+          <Table className="w-full min-w-[800px]">
+            <TableHeader>
+              <TableRow className="bg-gray-50 border-b">
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>S No</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Photo</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Patient ID</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Name</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Age</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Gender</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Phone</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Admission Date</span>
+                    <span className="sm:hidden">Date</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Status</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Actions</span>
+                  </div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {filteredPatients
                 .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
@@ -973,24 +985,30 @@ const PatientList: React.FC = () => {
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">
                       <button 
                         onClick={() => {
-                          // Use the patient.id which is already properly formatted (P0067, P0068, etc.)
-                          const route = `/patients/fully-history/${patient.id}`;
-                          
-                          console.log('🔗 Patient ID Navigation:', {
-                            clickedPatientName: patient.name,
-                            clickedPatientId: patient.id,
-                            originalDbId: patient.originalId,
-                            navigationRoute: route,
-                            timestamp: new Date().toISOString()
-                          });
-                          
-                          // Navigate to patient history
-                          navigate(route);
+                          try {
+                            const patientIdForRoute = patient.id?.startsWith('P') ? patient.id : `P${String(patient.originalId || patient.id).padStart(4, '0')}`;
+                            console.log('🔗 Button clicked for patient details:', {
+                              patientId: patient.id,
+                              originalId: patient.originalId,
+                              name: patient.name,
+                              patientIdForRoute: patientIdForRoute,
+                              routeWillBe: `/patients/details/${patientIdForRoute}`
+                            });
+                            console.log('🚀 Attempting navigation to:', `/patients/details/${patientIdForRoute}`);
+                            
+                            // Use window.location instead of navigate for testing
+                            window.location.href = `/patients/details/${patientIdForRoute}`;
+                            
+                            console.log('✅ Navigation call completed');
+                          } catch (error) {
+                            console.error('❌ Navigation error:', error);
+                          }
                         }}
-                        className="text-blue-600 font-bold hover:text-blue-800 hover:bg-blue-50 transition-all duration-200 px-2 py-1 rounded-md cursor-pointer text-sm border border-blue-200 hover:border-blue-400"
-                        title={`Click to view full medical history for ${patient.name}`}
+                        className="text-primary font-medium hover:underline hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 p-1 h-auto text-xs sm:text-sm cursor-pointer rounded-md inline-flex items-center gap-1"
+                        title={`View full details for ${patient.name} (Click to open comprehensive patient information)`}
                       >
-                        {patient.id}
+                        �
+                        {patient.id?.startsWith('P') ? patient.id : `P${String(patient.originalId || patient.id).padStart(4, '0')}`}
                       </button>
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm max-w-[100px] sm:max-w-[120px] truncate">{patient.name}</TableCell>
@@ -1010,29 +1028,28 @@ const PatientList: React.FC = () => {
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
                       <div className="flex space-x-1 justify-center">
                         <Button
-                        variant="outline" 
+                          variant="ghost"
                           size="sm"
                           onClick={() => setViewPatient(patient)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 bg-green-100 hover:bg-green-200 border-green-200 hover:border-green-400 action-btn-edit rounded-lg"
-
-                        title="View Patient"
+                          className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
+                          title="View Patient"
                         >
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
-                         size="sm" 
-                        variant="outline" 
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(patient)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
                           title="Edit Patient"
                         >
                           <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
-                         size="sm" 
-                        variant="outline" 
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDelete(patient)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                          className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
                           title="Delete Patient"
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1043,8 +1060,6 @@ const PatientList: React.FC = () => {
                 ))}
             </TableBody>
           </Table>
-            </div>
-          )}
           
           {filteredPatients.length === 0 && (
             <div className="text-center py-12 bg-white">
@@ -1057,38 +1072,77 @@ const PatientList: React.FC = () => {
           )}
         </div>
 
-        {/* Pagination */}
+        {/* Mobile Responsive Pagination */}
         {filteredPatients.length > rowsPerPage && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="text-sm text-gray-600">
-                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredPatients.length)} of {filteredPatients.length} patients
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 py-3 sm:py-4 px-4 sm:px-6 bg-white border-t">
+            {/* Pagination Info */}
+            <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+              <span className="hidden sm:inline">
+                Page {currentPage} of {Math.ceil(filteredPatients.length / rowsPerPage)} 
+                ({filteredPatients.length} total patients)
+              </span>
+              <span className="sm:hidden">
+                {currentPage} / {Math.ceil(filteredPatients.length / rowsPerPage)}
+              </span>
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2 order-1 sm:order-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
+              </Button>
+              
+              {/* Page Numbers for Desktop */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: Math.min(5, Math.ceil(filteredPatients.length / rowsPerPage)) }, (_, i) => {
+                  const totalPages = Math.ceil(filteredPatients.length / rowsPerPage);
+                  let pageNumber;
+                  
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`w-8 h-8 p-0 text-xs ${
+                        currentPage === pageNumber 
+                          ? "bg-primary text-white" 
+                          : "bg-white hover:bg-gray-50 text-gray-600 border-gray-300"
+                      }`}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                })}
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="hover:bg-blue-50 hover:border-blue-300"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {Math.ceil(filteredPatients.length / rowsPerPage)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredPatients.length / rowsPerPage)))}
-                  disabled={currentPage === Math.ceil(filteredPatients.length / rowsPerPage)}
-                  className="hover:bg-blue-50 hover:border-blue-300"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredPatients.length / rowsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(filteredPatients.length / rowsPerPage)}
+                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">Next</span>
+              </Button>
             </div>
           </div>
         )}
@@ -1478,13 +1532,13 @@ const PatientList: React.FC = () => {
                             </div>
                             <div className="relative group">
                               <img
-                                src={getFileUrl(viewPatient.patientAadhar)}
+                                src={getPatientPhotoUrl(viewPatient.patientAadhar)}
                                 alt="Patient Aadhar Card"
                                 className="w-full h-24 sm:h-32 md:h-40 object-cover rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-                                onClick={() => window.open(getFileUrl(viewPatient.patientAadhar), '_blank')}
+                                onClick={() => window.open(getPatientPhotoUrl(viewPatient.patientAadhar), '_blank')}
                                 onError={(e) => {
                                   console.error('❌ Failed to load Patient Aadhar image:', viewPatient.patientAadhar);
-                                  console.error('❌ Constructed URL:', getFileUrl(viewPatient.patientAadhar));
+                                  console.error('❌ Constructed URL:', getPatientPhotoUrl(viewPatient.patientAadhar));
                                   const img = e.currentTarget as HTMLImageElement;
                                   img.style.display = 'none';
                                   if (!img.parentNode?.querySelector('.error-message')) {
@@ -1515,13 +1569,13 @@ const PatientList: React.FC = () => {
                             </div>
                             <div className="relative group">
                               <img
-                                src={getFileUrl(viewPatient.patientPan)}
+                                src={getPatientPhotoUrl(viewPatient.patientPan)}
                                 alt="Patient PAN Card"
                                 className="w-full h-40 object-cover rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-                                onClick={() => window.open(getFileUrl(viewPatient.patientPan), '_blank')}
+                                onClick={() => window.open(getPatientPhotoUrl(viewPatient.patientPan), '_blank')}
                                 onError={(e) => {
                                   console.error('❌ Failed to load Patient PAN image:', viewPatient.patientPan);
-                                  console.error('❌ Constructed URL:', getFileUrl(viewPatient.patientPan));
+                                  console.error('❌ Constructed URL:', getPatientPhotoUrl(viewPatient.patientPan));
                                   const img = e.currentTarget as HTMLImageElement;
                                   img.style.display = 'none';
                                   if (!img.parentNode?.querySelector('.error-message')) {
@@ -1571,13 +1625,13 @@ const PatientList: React.FC = () => {
                             </div>
                             <div className="relative group">
                               <img
-                                src={getFileUrl(viewPatient.attenderAadhar)}
+                                src={getPatientPhotoUrl(viewPatient.attenderAadhar)}
                                 alt="Attender Aadhar Card"
                                 className="w-full h-40 object-cover rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-                                onClick={() => window.open(getFileUrl(viewPatient.attenderAadhar), '_blank')}
+                                onClick={() => window.open(getPatientPhotoUrl(viewPatient.attenderAadhar), '_blank')}
                                 onError={(e) => {
                                   console.error('❌ Failed to load Attender Aadhar image:', viewPatient.attenderAadhar);
-                                  console.error('❌ Constructed URL:', getFileUrl(viewPatient.attenderAadhar));
+                                  console.error('❌ Constructed URL:', getPatientPhotoUrl(viewPatient.attenderAadhar));
                                   const img = e.currentTarget as HTMLImageElement;
                                   img.style.display = 'none';
                                   if (!img.parentNode?.querySelector('.error-message')) {
@@ -1608,13 +1662,13 @@ const PatientList: React.FC = () => {
                             </div>
                             <div className="relative group">
                               <img
-                                src={getFileUrl(viewPatient.attenderPan)}
+                                src={getPatientPhotoUrl(viewPatient.attenderPan)}
                                 alt="Attender PAN Card"
                                 className="w-full h-40 object-cover rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-                                onClick={() => window.open(getFileUrl(viewPatient.attenderPan), '_blank')}
+                                onClick={() => window.open(getPatientPhotoUrl(viewPatient.attenderPan), '_blank')}
                                 onError={(e) => {
                                   console.error('❌ Failed to load Attender PAN image:', viewPatient.attenderPan);
-                                  console.error('❌ Constructed URL:', getFileUrl(viewPatient.attenderPan));
+                                  console.error('❌ Constructed URL:', getPatientPhotoUrl(viewPatient.attenderPan));
                                   const img = e.currentTarget as HTMLImageElement;
                                   img.style.display = 'none';
                                   if (!img.parentNode?.querySelector('.error-message')) {
@@ -1774,7 +1828,7 @@ const PatientList: React.FC = () => {
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-muted border">
                   {editPatient.photo && editPatient.photo.trim() !== '' ? (
                     <img 
-                      src={editPatient.photo.startsWith('data:') ? editPatient.photo : getFileUrl(editPatient.photo)} 
+                      src={editPatient.photo.startsWith('data:') ? editPatient.photo : getPatientPhotoUrl(editPatient.photo)} 
                       alt={editPatient.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -2115,6 +2169,7 @@ const PatientList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

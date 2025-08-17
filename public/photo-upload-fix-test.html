@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔧 Photo Upload Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .step { margin: 10px 0; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Photo Upload Folder Fix Test</h1>
+    <p>Testing if photos and documents save to <strong>"patient Admission"</strong> folder instead of <strong>"Doctor Admission"</strong> folder.</p>
+    
+    <div class="step">
+        <h3>Step 1: Upload a test file</h3>
+        <input type="file" id="fileInput" accept="image/*,.pdf">
+        <button onclick="testUpload()" style="margin-left: 10px; padding: 8px 16px;">Upload Test File</button>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Create test patient</h3>
+        <button onclick="createTestPatient()" style="padding: 8px 16px;">Create Test Patient</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+    let tempFilePath = '';
+    let patientId = '';
+
+    async function testUpload() {
+        const fileInput = document.getElementById('fileInput');
+        const resultDiv = document.getElementById('result');
+        
+        if (!fileInput.files[0]) {
+            resultDiv.innerHTML = '<div class="result error">Please select a file first!</div>';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('patientId', 'temp'); // This should go to temp initially
+        formData.append('fieldName', 'photo');
+
+        try {
+            resultDiv.innerHTML = '<div class="result info">🔄 Uploading file to temp folder...</div>';
+            
+            const response = await fetch('http://localhost:4000/api/patients/upload-patient-file', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            
+            if (response.ok) {
+                tempFilePath = result.filePath;
+                resultDiv.innerHTML = \`
+                    <div class="result success">
+                        <h3>✅ File uploaded to temp successfully!</h3>
+                        <p><strong>File path:</strong> \${result.filePath}</p>
+                        <p><strong>Expected:</strong> Should contain "patient Admission/temp"</p>
+                        <p><strong>Status:</strong> \${result.filePath.includes('patient Admission/temp') ? '✅ CORRECT!' : '❌ Still using Doctor Admission'}</p>
+                    </div>
+                \`;
+            } else {
+                throw new Error(result.error || 'Upload failed');
+            }
+        } catch (error) {
+            resultDiv.innerHTML = \`
+                <div class="result error">
+                    <h3>❌ Upload failed</h3>
+                    <p>\${error.message}</p>
+                </div>
+            \`;
+        }
+    }
+
+    async function createTestPatient() {
+        const resultDiv = document.getElementById('result');
+        
+        if (!tempFilePath) {
+            resultDiv.innerHTML = '<div class="result error">Please upload a file first!</div>';
+            return;
+        }
+
+        const patientData = {
+            name: 'Test Patient ' + Date.now(),
+            age: 30,
+            gender: 'Male',
+            phone: '9999999999',
+            email: 'test@example.com',
+            address: 'Test Address',
+            emergencyContact: 'Emergency Contact',
+            marriageStatus: 'Married',
+            employeeStatus: 'Self Employed',
+            attenderRelationship: 'Son',
+            photo: tempFilePath
+        };
+
+        try {
+            resultDiv.innerHTML += '<div class="result info">🔄 Creating test patient...</div>';
+            
+            // Create patient
+            const patientResponse = await fetch('http://localhost:4000/api/patients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patientData)
+            });
+
+            const patientResult = await patientResponse.json();
+            
+            if (patientResponse.ok) {
+                patientId = patientResult.patient_id;
+                resultDiv.innerHTML += \`
+                    <div class="result success">
+                        <h3>✅ Patient created successfully!</h3>
+                        <p><strong>Patient ID:</strong> \${patientId}</p>
+                    </div>
+                \`;
+                
+                // Now move files from temp to patient folder
+                resultDiv.innerHTML += '<div class="result info">🔄 Moving file from temp to patient folder...</div>';
+                
+                const moveResponse = await fetch('http://localhost:4000/api/patients/move-patient-files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patientId: patientId,
+                        tempPaths: { photo: tempFilePath }
+                    })
+                });
+
+                const moveResult = await moveResponse.json();
+                
+                if (moveResponse.ok) {
+                    const newPhotoPath = moveResult.newPaths.photo;
+                    const isCorrectFolder = newPhotoPath.includes(\`patient Admission/\${patientId}\`);
+                    
+                    resultDiv.innerHTML += \`
+                        <div class="result \${isCorrectFolder ? 'success' : 'error'}">
+                            <h3>\${isCorrectFolder ? '✅ SUCCESS! File moved to correct folder!' : '❌ File still in wrong folder!'}</h3>
+                            <p><strong>New file path:</strong> \${newPhotoPath}</p>
+                            <p><strong>Expected pattern:</strong> Photos/patient Admission/\${patientId}/filename</p>
+                            <p><strong>Result:</strong> \${isCorrectFolder ? '✅ Files are now saving to PATIENT ADMISSION folder with correct Patient ID!' : '❌ Files are still saving to wrong location'}</p>
+                        </div>
+                    \`;
+                } else {
+                    throw new Error(moveResult.error || 'File move failed');
+                }
+            } else {
+                throw new Error(patientResult.error || 'Patient creation failed');
+            }
+            
+        } catch (error) {
+            resultDiv.innerHTML += \`
+                <div class="result error">
+                    <h3>❌ Test failed</h3>
+                    <p>\${error.message}</p>
+                </div>
+            \`;
+        }
+    }
+    </script>
+</body>
+</html>

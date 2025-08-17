@@ -17,10 +17,24 @@ export const getPatientPhotoUrl = (photoPath: string): string => {
     return photoPath;
   }
   
+  // Handle the CRM photo storage pattern: Photos/patient Admission/{patientId}/
+  if (photoPath.includes('Photos/patient Admission/')) {
+    // Photo path is already in correct format from database
+    return `/${photoPath.replace(/\s/g, '%20')}`;
+  }
+  
   // Handle backend file paths
   if (photoPath.startsWith('/uploads/')) {
     const baseUrl = import.meta.env.VITE_BASE_URL || import.meta.env.VITE_API_URL.replace(/\/api$/, '');
     return baseUrl + photoPath;
+  }
+  
+  // For paths that might be just filenames, try to construct full path
+  // This is a fallback - ideally we'd have the patient ID to construct proper path
+  if (!photoPath.startsWith('/') && !photoPath.includes('/')) {
+    // This is likely just a filename, but we can't construct proper path without patient ID
+    // Return as-is and let the image error handling deal with it
+    return `/Photos/patient%20Admission/unknown/${photoPath}`;
   }
   
   // For legacy paths without /uploads/ prefix
@@ -45,6 +59,15 @@ export const PatientPhoto = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   
   const photoUrl = getPatientPhotoUrl(photoPath);
+  
+  // Debug logging
+  console.log('🔍 PatientPhoto Debug:', {
+    photoPath,
+    photoUrl,
+    isEmpty: !photoPath || photoPath.trim() === '' || photoPath === 'null',
+    baseUrl: import.meta.env.VITE_BASE_URL,
+    apiUrl: import.meta.env.VITE_API_URL
+  });
   
   // Reset error state when photoPath changes
   useEffect(() => {

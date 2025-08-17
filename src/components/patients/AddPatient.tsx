@@ -257,6 +257,10 @@ const AddPatient: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
+    console.log('🚀 Form submission started');
+    console.log('📝 Current form data:', formData);
+    
     try {
       // Validate required fields
       if (!formData.name.trim()) {
@@ -330,7 +334,7 @@ const AddPatient: React.FC = () => {
       if (photo) {
         try {
           console.log('🔄 Attempting photo upload with simple method...');
-          photoPath = await uploadPatientFileSimple(photo, 'new', 'photo');
+          photoPath = await uploadPatientFileSimple(photo, 'temp', 'photo');
           console.log('✅ Photo uploaded successfully:', photoPath);
         } catch (error) {
           console.error('❌ Photo upload failed:', error);
@@ -347,7 +351,7 @@ const AddPatient: React.FC = () => {
       // Upload document files to server
       if (documents.patientAadhar) {
         try {
-          patientAadharPath = await uploadPatientFileSimple(documents.patientAadhar, 'new', 'patientAadhar');
+          patientAadharPath = await uploadPatientFileSimple(documents.patientAadhar, 'temp', 'patientAadhar');
           console.log('✅ Patient Aadhar uploaded successfully:', patientAadharPath);
         } catch (error) {
           console.error('❌ Patient Aadhar upload failed:', error);
@@ -360,7 +364,7 @@ const AddPatient: React.FC = () => {
       }
       if (documents.patientPan) {
         try {
-          patientPanPath = await uploadPatientFileSimple(documents.patientPan, 'new', 'patientPan');
+          patientPanPath = await uploadPatientFileSimple(documents.patientPan, 'temp', 'patientPan');
           console.log('✅ Patient PAN uploaded successfully:', patientPanPath);
         } catch (error) {
           console.error('❌ Patient PAN upload failed:', error);
@@ -373,7 +377,7 @@ const AddPatient: React.FC = () => {
       }
       if (documents.attenderAadhar) {
         try {
-          attenderAadharPath = await uploadPatientFileSimple(documents.attenderAadhar, 'new', 'attenderAadhar');
+          attenderAadharPath = await uploadPatientFileSimple(documents.attenderAadhar, 'temp', 'attenderAadhar');
           console.log('✅ Attender Aadhar uploaded successfully:', attenderAadharPath);
         } catch (error) {
           console.error('❌ Attender Aadhar upload failed:', error);
@@ -386,7 +390,7 @@ const AddPatient: React.FC = () => {
       }
       if (documents.attenderPan) {
         try {
-          attenderPanPath = await uploadPatientFileSimple(documents.attenderPan, 'new', 'attenderPan');
+          attenderPanPath = await uploadPatientFileSimple(documents.attenderPan, 'temp', 'attenderPan');
           console.log('✅ Attender PAN uploaded successfully:', attenderPanPath);
         } catch (error) {
           console.error('❌ Attender PAN upload failed:', error);
@@ -432,13 +436,27 @@ const AddPatient: React.FC = () => {
       };
 
       console.log('📋 Final patient data being submitted:');
+      console.log('  Name:', patientData.name);
+      console.log('  Age:', patientData.age);
+      console.log('  Gender:', patientData.gender);
+      console.log('  Phone:', patientData.phone);
+      console.log('  Email:', patientData.email);
+      console.log('  Address:', patientData.address);
+      console.log('  Emergency Contact:', patientData.emergencyContact);
+      console.log('  Medical History:', patientData.medicalHistory);
+      console.log('  Admission Date:', patientData.admissionDate);
+      console.log('  Status:', patientData.status);
       console.log('  Photo:', photoPath);
       console.log('  Patient Aadhar:', patientAadharPath);
       console.log('  Patient PAN:', patientPanPath);
       console.log('  Attender Aadhar:', attenderAadharPath);
       console.log('  Attender PAN:', attenderPanPath);
-      console.log('Submitting patient data:', patientData);
+      console.log('  Complete patient data object:', JSON.stringify(patientData, null, 2));
+      console.log('🌐 API URL being used:', import.meta.env.VITE_API_URL || 'http://localhost:4000/api');
+      
+      console.log('🚀 About to call DatabaseService.addPatient with data:', patientData);
       const addPatientResponse = await DatabaseService.addPatient(patientData);
+      console.log('✅ Patient creation API response:', addPatientResponse);
       console.log('🔍 Full patient creation response:', addPatientResponse);
       
       // Get the actual patient ID from the response (use patient_id which is in P0001 format)
@@ -533,9 +551,10 @@ const AddPatient: React.FC = () => {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
-          
-          await DatabaseService.addPatientPayment(paymentData);
-          console.log('Synced payment data for new patient:', formData.name);
+          console.log('💰 Payment data to be saved:', paymentData);
+          // Temporarily comment out the payment saving to debug patient creation
+          // await DatabaseService.addPatientPayment(paymentData);
+          console.log('💰 Payment sync temporarily disabled for debugging');
         } catch (paymentError) {
           console.warn('Failed to sync payment data for new patient:', paymentError);
           // Fallback to localStorage
@@ -564,10 +583,12 @@ const AddPatient: React.FC = () => {
         navigate('/patients/list');
       }, 1500);
     } catch (error) {
-      console.error('Error adding patient:', error);
+      console.error('❌ Error adding patient:', error);
+      console.error('❌ Error details:', error?.message || 'Unknown error');
+      console.error('❌ Full error object:', JSON.stringify(error, null, 2));
       toast({
         title: "Error",
-        description: "Failed to add patient. Please try again.",
+        description: `Failed to add patient: ${error?.message || 'Please try again.'}`,
         variant: "destructive",
       });
     } finally {

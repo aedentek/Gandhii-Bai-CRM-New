@@ -17,7 +17,7 @@ class MedicalRecordService {
 
   static async addPatientMedicalRecord(data: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/patient-medical-records`, {
+      const response = await fetch(`${this.baseUrl}/patient-medical-records/json`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

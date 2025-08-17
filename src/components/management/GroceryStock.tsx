@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye, BarChart3, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Helper function to format grocery ID
@@ -1026,82 +1026,192 @@ const handleRefresh = React.useCallback(() => {
           </DialogContent>
         </Dialog>
 
-        {/* View Stock Dialog */}
+        {/* View Stock Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
         <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Eye className="h-6 w-6 text-blue-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Stock Details
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="px-2 sm:px-6">
+              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <span className="truncate">Stock Information History</span>
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Complete information about this stock item
-              </DialogDescription>
             </DialogHeader>
             
             {viewingStock && (
-              <div className="space-y-4 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">GR ID</Label>
-                    <div className="text-sm font-medium text-gray-900">{viewingStock.grId}</div>
+              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
+                {/* Product Details Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      Product Details
+                    </h3>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Product Name</Label>
-                    <div className="text-sm font-medium text-gray-900">{viewingStock.productName}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Category</Label>
-                    <div className="text-sm text-gray-900">{viewingStock.category}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Supplier</Label>
-                    <div className="text-sm text-gray-900">{viewingStock.supplier}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Current Stock</Label>
-                    <div className="text-sm text-gray-900">{viewingStock.currentStock} {viewingStock.unit}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Used Stock</Label>
-                    <div className="text-sm text-gray-900">{viewingStock.usedStock} {viewingStock.unit}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Balance</Label>
-                    <div className="text-sm font-medium text-gray-900">
-                      {viewingStock.currentStock - viewingStock.usedStock} {viewingStock.unit}
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">GR ID</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                          {viewingStock.grId}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product Name</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewingStock.productName}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewingStock.category}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Supplier</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewingStock.supplier}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Unit</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewingStock.unit}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Price per Unit</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          ₹{viewingStock.price}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Purchase Date</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewingStock.purchaseDate ? (() => {
+                            try {
+                              const date = new Date(viewingStock.purchaseDate);
+                              if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('en-GB');
+                              }
+                              return viewingStock.purchaseDate;
+                            } catch {
+                              return viewingStock.purchaseDate || 'Not specified';
+                            }
+                          })() : 'Not specified'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Last Update</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewingStock.lastUpdate ? (() => {
+                            try {
+                              const date = new Date(viewingStock.lastUpdate);
+                              if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('en-GB');
+                              }
+                              return viewingStock.lastUpdate;
+                            } catch {
+                              return viewingStock.lastUpdate || 'Not specified';
+                            }
+                          })() : 'Not specified'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Price</Label>
-                    <div className="text-sm text-gray-900">₹{viewingStock.price}</div>
+                </div>
+                
+                {/* Stock Summary Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      Stock Summary
+                    </h3>
                   </div>
-                  <div className="col-span-2">
-                    <Label className="text-sm font-medium text-gray-500">Status</Label>
-                    <div className="mt-1">
-                      <Badge 
-                        variant={viewingStock.status === 'in-stock' ? 'default' : viewingStock.status === 'low-stock' ? 'secondary' : 'destructive'}
-                        className={`
-                          ${viewingStock.status === 'in-stock' ? 'bg-green-100 text-green-800' : 
-                            viewingStock.status === 'low-stock' ? 'bg-orange-100 text-orange-800' : 
-                            'bg-red-100 text-red-800'}
-                        `}
-                      >
-                        {viewingStock.status === 'in-stock' ? 'In Stock' : viewingStock.status === 'low-stock' ? 'Low Stock' : 'Out of Stock'}
-                      </Badge>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">{viewingStock.currentStock || 0}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Current Stock</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">{viewingStock.usedStock || 0}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Used Stock</div>
+                      </div>
+                      <div className="text-center lg:col-start-3">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">{(viewingStock.currentStock || 0) - (viewingStock.usedStock || 0)}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Available</div>
+                      </div>
+                      <div className="text-center lg:col-start-4">
+                        <div className="mb-2">
+                          <Badge 
+                            variant={
+                              viewingStock.status === 'in-stock' ? 'default' : 
+                              viewingStock.status === 'low-stock' ? 'secondary' : 'destructive'
+                            }
+                            className={`text-xs sm:text-sm font-medium px-2 py-1 ${
+                              viewingStock.status === 'in-stock' ? 'bg-green-100 text-green-800' :
+                              viewingStock.status === 'low-stock' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {viewingStock.status === 'in-stock' ? 'In Stock' :
+                             viewingStock.status === 'low-stock' ? 'Low Stock' :
+                             'Out of Stock'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600">Status</div>
+                      </div>
                     </div>
+                  </div>
+                </div>
+                
+                {/* Stock Movement History */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                      Stock Movement History
+                    </h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[50px]">S NO</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Date</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Stock Change</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Type</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Stock After</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Description</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-6 sm:py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
+                              <span className="text-sm sm:text-base">No stock history recorded yet</span>
+                              <span className="text-xs text-gray-500 hidden sm:block">Stock movement tracking will appear here</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-100 px-3 sm:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
                 variant="outline"
                 onClick={() => setShowViewDialog(false)}
-                className="w-full"
+                className="w-full sm:w-auto modern-btn modern-btn-secondary text-sm sm:text-base"
               >
                 Close
               </Button>

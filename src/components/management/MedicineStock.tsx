@@ -30,7 +30,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, DollarSign } from 'lucide-react';
+import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, DollarSign, BarChart3, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 
@@ -838,87 +838,161 @@ const MedicineStock: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* View Stock Dialog */}
+        {/* View Stock Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
         <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Eye className="h-6 w-6 text-blue-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Stock Information History
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="px-2 sm:px-6">
+              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <span className="truncate">Stock Information History</span>
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Complete stock details and movement history
-              </DialogDescription>
             </DialogHeader>
             
             {viewItem && (
-              <div className="space-y-6 p-4">
-                {/* Product Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="font-bold mb-1">
-                      Medicine ID: <span className="text-blue-700 underline cursor-pointer">
-                        {typeof viewItem.id === 'number' ? `MD${viewItem.id.toString().padStart(4, '0')}` : (typeof viewItem.id === 'string' && /^\d+$/.test(viewItem.id) ? `MD${viewItem.id.padStart(4, '0')}` : viewItem.id)}
-                      </span>
-                    </div>
-                    <div className="font-bold mb-1">Category: <span className="font-normal">{viewItem.category}</span></div>
-                    <div className="font-bold mb-1">Purchase Date: <span className="font-normal">{formatDateDDMMYYYY(viewItem.purchase_date)}</span></div>
+              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
+                {/* Product Details Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      Product Details
+                    </h3>
                   </div>
-                  <div>
-                    <div className="font-bold mb-1">Product Name: <span className="font-normal">{viewItem.name}</span></div>
-                    <div className="font-bold mb-1">Supplier: <span className="font-normal">{viewItem.supplier ?? '-'}</span></div>
-                    <div className="font-bold mb-1">Expiry Date: <span className="font-normal">{formatDateDDMMYYYY(viewItem.expiry_date)}</span></div>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Medicine ID</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                          {typeof viewItem.id === 'number' ? `MD${viewItem.id.toString().padStart(4, '0')}` : (typeof viewItem.id === 'string' && /^\d+$/.test(viewItem.id) ? `MD${viewItem.id.padStart(4, '0')}` : viewItem.id)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product Name</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewItem.name}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewItem.category}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Supplier</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewItem.supplier ?? '-'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Unit</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          Units
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Price</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          ₹{viewItem.price ?? 0}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Purchase Date</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {formatDateDDMMYYYY(viewItem.purchase_date)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Expiry Date</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {formatDateDDMMYYYY(viewItem.expiry_date)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-600">Batch Number</label>
+                        <p className="font-semibold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          -
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Stock Summary */}
-                <div className="rounded-lg bg-blue-50 flex flex-col md:flex-row items-center justify-between p-6 gap-6">
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm text-gray-600 font-semibold mb-1">Total Stock:</div>
-                    <div className="text-2xl font-bold text-blue-700">{viewItem.quantity}</div>
+                
+                {/* Stock Summary Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b">
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-green-600" />
+                      Stock Summary
+                    </h3>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm text-gray-600 font-semibold mb-1">Used Stock:</div>
-                    <div className="text-2xl font-bold text-red-600">{viewItem.used_stock ?? 0}</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm text-gray-600 font-semibold mb-1">Available:</div>
-                    <div className="text-2xl font-bold text-green-600">{viewItem.balance_stock ?? (viewItem.quantity - (viewItem.used_stock ?? 0))}</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm text-gray-600 font-semibold mb-1">Status:</div>
-                    <div>
-                      <Badge variant={getStatusColor(viewItem.status)} className="text-base px-4 py-1">
-                        {viewItem.status.replace(/[-_]/g, ' ').charAt(0).toUpperCase() + viewItem.status.replace(/[-_]/g, ' ').slice(1)}
-                      </Badge>
+                  
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600">{viewItem.quantity || 0}</div>
+                        <div className="text-sm text-gray-600">Total Stock</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-red-600">{viewItem.used_stock || 0}</div>
+                        <div className="text-sm text-gray-600">Used Stock</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-green-600">{viewItem.balance_stock ?? ((viewItem.quantity || 0) - (viewItem.used_stock || 0))}</div>
+                        <div className="text-sm text-gray-600">Available</div>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <Badge 
+                          variant={getStatusColor(viewItem.status)}
+                          className={`text-sm font-medium ${
+                            viewItem.status === 'in_stock' ? 'bg-green-100 text-green-800' :
+                            viewItem.status === 'low_stock' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {viewItem.status.replace(/[-_]/g, ' ').charAt(0).toUpperCase() + viewItem.status.replace(/[-_]/g, ' ').slice(1)}
+                        </Badge>
+                        <div className="text-sm text-gray-600">Status</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-
+                
                 {/* Stock Movement History */}
-                <div>
-                  <div className="text-lg font-semibold mb-2">Stock Movement History</div>
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                      <History className="h-5 w-5 text-gray-600" />
+                      Stock Movement History
+                    </h3>
+                  </div>
+                  
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border text-sm">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="px-3 py-2 border text-left">S NO</th>
-                          <th className="px-3 py-2 border text-left">Date</th>
-                          <th className="px-3 py-2 border text-left">Stock Change</th>
-                          <th className="px-3 py-2 border text-left">Type</th>
-                          <th className="px-3 py-2 border text-left">Stock After</th>
-                          <th className="px-3 py-2 border text-left">Description</th>
-                          <th className="px-3 py-2 border text-left">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="px-3 py-2 border text-center" colSpan={7}>No stock history recorded yet</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead className="text-center font-medium">S NO</TableHead>
+                          <TableHead className="text-center font-medium">Date</TableHead>
+                          <TableHead className="text-center font-medium">Stock Change</TableHead>
+                          <TableHead className="text-center font-medium">Type</TableHead>
+                          <TableHead className="text-center font-medium">Stock After</TableHead>
+                          <TableHead className="text-center font-medium">Description</TableHead>
+                          <TableHead className="text-center font-medium">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package className="h-12 w-12 text-gray-300" />
+                              <span>No stock history recorded yet</span>
+                              <span className="text-xs text-gray-500">Stock movement tracking will appear here</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>

@@ -5,15 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from '../../hooks/use-toast';
-import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText } from 'lucide-react';
+import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { Textarea } from '../../components/ui/textarea';
-import { uploadMedicalHistoryFile } from '../../services/simpleFileUpload';
+import { uploadMedicalHistoryFile, uploadPatientHistoryFile } from '../../services/simpleFileUpload';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 
 type AudioRecording = {
   blob: Blob;
@@ -69,6 +71,8 @@ const PatientMedicalRecord: React.FC = () => {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isUpdatingRecords, setIsUpdatingRecords] = useState(false);
   
@@ -86,8 +90,8 @@ const PatientMedicalRecord: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(null);
-  const [filterYear, setFilterYear] = useState<number | null>(null);
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // View dialog filtering
   const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(new Date().getMonth());
@@ -102,6 +106,17 @@ const PatientMedicalRecord: React.FC = () => {
   const [viewRecord, setViewRecord] = useState<MedicalRecord | null>(null);
   const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewImageModal, setViewImageModal] = useState<{
+    show: boolean;
+    images: string[];
+    currentIndex: number;
+    recordId: string;
+  }>({
+    show: false,
+    images: [],
+    currentIndex: 0,
+    recordId: ''
+  });
 
   // Media recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -123,8 +138,16 @@ const PatientMedicalRecord: React.FC = () => {
     description: '',
     date: new Date().toISOString().split('T')[0],
     audioFiles: [] as File[],
-    photoFiles: [] as File[]
+    photoFiles: [] as File[],
+    documentFiles: [] as File[]
   });
+
+  // Function to format patient ID as P0001
+  const formatPatientId = (id: string | number): string => {
+    // Convert to number, removing any existing P prefix and leading zeros
+    const numericId = typeof id === 'string' ? parseInt(id.replace(/^P0*/, '')) : id;
+    return `P${numericId.toString().padStart(4, '0')}`;
+  };
 
   // Reset to first page when filter changes
   useEffect(() => {
@@ -172,7 +195,8 @@ const PatientMedicalRecord: React.FC = () => {
       
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          // Create File object using proper typing
+          const file = new (window as any).File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
           setCapturedPhotos(prev => [...prev, file]);
           setFormData(prev => ({ ...prev, photoFiles: [...prev.photoFiles, file] }));
           
@@ -212,7 +236,8 @@ const PatientMedicalRecord: React.FC = () => {
         const url = URL.createObjectURL(blob);
         setAudioRecording({ blob, url, duration: recordingTime });
         
-        const audioFile = new File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
+        // Create File object using proper typing
+        const audioFile = new (window as any).File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
         setFormData(prev => ({ ...prev, audioFiles: [audioFile] }));
         
         stream.getTracks().forEach(track => track.stop());
@@ -293,6 +318,55 @@ const PatientMedicalRecord: React.FC = () => {
       setFormData(prev => ({
         ...prev,
         audioFiles: [...prev.audioFiles, ...newFiles]
+      }));
+    }
+  };
+
+  // Document file upload handler
+  const handleDocumentFileUpload = (files: FileList | null) => {
+    if (files) {
+      const newFiles = Array.from(files).filter(file => {
+        // Allow common document formats
+        const allowedTypes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'text/plain',
+          'text/csv',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp'
+        ];
+        
+        if (!allowedTypes.includes(file.type)) {
+          toast({
+            title: "Invalid File Type",
+            description: `${file.name}: Only PDF, Word, Excel, PowerPoint, text, and image files are allowed.`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        
+        if (file.size > 500 * 1024 * 1024) { // 500MB limit
+          toast({
+            title: "File Too Large",
+            description: `${file.name}: Files larger than 500MB are not allowed.`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        
+        return true;
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        documentFiles: [...prev.documentFiles, ...newFiles]
       }));
     }
   };
@@ -384,12 +458,13 @@ const PatientMedicalRecord: React.FC = () => {
     }
   };
 
-  const refreshData = async () => {
+  // Load data without resetting filters (for month/year changes)
+  const loadData = async () => {
     setRefreshCounter(prev => prev + 1);
     setIsLoadingRecords(true);
     
     try {
-      // First load patients and medical records separately 
+      // Load patients and medical records separately without resetting filters
       const [patientsData, medicalRecordsData] = await Promise.all([
         DatabaseService.getAllPatients(),
         MedicalRecordService.getAllPatientMedicalRecords()
@@ -441,6 +516,160 @@ const PatientMedicalRecord: React.FC = () => {
         createdBy: record.created_by || record.createdBy || 'System',
         createdAt: record.created_at || record.createdAt || new Date().toISOString()
       }));
+
+      // Create patient list records exactly like refreshData
+      const patientListRecords: MedicalRecord[] = [];
+      
+      // For ALL patients, create basic patient registration entries for main table display
+      formattedPatients.forEach(patient => {
+        // Find the latest medical record for this patient (if any)
+        const latestMedicalRecord = processedMedicalRecords
+          .filter(record => String(record.patientId) === String(patient.id))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+        // Create patient registration entry for main table
+        patientListRecords.push({
+          id: `patient_${patient.id}`,
+          patientId: patient.id,
+          patientName: patient.name,
+          date: new Date().toISOString().split('T')[0],
+          recordType: 'registration',
+          description: latestMedicalRecord ? latestMedicalRecord.description : `Patient ${patient.name} registered in the system.`,
+          images: latestMedicalRecord?.images || [],
+          audioRecording: latestMedicalRecord?.audioRecording,
+          audioFiles: latestMedicalRecord?.audioFiles || [],
+          photoFiles: latestMedicalRecord?.photoFiles || [],
+          createdAt: new Date().toISOString(),
+          createdBy: 'System'
+        });
+      });
+
+      // Sort by Patient ID in ascending order (P0001, P0002, P0003, etc.)
+      patientListRecords.sort((a, b) => {
+        // Extract numeric part from patient ID for proper sorting
+        const getNumericId = (patientId: string) => {
+          const numericPart = patientId.replace(/^P0*/, ''); // Remove P prefix and leading zeros
+          return parseInt(numericPart) || 0;
+        };
+        
+        const aId = getNumericId(a.patientId);
+        const bId = getNumericId(b.patientId);
+        
+        return aId - bId; // Ascending order
+      });
+
+      setPatients(formattedPatients);
+      setMedicalRecords(processedMedicalRecords);
+      setRecords(patientListRecords);
+      
+      console.log('Data loaded successfully without resetting filters');
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setPatients([]);
+      setMedicalRecords([]);
+      setRecords([]);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRecords(false);
+      setIsLoadingComplete(true);
+    }
+  };
+
+  const refreshData = async () => {
+    setRefreshCounter(prev => prev + 1);
+    setIsLoadingRecords(true);
+    
+    // Reset all filters to current month/year
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    setFilterMonth(currentMonth);
+    setFilterYear(currentYear);
+    setSelectedMonth(currentMonth);
+    setSelectedYear(currentYear);
+    setSearchTerm('');
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setCurrentPage(1);
+    
+    try {
+      // First load patients and medical records separately 
+      const [patientsData, medicalRecordsData] = await Promise.all([
+        DatabaseService.getAllPatients(),
+        MedicalRecordService.getAllPatientMedicalRecords()
+      ]);
+
+      // Process patients
+      const formattedPatients = patientsData.map((p: any) => {
+        // Safely parse dates with validation - use created_at as fallback for admission date
+        const parseDate = (dateValue: any) => {
+          if (!dateValue) return null;
+          const parsedDate = new Date(dateValue);
+          return isNaN(parsedDate.getTime()) ? null : parsedDate;
+        };
+        
+        // Get admission date with fallback to created_at
+        const getAdmissionDate = (p: any) => {
+          return parseDate(p.admissionDate || p.admission_date) || parseDate(p.created_at) || null;
+        };
+        
+        return {
+          id: p.id.toString(),
+          name: p.name,
+          age: p.age || '',
+          gender: p.gender || '',
+          contactNumber: p.contactNumber || p.phone || '',
+          address: p.address || '',
+          locality: p.locality || '',
+          city: p.city || '',
+          bloodGroup: p.bloodGroup || '',
+          occupation: p.occupation || '',
+          guardian: p.guardian || '',
+          guardianPhone: p.guardianPhone || '',
+          referredBy: p.referredBy || '',
+          uhid: p.uhid || '',
+          photo: p.photo || '',
+          photoUrl: p.photoUrl || '',
+          status: p.status || 'Active',
+          admissionDate: getAdmissionDate(p)
+        };
+      });
+
+      // Process medical records
+      const processedMedicalRecords = medicalRecordsData.map((record: any) => {
+        console.log('🔍 Processing medical record:', record.id, 'Raw images:', record.images, 'Type:', typeof record.images);
+        
+        let parsedImages = [];
+        try {
+          if (Array.isArray(record.images)) {
+            parsedImages = record.images;
+          } else if (record.images && typeof record.images === 'string') {
+            parsedImages = JSON.parse(record.images);
+          } else if (record.images) {
+            parsedImages = record.images;
+          }
+        } catch (error) {
+          console.error('❌ Error parsing images for record', record.id, ':', error);
+          parsedImages = [];
+        }
+        
+        console.log('✅ Parsed images for record', record.id, ':', parsedImages);
+        
+        return {
+          ...record,
+          patientId: record.patient_id?.toString() || record.patientId?.toString() || '',
+          patientName: record.patient_name || record.patientName || 'Unknown',
+          recordType: record.record_type || record.recordType || 'consultation',
+          images: parsedImages,
+          createdBy: record.created_by || record.createdBy || 'System',
+          createdAt: record.created_at || record.createdAt || new Date().toISOString()
+        };
+      });
 
       // Create patient list records exactly like PatientCallRecord
       const patientListRecords: MedicalRecord[] = [];
@@ -522,8 +751,22 @@ const PatientMedicalRecord: React.FC = () => {
         return record.patientName.toLowerCase().includes(searchLower) ||
                record.description.toLowerCase().includes(searchLower) ||
                record.patientId.toLowerCase().includes(searchLower) ||
+               record.recordType.toLowerCase().includes(searchLower) ||
                (patient?.contactNumber && patient.contactNumber.toLowerCase().includes(searchLower)) ||
                (patient?.uhid && patient.uhid.toLowerCase().includes(searchLower));
+      });
+    }
+
+    // Type filtering
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(record => record.recordType === typeFilter);
+    }
+
+    // Status filtering (filter by patient status)
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(record => {
+        const patient = patients.find(p => String(p.id) === String(record.patientId));
+        return patient?.status === statusFilter;
       });
     }
 
@@ -550,7 +793,7 @@ const PatientMedicalRecord: React.FC = () => {
     });
 
     return filtered;
-  }, [records, patients, searchTerm, filterMonth, filterYear]);
+  }, [records, patients, searchTerm, typeFilter, statusFilter, filterMonth, filterYear]);
 
   const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -592,7 +835,8 @@ const PatientMedicalRecord: React.FC = () => {
       description: '',
       date: new Date().toISOString().split('T')[0],
       audioFiles: [],
-      photoFiles: []
+      photoFiles: [],
+      documentFiles: []
     });
     setAudioRecording(null);
     setCapturedPhotos([]);
@@ -644,6 +888,16 @@ const PatientMedicalRecord: React.FC = () => {
         }
       }
 
+      // Upload document files
+      for (const documentFile of formData.documentFiles) {
+        try {
+          const filePath = await uploadPatientHistoryFile(documentFile, formData.patientId, 'document');
+          uploadedImages.push(filePath);
+        } catch (error) {
+          console.error('Error uploading document:', error);
+        }
+      }
+
       const recordData = {
         id: editRecord?.id || `MR${Date.now()}`,
         patient_id: formData.patientId,
@@ -686,6 +940,12 @@ const PatientMedicalRecord: React.FC = () => {
   };
 
   const handleEdit = (record: MedicalRecord) => {
+    console.log('🔧 Edit Record Debug:');
+    console.log('   Record:', record);
+    console.log('   Record PatientId:', record.patientId, typeof record.patientId);
+    console.log('   Record PatientName:', record.patientName);
+    console.log('   Available Patients:', patients.map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
+    
     setEditRecord(record);
     setFormData({
       patientId: record.patientId,
@@ -693,7 +953,8 @@ const PatientMedicalRecord: React.FC = () => {
       description: record.description,
       date: record.date,
       audioFiles: [],
-      photoFiles: []
+      photoFiles: [],
+      documentFiles: []
     });
     setShowAddDialog(true);
   };
@@ -734,7 +995,8 @@ const PatientMedicalRecord: React.FC = () => {
         description: '',
         date: new Date().toISOString().split('T')[0],
         audioFiles: [],
-        photoFiles: []
+        photoFiles: [],
+        documentFiles: []
       });
       setShowAddDialog(true);
     }
@@ -769,79 +1031,159 @@ const PatientMedicalRecord: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-blue-700 hover:scale-110">
-                <FileText className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-blue-600">Patient Medical Records</h1>
-              
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      
+      {/* Image Viewer Modal */}
+      {viewImageModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">
+                Medical Record Files ({viewImageModal.currentIndex + 1} of {viewImageModal.images.length})
+              </h3>
+              <button
+                onClick={() => setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' })}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <Button
-                onClick={refreshData}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
-                disabled={isLoadingPatients || isLoadingRecords}
-                title="Reset to current data and refresh"
-              >
-                {isLoadingPatients || isLoadingRecords ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                <span className="font-medium">Refresh</span>
-              </Button>
+            <div className="p-4 flex flex-col items-center">
+              <div className="relative max-w-full max-h-[60vh] overflow-hidden rounded-lg">
+                <img
+                  src={`http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`}
+                  alt={`Medical record file ${viewImageModal.currentIndex + 1}`}
+                  className="max-w-full max-h-full object-contain"
+                  onError={(e) => {
+                    console.error('Image failed to load:', viewImageModal.images[viewImageModal.currentIndex]);
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
+                />
+              </div>
               
-              <Button 
-                onClick={exportToExcel}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
-                title="Export records to Excel"
-              >
-                <Download className="h-4 w-4" />
-                <span className="font-medium">Export Excel</span>
-              </Button>
+              {viewImageModal.images.length > 1 && (
+                <div className="flex items-center gap-4 mt-4">
+                  <button
+                    onClick={() => setViewImageModal(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex > 0 ? prev.currentIndex - 1 : prev.images.length - 1
+                    }))}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 rounded-full text-blue-600"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  
+                  <span className="px-4 py-2 bg-gray-100 rounded-full text-sm">
+                    {viewImageModal.currentIndex + 1} / {viewImageModal.images.length}
+                  </span>
+                  
+                  <button
+                    onClick={() => setViewImageModal(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex < prev.images.length - 1 ? prev.currentIndex + 1 : 0
+                    }))}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 rounded-full text-blue-600"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
               
-              <Button 
-                onClick={() => {
-                  resetForm();
-                  setShowAddDialog(true);
-                }}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="font-medium">Add Record</span>
-              </Button>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = `http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`;
+                    link.download = viewImageModal.images[viewImageModal.currentIndex].split('/').pop() || 'file';
+                    link.click();
+                  }}
+                  className="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.open(`http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`, '_blank');
+                  }}
+                  className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open in New Tab
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient Medical Records</h1>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  onClick={refreshData}
+                  disabled={isLoadingPatients || isLoadingRecords}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                >
+                  {isLoadingPatients || isLoadingRecords ? (
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  )}
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">↻</span>
+                </Button>
+                
+                {/* Month & Year Filter Button */}
+                <Button 
+                  type="button"
+                  onClick={() => setShowMonthYearDialog(true)}
+                  variant="outline"
+                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth]} ${filterYear}`
+                      : `${months[selectedMonth]} ${selectedYear}`
+                    }
+                  </span>
+                  <span className="sm:hidden">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                      : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                    }
+                  </span>
+                </Button>
+              </div>
+              
+
             </div>
           </div>
         </div>
 
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <FileText className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Records</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{medicalRecords.length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
 
+
+
+
+        {/* Professional Stats Cards - Full Width */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+          
           <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
             <CardContent className="p-6">
@@ -879,74 +1221,77 @@ const PatientMedicalRecord: React.FC = () => {
           </Card>
         </div>
 
-        {/* Search and Filter Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col md:flex-row gap-4 items-center flex-1">
-            <div className="relative min-w-[300px]">
-              <Input
-                placeholder="Search by patient name, ID, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-4"
-              />
-            </div>
-            
-            <button
-              onClick={() => setShowMonthYearDialog(true)}
-              className="modern-btn modern-btn-outline min-w-[150px] flex items-center justify-center"
-            >
-              {filterMonth !== null && filterYear !== null 
-                ? `${months[filterMonth]} ${filterYear}`
-                : 'Filter by Month'
-              }
-            </button>
-            
-            {(filterMonth !== null || filterYear !== null) && (
-              <button
-                onClick={() => {
-                  setFilterMonth(null);
-                  setFilterYear(null);
-                }}
-                className="modern-btn modern-btn-outline text-red-600 hover:text-red-700 hover:border-red-300"
+        {/* Filter and Search Section - Full Width */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col gap-4">
+            {/* Month & Year Filter Button for mobile */}
+            <div className="block sm:hidden">
+              <Button 
+                type="button"
+                onClick={() => setShowMonthYearDialog(true)}
+                variant="outline"
+                className="modern-btn modern-btn-secondary w-full text-sm px-4 py-2"
               >
-                Clear Filter
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+                <CalendarDays className="h-4 w-4 mr-2" />
+                {filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth]} ${filterYear}`
+                  : `${months[selectedMonth]} ${selectedYear}`
+                }
+              </Button>
+            </div>
 
-      {/* Records Table */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Medical Records</h2>
-        </div>
-        
-        <div className="p-6">
-          {/* Loading Indicator */}
-          {(!isLoadingComplete && isLoadingRecords) && (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center space-x-3">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <div className="text-sm text-gray-600">
-                  Loading medical records...
-                </div>
+            {/* Full Width Search Bar */}
+            <div className="w-full">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search by name, ID, type, or condition..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
+                />
               </div>
             </div>
-          )}
+          </div>
+        </div>
+        
+
+        {/* Records Table */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Medical Records</h2>
+          </div>
           
-          {/* Table Content */}
-          {isLoadingComplete && (
-            <div className="overflow-x-auto">
-              {filteredRecords.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-gray-500">
-                    <p className="text-lg">No active patients found</p>
-                    <p className="text-sm mt-2">Check if patients are marked as active in the system</p>
+          <div className="p-4 sm:p-6">
+            {/* Loading Indicator */}
+            {(!isLoadingComplete && isLoadingRecords) && (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <div className="text-sm text-gray-600">
+                    Loading medical records...
                   </div>
                 </div>
-              ) : (
+              </div>
+            )}
+            
+            {/* Table Content */}
+            {isLoadingComplete && (
+              <div className="overflow-x-auto">
+                {filteredRecords.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500">
+                      <p className="text-lg">No medical records found</p>
+                      <p className="text-sm mt-2">
+                        {searchTerm || typeFilter !== 'all' || statusFilter !== 'all' 
+                          ? 'Try adjusting your filters or search term'
+                          : 'Start by adding your first medical record'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -969,27 +1314,74 @@ const PatientMedicalRecord: React.FC = () => {
                             <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                             <TableCell className="text-center">
                               <div className="flex justify-center items-center">
-                                {patient?.photo || patient?.photoUrl ? (
-                                  <img
-                                    src={patient.photo || patient.photoUrl}
-                                    alt={`${record.patientName}'s photo`}
-                                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                                    onError={(e) => {
-                                      // Fallback to default avatar if image fails to load
-                                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNGM0Y0RjYiLz4KPGF0aCBkPSJNMjAgMTJDMTcuNzkgMTIgMTYgMTMuNzkgMTYgMTZDMTYgMTguMjEgMTcuNzkgMjAgMjAgMjBDMjIuMjEgMjAgMjQgMTguMjEgMjQgMTZDMjQgMTMuNzkgMjIuMjEgMTIgMjAgMTJaTTIwIDI2QzE2LjY7IDI2IDEwIDI3LjY3IDEwIDMxVjMySDMwVjMxQzMwIDI3LjY3IDIzLjMzIDI2IDIwIDI2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <path d="M12 6C10.34 6 9 7.34 9 9C9 10.66 10.34 12 12 12C13.66 12 15 10.66 15 9C15 7.34 13.66 6 12 6ZM12 15C9.33 15 4 16.34 4 19V20H20V19C20 16.34 14.67 15 12 15Z" fill="#9CA3AF"/>
-                                    </svg>
-                                  </div>
-                                )}
+                                {(() => {
+                                  // Construct proper photo URL
+                                  let imageUrl = '';
+                                  
+                                  if (patient?.photo) {
+                                    // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                                    if (patient.photo.startsWith('http')) {
+                                      imageUrl = patient.photo;
+                                    } else {
+                                      // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                                      // Database stores: Photos/patient Admission/{patientId}/{filename}
+                                      // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                                      if (patient.photo.includes('Photos/patient Admission/')) {
+                                        // Photo path is already in correct format from database
+                                        imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
+                                      } else {
+                                        // Assume it's just filename and build full path
+                                        imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photo}`;
+                                      }
+                                    }
+                                  } else if (patient?.photoUrl) {
+                                    if (patient.photoUrl.startsWith('http')) {
+                                      imageUrl = patient.photoUrl;
+                                    } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                                      imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                                    } else {
+                                      imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photoUrl}`;
+                                    }
+                                  }
+
+                                  return imageUrl ? (
+                                    <>
+                                      <img
+                                        src={imageUrl}
+                                        alt={`${record.patientName}'s photo`}
+                                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                        onError={(e) => {
+                                          console.log('❌ Image failed for:', record.patientName);
+                                          console.log('   Failed URL:', imageUrl);
+                                          
+                                          // Show fallback avatar
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          const avatarDiv = target.nextElementSibling as HTMLElement;
+                                          if (avatarDiv) avatarDiv.style.display = 'flex';
+                                        }}
+                                        onLoad={() => {
+                                          console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
+                                        }}
+                                      />
+                                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border border-gray-200" style={{display: 'none'}}>
+                                        <span className="text-sm font-semibold text-white">
+                                          {(record.patientName || 'P').charAt(0).toUpperCase()}
+                                        </span>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border border-gray-200">
+                                      <span className="text-sm font-semibold text-white">
+                                        {(record.patientName || 'P').charAt(0).toUpperCase()}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <span className="font-bold text-black">{record.patientId}</span>
+                              <span className="font-medium text-blue-600">{formatPatientId(record.patientId)}</span>
                             </TableCell>
                             <TableCell className="text-center font-semibold">{record.patientName}</TableCell>
                             <TableCell className="text-center">
@@ -1025,10 +1417,10 @@ const PatientMedicalRecord: React.FC = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleView(record)}
-                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-100 border-green-200 hover:border-green-400 action-btn-edit rounded-lg flex items-center justify-center"
+                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 bg-green-100 hover:bg-green-200 border-green-200 hover:border-green-400 action-btn-edit rounded-lg"
                                   title="View Patient Details"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -1121,8 +1513,46 @@ const PatientMedicalRecord: React.FC = () => {
                 <Label htmlFor="patient">Patient *</Label>
                 <div className="w-full p-2 border rounded-md bg-gray-50 text-gray-700">
                   {(() => {
-                    const selectedPatient = patients.find(p => p.id === formData.patientId);
-                    return selectedPatient ? `${selectedPatient.name} (ID: ${selectedPatient.id})` : 'No patient selected';
+                    if (!formData.patientId) {
+                      return 'No patient selected';
+                    }
+                    
+                    console.log('🔍 Patient Lookup Debug:');
+                    console.log('   Looking for PatientId:', formData.patientId, typeof formData.patientId);
+                    console.log('   Patients array length:', patients.length);
+                    console.log('   First few patients:', patients.slice(0, 3).map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
+                    
+                    // Normalize the patient ID - remove P prefix and leading zeros for comparison
+                    const normalizeId = (id: string | number) => {
+                      return String(id).replace(/^P0*/, '');
+                    };
+                    
+                    const targetId = normalizeId(formData.patientId);
+                    console.log('   Normalized target ID:', targetId);
+                    
+                    // Try to find patient with normalized ID comparison
+                    let selectedPatient = patients.find(p => {
+                      const normalizedPatientId = normalizeId(p.id);
+                      console.log('   Comparing:', normalizedPatientId, 'with', targetId);
+                      return normalizedPatientId === targetId;
+                    });
+                    
+                    if (!selectedPatient) {
+                      // Try exact match as fallback
+                      selectedPatient = patients.find(p => String(p.id) === String(formData.patientId));
+                    }
+                    
+                    console.log('   Selected Patient:', selectedPatient);
+                    
+                    if (!selectedPatient) {
+                      // If still not found, try to get from the editRecord
+                      if (editRecord && editRecord.patientName !== 'Unknown') {
+                        return `${editRecord.patientName} (ID: ${formData.patientId})`;
+                      }
+                      return `Patient ID: ${formData.patientId} (Not Found - Check Console)`;
+                    }
+                    
+                    return `${selectedPatient.name} (ID: ${selectedPatient.id})`;
                   })()}
                 </div>
               </div>
@@ -1288,6 +1718,64 @@ const PatientMedicalRecord: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Document Upload Section */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4 flex items-center">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Documents
+              </h3>
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
+                multiple
+                onChange={(e) => handleDocumentFileUpload(e.target.files)}
+                className="mb-2"
+              />
+              <p className="text-xs text-muted-foreground mb-2">
+                Supported formats: PDF, Word, Excel, PowerPoint, Text, CSV, Images (Max 500MB per file)
+              </p>
+              {formData.documentFiles.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Selected documents: {formData.documentFiles.length}
+                  </p>
+                  <div className="space-y-2">
+                    {formData.documentFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 border rounded bg-gray-50">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold text-blue-600">
+                              {file.name.split('.').pop()?.toUpperCase() || 'DOC'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              documentFiles: prev.documentFiles.filter((_, i) => i !== index) 
+                            }));
+                          }}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <DialogFooter>
@@ -1385,7 +1873,24 @@ const PatientMedicalRecord: React.FC = () => {
                       };
 
                       const handleView = () => {
-                        window.open(fileUrl, '_blank');
+                        if (isImage) {
+                          // For images, open in modal
+                          const allImages = viewRecord.images.filter(path => 
+                            path.includes('.jpg') || path.includes('.jpeg') || 
+                            path.includes('.png') || path.includes('.gif') || 
+                            path.includes('.bmp') || path.includes('.webp')
+                          );
+                          const currentIndex = allImages.indexOf(imagePath);
+                          setViewImageModal({ 
+                            show: true, 
+                            images: allImages, 
+                            currentIndex: Math.max(0, currentIndex),
+                            recordId: viewRecord.id 
+                          });
+                        } else {
+                          // For non-images (audio, documents), open in new tab
+                          window.open(fileUrl, '_blank');
+                        }
                       };
 
                       return (
@@ -1497,13 +2002,37 @@ const PatientMedicalRecord: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex justify-center items-center gap-2">
-                              {record.images && record.images.length > 0 ? (
+                              {(() => {
+                                console.log('🎯 Display check for record:', record.id, 'Images:', record.images, 'Length:', record.images?.length);
+                                return record.images && record.images.length > 0;
+                              })() ? (
                                 <>
                                   <button
                                     onClick={() => {
-                                      // View first file in new tab
-                                      const fileUrl = `http://localhost:4000${record.images[0]}`;
-                                      window.open(fileUrl, '_blank');
+                                      // Check if first file is an image
+                                      const firstFile = record.images[0];
+                                      const isImage = firstFile.includes('.jpg') || firstFile.includes('.jpeg') || 
+                                                    firstFile.includes('.png') || firstFile.includes('.gif') || 
+                                                    firstFile.includes('.bmp') || firstFile.includes('.webp');
+                                      
+                                      if (isImage) {
+                                        // Filter only images for modal viewing
+                                        const allImages = record.images.filter(path => 
+                                          path.includes('.jpg') || path.includes('.jpeg') || 
+                                          path.includes('.png') || path.includes('.gif') || 
+                                          path.includes('.bmp') || path.includes('.webp')
+                                        );
+                                        setViewImageModal({ 
+                                          show: true, 
+                                          images: allImages, 
+                                          currentIndex: 0,
+                                          recordId: record.id 
+                                        });
+                                      } else {
+                                        // For non-images, open in new tab
+                                        const fileUrl = `http://localhost:4000${record.images[0]}`;
+                                        window.open(fileUrl, '_blank');
+                                      }
                                     }}
                                     className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200 border flex items-center justify-center transition-colors"
                                     title={`View ${record.images.length} file${record.images.length > 1 ? 's' : ''}`}
@@ -1588,57 +2117,7 @@ const PatientMedicalRecord: React.FC = () => {
         </Dialog>
       )}
 
-      {/* Month/Year Filter Dialog */}
-      <Dialog open={showMonthYearDialog} onOpenChange={setShowMonthYearDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter by Month & Year</DialogTitle>
-            <DialogDescription>
-              Select month and year to filter medical records
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Month</Label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {months.map((month, index) => (
-                  <option key={index} value={index}>{month}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Year</Label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {Array.from({ length: 10 }, (_, i) => currentYear - i).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMonthYearDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              setFilterMonth(selectedMonth);
-              setFilterYear(selectedYear);
-              setShowMonthYearDialog(false);
-            }}>
-              Apply Filter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* View Dialog Month/Year Filter */}
       <Dialog open={showViewDialogMonthYearDialog} onOpenChange={setShowViewDialogMonthYearDialog}>
@@ -1728,6 +2207,25 @@ const PatientMedicalRecord: React.FC = () => {
 
       {/* Hidden audio element for playback */}
       <audio ref={audioRef} />
+
+      {/* Month/Year Picker Dialog */}
+      <MonthYearPickerDialog
+        open={showMonthYearDialog}
+        onOpenChange={setShowMonthYearDialog}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onMonthChange={setSelectedMonth}
+        onYearChange={setSelectedYear}
+        onApply={() => {
+          setFilterMonth(selectedMonth);
+          setFilterYear(selectedYear);
+          setShowMonthYearDialog(false);
+          loadData(); // Use loadData instead of refreshData to preserve selected filters
+        }}
+        title="Select Month & Year"
+        description="Filter medical records by specific month and year"
+        previewText="medical records"
+      />
       </div>
     </div>
   );

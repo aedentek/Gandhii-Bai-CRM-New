@@ -1,0 +1,4 @@
+Test file upload for Patient History
+Patient ID: P0100
+Date: 17-08-2025
+This file should be saved in /Photos/Patient History/P0100/documents/

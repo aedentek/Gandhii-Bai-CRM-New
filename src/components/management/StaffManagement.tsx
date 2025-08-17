@@ -5,15 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Search, Users, Plus, Eye, Edit2, Trash2, UserCheck, UserX, Calendar, RefreshCw } from 'lucide-react';
+import { Download, Search, Users, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { parseISO, format as formatDate } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { DatabaseService } from '@/services/databaseService';
 import { getStaffFileUrl } from '@/services/staffFileUpload';
-import LoadingScreen from '@/components/shared/LoadingScreen';
-import '@/modern.css';
 
 const StaffManagement: React.FC = () => {
   const [staff, setStaff] = useState<any[]>([]);
@@ -303,169 +301,70 @@ const StaffManagement: React.FC = () => {
     setDeleteStaff(null);
   };
 
-  if (loading) {
-    return <LoadingScreen message="Loading staff management data..." />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-blue-700 hover:scale-110">
-                <Users className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-blue-600">Staff Management</h1>
-                <p className="text-sm text-gray-600 mt-1">Manage your team members and staff records</p>
-              </div>
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-primary rounded-lg">
+              <Users className="w-6 h-6 text-primary-foreground" />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button 
-                onClick={() => window.location.reload()}
-                disabled={false}
-                variant="outline"
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className="h-4 w-4 transition-transform duration-300 hover:rotate-180" />
-                <span className="font-medium">Refresh</span>
-              </Button>
-
-              <Button 
-                onClick={() => window.location.href = '/management/add-staff'}
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Plus className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
-                <span className="font-medium">Add Staff</span>
-              </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Staff Management</h1>
             </div>
           </div>
+          <Button onClick={() => window.location.href = '/management/add-staff'} 
+            className="bg-emerald-100 hover:bg-emerald-200 text-emerald-600 border-emerald-200">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Staff
+          </Button>
         </div>
+      </div>
 
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Staff</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{staff.length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <UserCheck className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Staff</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">{staff.filter(s => s.status === 'active').length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors duration-300">
-                  <UserX className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Inactive Staff</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-red-600 transition-colors duration-300">{staff.filter(s => s.status === 'inactive').length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-red-200 rounded-full overflow-hidden">
-                <div className="h-full bg-red-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <Calendar className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">{staff.filter(s => {
-                    const joinDate = new Date(s.joinDate);
-                    const now = new Date();
-                    return joinDate.getMonth() === now.getMonth() && joinDate.getFullYear() === now.getFullYear();
-                  }).length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-6 mb-8 shadow-lg">
+      {/* Filters and Search */}
+      <Card className="mb-6 shadow-card">
+        <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, ID, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/70 border-slate-200 focus:border-blue-300 focus:ring-blue-200"
+                  className="pl-10"
                 />
               </div>
             </div>
             <div className="w-full md:w-48">
               <select
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white/70 focus:border-blue-300 focus:ring-blue-200"
+                className="w-full border rounded-md px-3 py-2 text-sm"
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
               >
                 <option value="All">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
               </select>
             </div>
-            <Button 
-              onClick={exportToCSV} 
-              className="modern-btn modern-btn-secondary"
+            <Button
+              onClick={exportToCSV}
+              className="bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-200 flex items-center"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Staff Table */}
-        <div className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-slate-200/60">
-            <h2 className="text-xl font-semibold text-slate-800">
-              Staff List ({filteredStaff.length})
-            </h2>
-          </div>
+      {/* Staff Table */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle>Staff List ({filteredStaff.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -538,26 +437,30 @@ const StaffManagement: React.FC = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center space-x-2">
+                          <div className="flex space-x-2 justify-center">
                             <Button 
                               size="sm" 
                               onClick={() => setViewStaff(s)}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-view rounded-lg transition-all duration-300"
+                              className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="sm" 
                               onClick={() => {
+                                // Initialize edit staff with all fields properly
                                 const staffToEdit = {
                                   ...s,
+                                  // Handle photo initialization
                                   photo: s.photo || '',
+                                  // Handle document fields
                                   aadharFront: s.aadharFront || s.documents?.aadharFront || '',
                                   aadharBack: s.aadharBack || s.documents?.aadharBack || '',
                                   aadharNumber: s.aadharNumber || s.documents?.aadharNumber || '',
                                   panFront: s.panFront || s.documents?.panFront || '',
                                   panBack: s.panBack || s.documents?.panBack || '',
                                   panNumber: s.panNumber || s.documents?.panNumber || '',
+                                  // Ensure other fields are initialized
                                   name: s.name || '',
                                   email: s.email || '',
                                   phone: s.phone || '',
@@ -573,14 +476,14 @@ const StaffManagement: React.FC = () => {
                                 console.log('Initial photo present:', !!staffToEdit.photo);
                                 setEditStaff(staffToEdit);
                               }}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 hover:border-orange-400 action-btn-edit rounded-lg transition-all duration-300"
+                              className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="sm" 
                               onClick={() => handleDelete(s)}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg transition-all duration-300"
+                              className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -646,9 +549,8 @@ const StaffManagement: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
+        </CardContent>
+      </Card>
       {/* View Staff Dialog */}
       {viewStaff && (
         <Dialog open={!!viewStaff} onOpenChange={() => setViewStaff(null)}>

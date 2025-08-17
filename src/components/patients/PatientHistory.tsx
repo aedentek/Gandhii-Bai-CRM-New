@@ -77,6 +77,7 @@ interface Patient {
   attenderName: string;
   attenderPhone: string;
   photo: string;
+  photoUrl: string;
   fees: number;
   bloodTest: number;
   pickupCharge: number;
@@ -148,6 +149,8 @@ const PatientHistory: React.FC = () => {
   const [formData, setFormData] = useState({
     patientId: '',
     doctor: '',
+    title: '',
+    category: '',
     description: '',
     date: new Date().toISOString().split('T')[0], // Add date field with today's date as default
     documents: [] as File[],
@@ -168,6 +171,13 @@ const PatientHistory: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Function to format patient ID as P0001
+  const formatPatientId = (id: string | number): string => {
+    // Convert to number, removing any existing P prefix and leading zeros
+    const numericId = typeof id === 'string' ? parseInt(id.replace(/^P0*/, '')) : id;
+    return `P${numericId.toString().padStart(4, '0')}`;
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -248,6 +258,7 @@ const PatientHistory: React.FC = () => {
           attenderName: p.attender_name || '',
           attenderPhone: p.attender_phone || '',
           photo: p.photo || '',
+          photoUrl: p.photoUrl || p.photo_url || '',
           fees: parseFloat(p.fees) || 0,
           bloodTest: parseFloat(p.blood_test) || 0,
           pickupCharge: parseFloat(p.pickup_charge) || 0,
@@ -282,6 +293,7 @@ const PatientHistory: React.FC = () => {
         attenderName: p.attenderName,
         attenderPhone: p.attenderPhone,
         photo: p.photo,
+        photoUrl: p.photoUrl,
         fees: p.fees,
         bloodTest: p.bloodTest,
         pickupCharge: p.pickupCharge,
@@ -321,6 +333,7 @@ const PatientHistory: React.FC = () => {
             attenderName: p.attenderName || '',
             attenderPhone: p.attenderPhone || '',
             photo: p.photo || '',
+            photoUrl: p.photoUrl || '',
             fees: p.fees || 0,
             bloodTest: p.bloodTest || 0,
             pickupCharge: p.pickupCharge || 0,
@@ -665,19 +678,61 @@ const PatientHistory: React.FC = () => {
   };
 
   const playAudio = (audioUrl: string, recordId: string) => {
+    console.log('🎵 playAudio called with URL:', audioUrl, 'Record ID:', recordId);
+    
     if (playingAudio === recordId) {
+      console.log('🎵 Pausing currently playing audio');
       audioRef.current?.pause();
       setPlayingAudio(null);
     } else {
       if (audioRef.current) {
+        console.log('🎵 Stopping previous audio');
         audioRef.current.pause();
       }
+      
+      console.log('🎵 Creating new Audio object with URL:', audioUrl);
       audioRef.current = new Audio(audioUrl);
       audioRef.current.playbackRate = playbackSpeed; // Set playback speed
-      audioRef.current.play();
-      setPlayingAudio(recordId);
+      
+      // Add error handling
+      audioRef.current.onerror = (error) => {
+        console.error('❌ Audio playback error:', error);
+        console.error('❌ Failed to load audio from URL:', audioUrl);
+        setPlayingAudio(null);
+        toast({
+          title: "Audio Playback Error",
+          description: `Failed to play audio file. Please check if the file exists and is accessible.`,
+          variant: "destructive",
+        });
+      };
+      
+      // Add loading event
+      audioRef.current.onloadstart = () => {
+        console.log('🎵 Audio loading started');
+      };
+      
+      audioRef.current.oncanplay = () => {
+        console.log('🎵 Audio can play');
+      };
+      
+      // Attempt to play
+      audioRef.current.play()
+        .then(() => {
+          console.log('🎵 Audio playback started successfully');
+          setPlayingAudio(recordId);
+        })
+        .catch((error) => {
+          console.error('❌ Audio play() failed:', error);
+          setPlayingAudio(null);
+          toast({
+            title: "Audio Playback Error",
+            description: `Failed to start audio playback: ${error.message}`,
+            variant: "destructive",
+          });
+        });
       
       audioRef.current.onended = () => {
+        console.log('🎵 Audio playback ended');
         setPlayingAudio(null);
       };
     }
@@ -764,6 +819,8 @@ const PatientHistory: React.FC = () => {
     setFormData({
       patientId: '',
       doctor: '',
+      title: '',
+      category: '',
       description: '',
       date: new Date().toISOString().split('T')[0], // Add date field
       documents: [],
@@ -777,7 +834,16 @@ const PatientHistory: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('🔥 handleSubmit called');
+    console.log('📝 Form data:', formData);
+    console.log('📝 Edit record:', editRecord);
+    
     if (!formData.patientId || !formData.doctor || !formData.date) {
+      console.log('❌ Validation failed:', {
+        patientId: formData.patientId,
+        doctor: formData.doctor,
+        date: formData.date
+      });
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields (Patient, Doctor, Date).",
@@ -883,9 +949,9 @@ const PatientHistory: React.FC = () => {
         patient_id: formData.patientId,
         patient_name: patient.name,
         date: formData.date,
-        title: 'Medical Record',
+        title: formData.title || 'Medical Record',
         doctor: formData.doctor,
-        category: 'General',
+        category: formData.category || 'General',
         description: formData.description,
         audio_recording: audioFilePath,
         audio_file_name: audioFileName,
@@ -894,12 +960,14 @@ const PatientHistory: React.FC = () => {
       };
 
       if (isEditing) {
+        console.log('🔄 Updating record:', recordId, dbRecord);
         await DatabaseService.updatePatientHistory(recordId, dbRecord);
         toast({
           title: "Record Updated",
           description: "Medical record has been updated successfully.",
         });
       } else {
+        console.log('➕ Adding new record:', dbRecord);
         await DatabaseService.addPatientHistory(dbRecord);
         toast({
           title: "Record Added",
@@ -933,6 +1001,8 @@ const PatientHistory: React.FC = () => {
     setFormData({
       patientId: record.patientId,
       doctor: record.doctor,
+      title: record.title || '',
+      category: record.category || '',
       description: record.description,
       date: record.date || new Date().toISOString().split('T')[0], // Add date field
       documents: [], // For edit mode, we'll show existing documents separately
@@ -1192,242 +1262,207 @@ const PatientHistory: React.FC = () => {
   }, [medicalRecords, viewRecord?.patientId, refreshCounter, viewDialogFilterMonth, viewDialogFilterYear]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-purple-700 hover:scale-110">
-                <FileText className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-purple-600">Patient Medical Records</h1>
-                
-              </div>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
+              <FileText className="w-6 h-6 text-white" />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button 
-                onClick={() => setShowAddDialog(true)}
-                className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="font-medium">Add Record</span>
-              </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Patient History</h1>
+              <p className="text-sm text-gray-600 mt-1">Medical records and patient documentation</p>
             </div>
-          </div>
-        </div>
-
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Patients</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{patients.filter(p => p.status === 'Active').length}</p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <Volume2 className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Audio Files</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">
-                    {(() => {
-                      let totalAudioCount = 0;
-                      // Count audio files from medical records, not history records
-                      let filteredMedicalRecords = medicalRecords;
-                      
-                      // Apply same filtering as main table
-                      if (searchTerm) {
-                        const searchLower = searchTerm.toLowerCase();
-                        filteredMedicalRecords = filteredMedicalRecords.filter(record =>
-                          record.title.toLowerCase().includes(searchLower) ||
-                          record.patientName.toLowerCase().includes(searchLower) ||
-                          record.doctor.toLowerCase().includes(searchLower) ||
-                          record.patientId.toLowerCase().includes(searchLower)
-                        );
-                      }
-
-                      // Month & Year filtering
-                      if (filterMonth !== null && filterYear !== null) {
-                        filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                          const recordDate = new Date(record.date);
-                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
-                        });
-                      }
-
-                      // Filter to show only active patients
-                      filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                        const patient = patients.find(p => String(p.id) === String(record.patientId));
-                        return patient && patient.status === 'Active';
-                      });
-
-                      filteredMedicalRecords.forEach(record => {
-                        // Count each record as having at most 1 audio file to avoid double counting
-                        if (record.audioRecording) {
-                          totalAudioCount += 1;
-                        } else if (record.audioFiles && record.audioFiles.length > 0) {
-                          totalAudioCount += record.audioFiles.length;
-                        }
-                      });
-                      return totalAudioCount;
-                    })()}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <File className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Documents</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">
-                    {(() => {
-                      let totalDocumentCount = 0;
-                      // Count documents from medical records, not history records
-                      let filteredMedicalRecords = medicalRecords;
-                      
-                      // Apply same filtering as main table
-                      if (searchTerm) {
-                        const searchLower = searchTerm.toLowerCase();
-                        filteredMedicalRecords = filteredMedicalRecords.filter(record =>
-                          record.title.toLowerCase().includes(searchLower) ||
-                          record.patientName.toLowerCase().includes(searchLower) ||
-                          record.doctor.toLowerCase().includes(searchLower) ||
-                          record.patientId.toLowerCase().includes(searchLower)
-                        );
-                      }
-
-                      // Month & Year filtering
-                      if (filterMonth !== null && filterYear !== null) {
-                        filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                          const recordDate = new Date(record.date);
-                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
-                        });
-                      }
-
-                      // Filter to show only active patients
-                      filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                        const patient = patients.find(p => String(p.id) === String(record.patientId));
-                        return patient && patient.status === 'Active';
-                      });
-
-                      filteredMedicalRecords.forEach(record => {
-                        if (record.documents && record.documents.length > 0) {
-                          totalDocumentCount += record.documents.length;
-                        }
-                      });
-                      return totalDocumentCount;
-                    })()}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Search and Filter Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search records..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 border-gray-200 hover:border-gray-300 transition-colors duration-300"
-              />
-            </div>
-            
-            <div className="flex space-x-2">
-              <Button 
-                onClick={exportToExcel} 
-                variant="outline"
-                className="flex-1 h-12 border-gray-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600 transition-all duration-300"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Button 
-                onClick={exportToPDF} 
-                variant="outline"
-                className="flex-1 h-12 border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
-
-            {/* Month & Year Selector */}
-            <button
-              type="button"
-              className="h-12 px-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 flex items-center justify-center min-w-[140px] font-medium text-gray-700"
-              onClick={() => setShowMonthYearDialog(true)}
-            >
-              {filterMonth !== null && filterYear !== null 
-                ? `${months[filterMonth]} ${filterYear}`
-                : `${months[selectedMonth]} ${selectedYear}`
-              }
-            </button>
-          </div>
-        </div>
-
-        {/* Records Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Patients Medical Records
-            </h2>
           </div>
           
-          <div className="p-6">
-            {/* Loading Indicator */}
-            {(!isLoadingComplete && (isLoadingPatients || isLoadingDoctors || isLoadingHistory)) && (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center space-x-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                  <div className="text-sm text-gray-600">
-                    Loading data...
-                    {isLoadingPatients && " (Patients)"}
-                    {isLoadingDoctors && " (Doctors)"}
-                    {isLoadingHistory && " (History)"}
-                  </div>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button 
+              onClick={() => {
+                console.log('🔵 Add Record button clicked');
+                setShowAddDialog(true);
+              }}
+              className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+            >
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add Record</span>
+              <span className="sm:hidden">+</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 w-full">
+        <div className="modern-stat-card">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{patients.filter(p => p.status === 'Active').length}</div>
+            <div className="text-sm text-gray-600">Active Patients</div>
+          </div>
+        </div>
+
+        <div className="modern-stat-card">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {(() => {
+                let totalAudioCount = 0;
+                // Count audio files from medical records, not history records
+                let filteredMedicalRecords = medicalRecords;
+                
+                // Apply same filtering as main table
+                if (searchTerm) {
+                  const searchLower = searchTerm.toLowerCase();
+                  filteredMedicalRecords = filteredMedicalRecords.filter(record =>
+                    record.title.toLowerCase().includes(searchLower) ||
+                    record.patientName.toLowerCase().includes(searchLower) ||
+                    record.doctor.toLowerCase().includes(searchLower) ||
+                    record.patientId.toLowerCase().includes(searchLower)
+                  );
+                }
+
+                // Month & Year filtering
+                if (filterMonth !== null && filterYear !== null) {
+                  filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                    const recordDate = new Date(record.date);
+                    return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                  });
+                }
+
+                // Filter to show only active patients
+                filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                  const patient = patients.find(p => String(p.id) === String(record.patientId));
+                  return patient && patient.status === 'Active';
+                });
+
+                filteredMedicalRecords.forEach(record => {
+                  // Count each record as having at most 1 audio file to avoid double counting
+                  if (record.audioRecording) {
+                    totalAudioCount += 1;
+                  } else if (record.audioFiles && record.audioFiles.length > 0) {
+                    totalAudioCount += record.audioFiles.length;
+                  }
+                });
+                return totalAudioCount;
+              })()}
+            </div>
+            <div className="text-sm text-gray-600">Audio Files</div>
+          </div>
+        </div>
+
+        <div className="modern-stat-card">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {(() => {
+                let totalDocumentCount = 0;
+                // Count documents from medical records, not history records
+                let filteredMedicalRecords = medicalRecords;
+                
+                // Apply same filtering as main table
+                if (searchTerm) {
+                  const searchLower = searchTerm.toLowerCase();
+                  filteredMedicalRecords = filteredMedicalRecords.filter(record =>
+                    record.title.toLowerCase().includes(searchLower) ||
+                    record.patientName.toLowerCase().includes(searchLower) ||
+                    record.doctor.toLowerCase().includes(searchLower) ||
+                    record.patientId.toLowerCase().includes(searchLower)
+                  );
+                }
+
+                // Month & Year filtering
+                if (filterMonth !== null && filterYear !== null) {
+                  filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                    const recordDate = new Date(record.date);
+                    return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                  });
+                }
+
+                // Filter to show only active patients
+                filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                  const patient = patients.find(p => String(p.id) === String(record.patientId));
+                  return patient && patient.status === 'Active';
+                });
+
+                filteredMedicalRecords.forEach(record => {
+                  if (record.documents && record.documents.length > 0) {
+                    totalDocumentCount += record.documents.length;
+                  }
+                });
+                return totalDocumentCount;
+              })()}
+            </div>
+            <div className="text-sm text-gray-600">Documents</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 mb-6 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search records..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button 
+              onClick={exportToExcel} 
+              className="modern-btn modern-btn-outline flex-1"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Excel
+            </Button>
+            <Button 
+              onClick={exportToPDF} 
+              className="modern-btn modern-btn-outline flex-1"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+          </div>
+
+          {/* Month & Year Selector */}
+          <button
+            type="button"
+            className="modern-btn modern-btn-outline min-w-[140px] justify-center"
+            onClick={() => setShowMonthYearDialog(true)}
+          >
+            {filterMonth !== null && filterYear !== null 
+              ? `${months[filterMonth]} ${filterYear}`
+              : `${months[selectedMonth]} ${selectedYear}`
+            }
+          </button>
+        </div>
+      </div>
+
+      {/* Records Table */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">Patients Medical Records</h2>
+        </div>
+        
+        <div className="p-6">
+          {/* Loading Indicator */}
+          {(!isLoadingComplete && (isLoadingPatients || isLoadingDoctors || isLoadingHistory)) && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div className="text-sm text-gray-600">
+                  Loading data...
+                  {isLoadingPatients && " (Patients)"}
+                  {isLoadingDoctors && " (Doctors)"}
+                  {isLoadingHistory && " (History)"}
                 </div>
               </div>
-            )}
-            
-            {/* Table Content */}
-            {isLoadingComplete && (
+            </div>
+          )}
+          
+          {/* Table Content */}
+          {isLoadingComplete && (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -1458,27 +1493,76 @@ const PatientHistory: React.FC = () => {
                       <div className="flex justify-center items-center">
                         {(() => {
                           const patient = patients.find(p => String(p.id) === String(record.patientId));
-                          return patient?.photo ? (
-                            <img
-                              src={patient.photo}
-                              alt={`${record.patientName}'s photo`}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                              onError={(e) => {
-                                // Fallback to default avatar if image fails to load
-                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNGM0Y0RjYiLz4KPGF0aCBkPSJNMjAgMTJDMTcuNzkgMTIgMTYgMTMuNzkgMTYgMTZDMTYgMTguMjEgMTcuNzkgMjAgMjAgMjBDMjIuMjEgMjAgMjQgMTguMjEgMjQgMTZDMjQgMTMuNzkgMjIuMjEgMTIgMjAgMTJaTTIwIDI2QzE2LjY3IDI2IDEwIDI3LjY3IDEwIDMxVjMySDMwVjMxQzMwIDI3LjY3IDIzLjMzIDI2IDIwIDI2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-                              }}
-                            />
+                          const formattedPatientId = formatPatientId(record.patientId);
+                          
+                          // Construct proper photo URL
+                          let imageUrl = '';
+                          
+                          if (patient?.photo) {
+                            // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                            if (patient.photo.startsWith('http')) {
+                              imageUrl = patient.photo;
+                            } else {
+                              // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                              // Database stores: Photos/patient Admission/{patientId}/{filename}
+                              // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                              if (patient.photo.includes('Photos/patient Admission/')) {
+                                // Photo path is already in correct format from database
+                                imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
+                              } else {
+                                // Assume it's just filename and build full path using formatted Patient ID
+                                imageUrl = `/Photos/patient%20Admission/${formattedPatientId}/${patient.photo}`;
+                              }
+                            }
+                          } else if (patient?.photoUrl) {
+                            if (patient.photoUrl.startsWith('http')) {
+                              imageUrl = patient.photoUrl;
+                            } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                              imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                            } else {
+                              imageUrl = `/Photos/patient%20Admission/${formattedPatientId}/${patient.photoUrl}`;
+                            }
+                          }
+
+                          return imageUrl ? (
+                            <>
+                              <img
+                                src={imageUrl}
+                                alt={`${record.patientName}'s photo`}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                onError={(e) => {
+                                  console.log('❌ Image failed for:', record.patientName);
+                                  console.log('   Failed URL:', imageUrl);
+                                  
+                                  // Show fallback avatar
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const avatarDiv = target.nextElementSibling as HTMLElement;
+                                  if (avatarDiv) avatarDiv.style.display = 'flex';
+                                }}
+                                onLoad={() => {
+                                  console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
+                                }}
+                              />
+                              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border border-gray-200" style={{display: 'none'}}>
+                                <span className="text-sm font-semibold text-white">
+                                  {(record.patientName || 'P').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            </>
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 6C10.34 6 9 7.34 9 9C9 10.66 10.34 12 12 12C13.66 12 15 10.66 15 9C15 7.34 13.66 6 12 6ZM12 15C9.33 15 4 16.34 4 19V20H20V19C20 16.34 14.67 15 12 15Z" fill="#9CA3AF"/>
-                              </svg>
+                            <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border border-gray-200">
+                              <span className="text-sm font-semibold text-white">
+                                {(record.patientName || 'P').charAt(0).toUpperCase()}
+                              </span>
                             </div>
                           );
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center font-bold text-black">{record.patientId}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-medium text-blue-600">{formatPatientId(record.patientId)}</span>
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="font-medium">{record.patientName}</div>
                     </TableCell>
@@ -1593,6 +1677,8 @@ const PatientHistory: React.FC = () => {
                               setFormData({
                                 patientId: record.patientId,
                                 doctor: '',
+                                title: '',
+                                category: '',
                                 description: '',
                                 date: new Date().toISOString().split('T')[0], // Add date field
                                 documents: [],
@@ -1721,7 +1807,37 @@ const PatientHistory: React.FC = () => {
                 {(editRecord || (formData.patientId && showAddDialog)) ? (
                   // When editing or when we have a pre-selected patient, show patient name as disabled input
                   <Input
-                    value={`${patients.find(p => p.id === formData.patientId)?.name || 'Unknown Patient'} (${formData.patientId})`}
+                    value={editRecord 
+                      ? `${editRecord.patientName || 'Unknown Patient'} (${editRecord.patientId})`
+                      : (() => {
+                          // More flexible patient matching - try different ID formats
+                          const findPatient = () => {
+                            const targetId = formData.patientId;
+                            // Try exact match first
+                            let patient = patients.find(p => p.id === targetId);
+                            if (patient) return patient;
+                            
+                            // Try matching with string conversion
+                            patient = patients.find(p => String(p.id) === String(targetId));
+                            if (patient) return patient;
+                            
+                            // Try matching formatted ID (P0101) with numeric ID (101)
+                            const numericId = String(targetId).replace(/^P0*/, '');
+                            patient = patients.find(p => String(p.id) === numericId);
+                            if (patient) return patient;
+                            
+                            // Try matching numeric ID with formatted ID in patients
+                            const formattedId = `P${String(targetId).padStart(4, '0')}`;
+                            patient = patients.find(p => p.id === formattedId);
+                            if (patient) return patient;
+                            
+                            return null;
+                          };
+                          
+                          const patient = findPatient();
+                          return `${patient?.name || 'Unknown Patient'} (${formData.patientId})`;
+                        })()
+                    }
                     disabled={true}
                     className="bg-muted"
                   />
@@ -1776,6 +1892,39 @@ const PatientHistory: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  placeholder="Enter title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({...formData, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">General</SelectItem>
+                    <SelectItem value="Consultation">Consultation</SelectItem>
+                    <SelectItem value="Follow-up">Follow-up</SelectItem>
+                    <SelectItem value="Emergency">Emergency</SelectItem>
+                    <SelectItem value="Registration">Registration</SelectItem>
+                    <SelectItem value="Lab Results">Lab Results</SelectItem>
+                    <SelectItem value="Prescription">Prescription</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -2080,13 +2229,87 @@ const PatientHistory: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-primary">Patient Details</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {/* Patient Photo */}
+                  <div className="flex items-center space-x-4 col-span-2 md:col-span-3 mb-4">
+                    {(() => {
+                      const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                      
+                      // Construct proper photo URL
+                      let imageUrl = '';
+                      
+                      if (patient?.photo) {
+                        // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                        if (patient.photo.startsWith('http')) {
+                          imageUrl = patient.photo;
+                        } else {
+                          // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                          // Database stores: Photos/patient Admission/{patientId}/{filename}
+                          // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                          if (patient.photo.includes('Photos/patient Admission/')) {
+                            // Photo path is already in correct format from database
+                            imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
+                          } else {
+                            // Assume it's just filename and build full path
+                            imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photo}`;
+                          }
+                        }
+                      } else if (patient?.photoUrl) {
+                        if (patient.photoUrl.startsWith('http')) {
+                          imageUrl = patient.photoUrl;
+                        } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                          imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                        } else {
+                          imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photoUrl}`;
+                        }
+                      }
+
+                      return imageUrl ? (
+                        <>
+                          <img
+                            src={imageUrl}
+                            alt={`${viewRecord.patientName}'s photo`}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                            onError={(e) => {
+                              console.log('❌ Image failed for:', viewRecord.patientName);
+                              console.log('   Failed URL:', imageUrl);
+                              
+                              // Show fallback avatar
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const avatarDiv = target.nextElementSibling as HTMLElement;
+                              if (avatarDiv) avatarDiv.style.display = 'flex';
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Image loaded successfully for patient:', viewRecord.patientName, 'URL:', imageUrl);
+                            }}
+                          />
+                          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                            <span className="text-lg font-semibold text-white">
+                              {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                          <span className="text-lg font-semibold text-white">
+                            {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <p className="text-xl font-semibold text-foreground">{viewRecord.patientName}</p>
+                      <p className="text-sm text-muted-foreground">Patient ID: {formatPatientId(viewRecord.patientId)}</p>
+                    </div>
+                  </div>
+                  
                   <div>
                     <Label className="font-semibold text-muted-foreground">Patient Name:</Label>
                     <p className="text-foreground font-medium">{viewRecord.patientName}</p>
                   </div>
                   <div>
                     <Label className="font-semibold text-muted-foreground">Patient ID:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientId}</p>
+                    <p className="text-foreground font-medium">{formatPatientId(viewRecord.patientId)}</p>
                   </div>
                   <div>
                     <Label className="font-semibold text-muted-foreground">Joining Date:</Label>
@@ -2714,7 +2937,6 @@ const PatientHistory: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   );
 };

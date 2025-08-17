@@ -12,9 +12,9 @@ export class PatientService {
       const patientsWithMedia = patients.map((patient: any) => {
         let photoUrl = null;
         if (patient.photo) {
-          // Ensure proper URL encoding for spaces and special characters
-          const photoPath = patient.photo.startsWith('/') ? patient.photo : `/${patient.photo}`;
-          photoUrl = encodeURI(photoPath);
+          // For static files served by Express, prepend the base URL + the path
+          // Server serves static files from /Photos route
+          photoUrl = `http://localhost:4000/${patient.photo}`;
         }
         
         return {
@@ -51,7 +51,7 @@ export class PatientService {
         ...patient,
         photo: patient.photo || null,
         hasPhoto: !!patient.photo,
-        photoUrl: patient.photo ? `/${patient.photo}` : null,
+        photoUrl: patient.photo ? `http://localhost:4000/${patient.photo}` : null,
       };
     } catch (error) {
       console.error('Error fetching patient with media:', error);

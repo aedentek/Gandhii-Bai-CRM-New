@@ -4,7 +4,9 @@ import AddDoctor from '@/components/management/AddDoctor';
 import SalaryPayment from '@/components/management/SalaryPayment';
 import PatientCallRecord from '@/components/patients/PatientCallRecord';
 import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
-import PatientFullyHistory from '@/components/patients/PatientFullyHistorySimple';
+import PatientFullyHistory from '@/components/patients/PatientFullyHistory';
+import PatientFullDetails from '@/components/patients/PatientFullDetailsSimple';
+import TestRoute from '@/components/TestRoute';
 import StaffCategoryManagement from './components/management/StaffCategory';
 import AddStaff from './components/management/AddStaff';
 import DoctorAttendance from '@/components/management/DoctorAttendance';
@@ -151,7 +153,7 @@ function App() {
           ) : !user ? (
             <LoginPage onLogin={handleLogin} />
           ) : (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background border-r-4 sm:border-r-6 md:border-r-8 border-gray-300 pr-4 sm:pr-6 md:pr-8">
               <Sidebar 
                 user={user} 
                 onLogout={handleLogout} 
@@ -168,6 +170,9 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard user={user} />} />
                     
                   {/* Patient Management Routes */}
+                  <Route path="/patients/details/:patientId" element={<PatientFullDetails />} />
+                  <Route path="/patients/fully-history/:patientId" element={<PatientFullyHistory />} />
+                  <Route path="/test/:testId" element={<TestRoute />} />
                   <Route path="/patients/add" element={<AddPatient />} />
                   <Route path="/patients/list" element={<PatientList />} />
                   <Route path="/patients/deleted" element={<DeletedPatients />} />
@@ -176,7 +181,6 @@ function App() {
                   <Route path="/patients/call-records" element={<PatientCallRecord />} />
                   <Route path="/patients/medical-records" element={<PatientMedicalRecord />} />
                   <Route path="/patients/payment-fees" element={<PatientPaymentFees />} />
-                  <Route path="/patients/fully-history/:patientId" element={<PatientFullyHistory />} />
                   
                   {/* Staff Management Routes */}
                   <Route path="/management/add-doctor" element={<AddDoctor />} />
@@ -223,7 +227,15 @@ function App() {
                   <Route path="/leads/add-category" element={<AddLeadCategory />} />
                   <Route path="/leads/list" element={<LeadsList />} />
                     
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="*" element={
+                    <div style={{ padding: '20px', backgroundColor: 'red', color: 'white' }}>
+                      <h1>WILDCARD ROUTE CAUGHT!</h1>
+                      <p>Current URL: {window.location.href}</p>
+                      <p>Pathname: {window.location.pathname}</p>
+                      <p>This means the route pattern did not match any defined routes.</p>
+                      <button onClick={() => window.location.href = '/dashboard'}>Go to Dashboard</button>
+                    </div>
+                  } />
                 </Routes>
                   </div>
               </main>

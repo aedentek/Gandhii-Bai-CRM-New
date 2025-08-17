@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertTriangle, Calendar, Download, Eye } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertTriangle, Calendar, Download, Eye, Package, BarChart3, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Medicine {
@@ -56,14 +56,24 @@ const MedicineManagement: React.FC = () => {
 const [medicines, setMedicines] = useState<Medicine[]>([]);
 const [loading, setLoading] = useState(true);
 const [refreshKey, setRefreshKey] = useState(0);
+const [categories, setCategories] = useState<Array<{id: number, name: string, status: string}>>([]);
+const [suppliers, setSuppliers] = useState<Array<{id: number, name: string, status: string}>>([]);
 
 React.useEffect(() => {
   (async () => {
     if (refreshKey > 0) console.log('Refreshing data...');
     try {
       const db = (await import('@/services/databaseService')).DatabaseService;
-      const data = await db.getAllMedicineProducts();
-      setMedicines(data.map((medicine: any) => ({
+      
+      // Fetch medicines, categories, and suppliers in parallel
+      const [medicinesData, categoriesData, suppliersData] = await Promise.all([
+        db.getAllMedicineProducts(),
+        db.getAllMedicineCategories(),
+        db.getAllMedicineSuppliers()
+      ]);
+      
+      // Set medicines
+      setMedicines(medicinesData.map((medicine: any) => ({
         ...medicine,
         id: medicine.id.toString(),
         createdAt: medicine.created_at || medicine.createdAt || '',
@@ -72,6 +82,10 @@ React.useEffect(() => {
         current_stock: medicine.current_stock || medicine.quantity || 0,
         used_stock: medicine.used_stock || 0,
       })));
+      
+      // Set active categories and suppliers only
+      setCategories(categoriesData.filter((cat: any) => cat.status === 'active'));
+      setSuppliers(suppliersData.filter((sup: any) => sup.status === 'active'));
     } catch (e) {
       // Optionally show error
     } finally {
@@ -178,21 +192,219 @@ const handleRefresh = React.useCallback(() => {
     }
   }, [filterMonth, filterYear, searchTerm, statusFilter, categoryFilter, toast]);
 
-  const handleEditMedicine = (medicine: Medicine) => {
-    setEditingMedicine(medicine);
-    setFormData({
-      name: medicine.name,
-      category: medicine.category,
-      manufacturer: medicine.manufacturer || '',
-      supplier: medicine.supplier,
-      batch_number: medicine.batch_number || '',
-      expiry_date: medicine.expiry_date || '',
-      quantity: medicine.quantity,
-      price: medicine.price,
-      status: medicine.status,
-      description: medicine.description || '',
-    });
-    setIsAddingMedicine(true);
+  // Helper functions for display consistency
+  const getDisplayCategoryName = (category: string): string => {
+    if (!category) return 'No Category';
+    
+    // Use dynamic categories from database instead of static ones
+    const categoryNames = categories.map(c => c.name);
+    
+    // Try exact match first
+    const exactMatch = categoryNames.find(c => c === category);
+    if (exactMatch) return exactMatch;
+    
+    // Try case-insensitive match
+    const caseMatch = categoryNames.find(c => 
+      c.toLowerCase() === category.toLowerCase()
+    );
+    if (caseMatch) return caseMatch;
+    
+    // Try partial match
+    const partialMatch = categoryNames.find(c => 
+      c.toLowerCase().includes(category.toLowerCase()) || 
+      category.toLowerCase().includes(c.toLowerCase())
+    );
+    if (partialMatch) return partialMatch;
+    
+    // Return original if no match found
+    return category;
+  };
+
+  const getDisplaySupplierName = (supplier: string): string => {
+    if (!supplier || supplier.trim() === '') return 'No Supplier';
+    
+    // Use dynamic suppliers from database instead of just returning the value
+    const supplierNames = suppliers.map(s => s.name);
+    
+    // Try exact match first
+    const exactMatch = supplierNames.find(s => s === supplier);
+    if (exactMatch) return exactMatch;
+    
+    // Try case-insensitive match
+    const caseMatch = supplierNames.find(s => 
+      s.toLowerCase() === supplier.toLowerCase()
+    );
+    if (caseMatch) return caseMatch;
+    
+    // Try partial match
+    const partialMatch = supplierNames.find(s => 
+      s.toLowerCase().includes(supplier.toLowerCase()) || 
+      supplier.toLowerCase().includes(s.toLowerCase())
+    );
+    if (partialMatch) return partialMatch;
+    
+    // Return original if no match found
+    return supplier;
+  };
+
+  const handleEditMedicine = async (medicine: Medicine) => {
+    try {
+      // Ensure data is loaded before proceeding
+      if (categories.length === 0 || suppliers.length === 0) {
+        toast({
+          title: "Loading...",
+          description: "Please wait for categories and suppliers to load",
+          variant: "default",
+        });
+        return;
+      }
+
+      console.log('Editing medicine:', medicine);
+      console.log('Available categories:', categories.map(c => c.name));
+      console.log('Available suppliers:', suppliers.map(s => s.name));
+
+      // Enhanced category matching for edit dialog using dynamic categories
+      const availableCategories = categories.map(c => c.name);
+      let selectedCategory = medicine.category || '';
+      
+      if (selectedCategory) {
+        console.log('Original category:', selectedCategory);
+        
+        // Try to find exact match first
+        const exactMatch = availableCategories.find(cat => cat === selectedCategory);
+        
+        if (!exactMatch) {
+          // Try case-insensitive match
+          const caseMatch = availableCategories.find(cat => 
+            cat.toLowerCase() === selectedCategory.toLowerCase()
+          );
+          
+          if (caseMatch) {
+            selectedCategory = caseMatch;
+          } else {
+            // Try partial match
+            const partialMatch = availableCategories.find(cat => 
+              cat.toLowerCase().includes(selectedCategory.toLowerCase()) || 
+              selectedCategory.toLowerCase().includes(cat.toLowerCase())
+            );
+            
+            if (partialMatch) {
+              selectedCategory = partialMatch;
+            }
+            // If no match found, keep original value
+          }
+        }
+        console.log('Selected category:', selectedCategory);
+      }
+
+      // Enhanced supplier matching for edit dialog using dynamic suppliers
+      const availableSuppliers = suppliers.map(s => s.name);
+      let selectedSupplier = medicine.supplier || '';
+      
+      if (selectedSupplier) {
+        console.log('Original supplier:', selectedSupplier);
+        
+        // Try to find exact match first
+        const exactMatch = availableSuppliers.find(sup => sup === selectedSupplier);
+        
+        if (!exactMatch) {
+          // Try case-insensitive match
+          const caseMatch = availableSuppliers.find(sup => 
+            sup.toLowerCase() === selectedSupplier.toLowerCase()
+          );
+          
+          if (caseMatch) {
+            selectedSupplier = caseMatch;
+          } else {
+            // Try partial match
+            const partialMatch = availableSuppliers.find(sup => 
+              sup.toLowerCase().includes(selectedSupplier.toLowerCase()) || 
+              selectedSupplier.toLowerCase().includes(sup.toLowerCase())
+            );
+            
+            if (partialMatch) {
+              selectedSupplier = partialMatch;
+            }
+            // If no match found, keep original value
+          }
+        }
+        console.log('Selected supplier:', selectedSupplier);
+      }
+
+      // Handle date field mapping and formatting
+      const purchaseDate = medicine.purchase_date || medicine.createdAt || '';
+      let expiryDate = medicine.expiry_date || '';
+      
+      // Format expiry date for HTML date input (YYYY-MM-DD)
+      if (expiryDate) {
+        try {
+          // If it's already in YYYY-MM-DD format, keep it
+          if (/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
+            // Already in correct format
+            console.log('Expiry date already in correct format:', expiryDate);
+          } else {
+            // Try to parse different date formats
+            let dateObj = null;
+            
+            // Try DD/MM/YYYY format
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(expiryDate)) {
+              const parts = expiryDate.split('/');
+              dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+            // Try MM/DD/YYYY format
+            else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(expiryDate)) {
+              dateObj = new Date(expiryDate);
+            }
+            // Try other date formats
+            else {
+              dateObj = new Date(expiryDate);
+            }
+            
+            if (dateObj && !isNaN(dateObj.getTime())) {
+              // Convert to YYYY-MM-DD format for HTML date input
+              expiryDate = dateObj.toISOString().split('T')[0];
+              console.log('Converted expiry date to:', expiryDate);
+            } else {
+              console.log('Could not parse expiry date:', medicine.expiry_date);
+              expiryDate = ''; // Reset if can't parse
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing expiry date:', error);
+          expiryDate = ''; // Reset on error
+        }
+      }
+      
+      console.log('Original expiry_date:', medicine.expiry_date);
+      console.log('Formatted expiry_date:', expiryDate);
+
+      const newFormData = {
+        name: medicine.name || '',
+        category: selectedCategory,
+        manufacturer: medicine.manufacturer || '',
+        supplier: selectedSupplier,
+        batch_number: medicine.batch_number || '',
+        expiry_date: expiryDate,
+        quantity: medicine.quantity || 0,
+        price: medicine.price || 0,
+        status: medicine.status || 'active',
+        description: medicine.description || '',
+      };
+      
+      console.log('Setting form data:', newFormData);
+      
+      setEditingMedicine(medicine);
+      setFormData(newFormData);
+      setIsAddingMedicine(true);
+      
+    } catch (error) {
+      console.error('Error preparing edit form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load medicine data for editing",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewMedicine = (medicine: Medicine) => {
@@ -327,19 +539,38 @@ const handleRefresh = React.useCallback(() => {
           index + 1,
           formattedDate,
           `"${medicine.name}"`,
-          `"${medicine.category}"`,
+          `"${getDisplayCategoryName(medicine.category)}"`,
           `"${medicine.manufacturer || ''}"`,
-          `"${medicine.supplier}"`,
+          `"${getDisplaySupplierName(medicine.supplier)}"`,
           `"${medicine.batch_number || ''}"`,
           medicine.expiry_date || '',
           medicine.quantity,
-          medicine.price,
+          `₹${medicine.price}`,
           medicine.status.charAt(0).toUpperCase() + medicine.status.slice(1),
         ];
       });
+
+      // Calculate totals
+      const totalQuantity = filteredMedicines.reduce((sum, medicine) => sum + (medicine.quantity || 0), 0);
+      const totalValue = filteredMedicines.reduce((sum, medicine) => sum + (medicine.price || 0) * (medicine.quantity || 0), 0);
       
-      const csvContent = [headers, ...csvData]
-        .map(row => row.join(','))
+      // Add totals row
+      const totalsRow = [
+        '',
+        '',
+        'TOTALS',
+        '',
+        '',
+        '',
+        '',
+        '',
+        totalQuantity,
+        `₹${totalValue.toFixed(2)}`,
+        `${filteredMedicines.length} medicines`
+      ];
+      
+      const csvContent = [headers, ...csvData, [], totalsRow]
+        .map(row => Array.isArray(row) ? row.join(',') : row)
         .join('\n');
       
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -634,11 +865,11 @@ const handleRefresh = React.useCallback(() => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="Tablets">Tablets</SelectItem>
-                    <SelectItem value="Capsules">Capsules</SelectItem>
-                    <SelectItem value="Syrup">Syrup</SelectItem>
-                    <SelectItem value="Injection">Injection</SelectItem>
-                    <SelectItem value="Ointment">Ointment</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -694,13 +925,26 @@ const handleRefresh = React.useCallback(() => {
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Date</span>
+                    <span>
+                      <span className="hidden sm:inline">Purchase Date *</span>
+                      <span className="sm:hidden">Date *</span>
+                    </span>
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Medicine Name</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Category</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <span>
+                    <span className="hidden sm:inline">Category *</span>
+                    <span className="sm:hidden">Cat *</span>
+                  </span>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Manufacturer</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Supplier</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <span>
+                    <span className="hidden sm:inline">Supplier *</span>
+                    <span className="sm:hidden">Sup *</span>
+                  </span>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Quantity</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Price</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
@@ -731,9 +975,9 @@ const handleRefresh = React.useCallback(() => {
                     })()
                   }</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm max-w-[200px] truncate">{medicine.name}</TableCell>
-                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{medicine.category}</TableCell>
+                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{getDisplayCategoryName(medicine.category)}</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{medicine.manufacturer || '-'}</TableCell>
-                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{medicine.supplier}</TableCell>
+                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{getDisplaySupplierName(medicine.supplier)}</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
                     <span className={medicine.quantity <= 10 ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
                       {medicine.quantity}
@@ -883,6 +1127,7 @@ const handleRefresh = React.useCallback(() => {
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium text-gray-700">Medicine Name *</Label>
                   <Input
+                    key={`name-${editingMedicine?.id || 'new'}-${formData.name}`}
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -892,22 +1137,27 @@ const handleRefresh = React.useCallback(() => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category" className="text-sm font-medium text-gray-700">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                  <Select 
+                    key={`category-${editingMedicine?.id || 'new'}-${formData.category}`} 
+                    value={formData.category} 
+                    onValueChange={(value) => setFormData({...formData, category: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Tablets">Tablets</SelectItem>
-                      <SelectItem value="Capsules">Capsules</SelectItem>
-                      <SelectItem value="Syrup">Syrup</SelectItem>
-                      <SelectItem value="Injection">Injection</SelectItem>
-                      <SelectItem value="Ointment">Ointment</SelectItem>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="manufacturer" className="text-sm font-medium text-gray-700">Manufacturer</Label>
                   <Input
+                    key={`manufacturer-${editingMedicine?.id || 'new'}-${formData.manufacturer}`}
                     id="manufacturer"
                     value={formData.manufacturer}
                     onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
@@ -916,17 +1166,27 @@ const handleRefresh = React.useCallback(() => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="supplier" className="text-sm font-medium text-gray-700">Supplier *</Label>
-                  <Input
-                    id="supplier"
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                    placeholder="Enter supplier"
-                    required
-                  />
+                  <Select 
+                    key={`supplier-${editingMedicine?.id || 'new'}-${formData.supplier}`} 
+                    value={formData.supplier} 
+                    onValueChange={(value) => setFormData({...formData, supplier: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map(supplier => (
+                        <SelectItem key={supplier.id} value={supplier.name}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="batch_number" className="text-sm font-medium text-gray-700">Batch Number</Label>
                   <Input
+                    key={`batch-number-${editingMedicine?.id || 'new'}-${formData.batch_number}`}
                     id="batch_number"
                     value={formData.batch_number}
                     onChange={(e) => setFormData({...formData, batch_number: e.target.value})}
@@ -936,6 +1196,7 @@ const handleRefresh = React.useCallback(() => {
                 <div className="space-y-2">
                   <Label htmlFor="expiry_date" className="text-sm font-medium text-gray-700">Expiry Date</Label>
                   <Input
+                    key={`expiry-date-${editingMedicine?.id || 'new'}-${formData.expiry_date}`}
                     id="expiry_date"
                     type="date"
                     value={formData.expiry_date}
@@ -945,6 +1206,7 @@ const handleRefresh = React.useCallback(() => {
                 <div className="space-y-2">
                   <Label htmlFor="quantity" className="text-sm font-medium text-gray-700">Quantity *</Label>
                   <Input
+                    key={`quantity-${editingMedicine?.id || 'new'}-${formData.quantity}`}
                     id="quantity"
                     type="number"
                     min="0"
@@ -957,6 +1219,7 @@ const handleRefresh = React.useCallback(() => {
                 <div className="space-y-2">
                   <Label htmlFor="price" className="text-sm font-medium text-gray-700">Price *</Label>
                   <Input
+                    key={`price-${editingMedicine?.id || 'new'}-${formData.price}`}
                     id="price"
                     type="number"
                     min="0"
@@ -969,7 +1232,11 @@ const handleRefresh = React.useCallback(() => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                  <Select 
+                    key={`status-${editingMedicine?.id || 'new'}-${formData.status}`} 
+                    value={formData.status} 
+                    onValueChange={(value) => setFormData({...formData, status: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
@@ -982,6 +1249,7 @@ const handleRefresh = React.useCallback(() => {
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
                   <Textarea
+                    key={`description-${editingMedicine?.id || 'new'}-${formData.description.slice(0, 10)}`}
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -1026,84 +1294,190 @@ const handleRefresh = React.useCallback(() => {
           </DialogContent>
         </Dialog>
 
-        {/* View Medicine Dialog */}
+        {/* View Medicine Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
         <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Eye className="h-6 w-6 text-blue-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Medicine Details
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="px-2 sm:px-6">
+              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <span className="truncate">Medicine Information History</span>
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Complete information about this medicine
-              </DialogDescription>
             </DialogHeader>
             
             {viewingMedicine && (
-              <div className="space-y-4 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Medicine Name</Label>
-                    <div className="text-sm font-medium text-gray-900">{viewingMedicine.name}</div>
+              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
+                {/* Product Details Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      Product Details
+                    </h3>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Category</Label>
-                    <div className="text-sm text-gray-900">{viewingMedicine.category}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Manufacturer</Label>
-                    <div className="text-sm text-gray-900">{viewingMedicine.manufacturer || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Supplier</Label>
-                    <div className="text-sm text-gray-900">{viewingMedicine.supplier}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Batch Number</Label>
-                    <div className="text-sm text-gray-900">{viewingMedicine.batch_number || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Expiry Date</Label>
-                    <div className="text-sm text-gray-900">{viewingMedicine.expiry_date || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Quantity</Label>
-                    <div className="text-sm font-medium text-gray-900">{viewingMedicine.quantity}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Price</Label>
-                    <div className="text-sm text-gray-900">₹{viewingMedicine.price}</div>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-sm font-medium text-gray-500">Status</Label>
-                    <div className="mt-1">
-                      <Badge 
-                        variant={viewingMedicine.status === 'active' ? 'default' : 'secondary'}
-                        className={`
-                          ${viewingMedicine.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                        `}
-                      >
-                        {viewingMedicine.status.charAt(0).toUpperCase() + viewingMedicine.status.slice(1)}
-                      </Badge>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Medicine ID</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                          {viewingMedicine.id}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Medicine Name</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewingMedicine.name}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {getDisplayCategoryName(viewingMedicine.category)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Supplier</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {getDisplaySupplierName(viewingMedicine.supplier)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Manufacturer</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewingMedicine.manufacturer || 'Not specified'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Price per Unit</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          ₹{viewingMedicine.price}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Expiry Date</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewingMedicine.expiry_date ? (() => {
+                            try {
+                              const date = new Date(viewingMedicine.expiry_date);
+                              if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('en-GB');
+                              }
+                              return viewingMedicine.expiry_date;
+                            } catch {
+                              return viewingMedicine.expiry_date || 'Not specified';
+                            }
+                          })() : 'Not specified'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Batch Number</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                          {viewingMedicine.batch_number || 'Not specified'}
+                        </p>
+                      </div>
+                      {viewingMedicine.description && (
+                        <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                          <label className="text-xs sm:text-sm font-medium text-gray-600">Description</label>
+                          <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                            {viewingMedicine.description}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {viewingMedicine.description && (
-                    <div className="col-span-2">
-                      <Label className="text-sm font-medium text-gray-500">Description</Label>
-                      <div className="text-sm text-gray-900 mt-1">{viewingMedicine.description}</div>
+                </div>
+                
+                {/* Stock Summary Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      Stock Summary
+                    </h3>
+                  </div>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">{viewingMedicine.quantity || 0}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Stock</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">0</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Used Stock</div>
+                      </div>
+                      <div className="text-center lg:col-start-3">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">{viewingMedicine.quantity || 0}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Available</div>
+                      </div>
+                      <div className="text-center lg:col-start-4">
+                        <div className="mb-2">
+                          <Badge 
+                            variant={
+                              viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'default' : 
+                              (viewingMedicine.quantity || 0) <= 10 ? 'secondary' : 'destructive'
+                            }
+                            className={`text-xs sm:text-sm font-medium px-2 py-1 ${
+                              viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
+                              (viewingMedicine.quantity || 0) <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'In Stock' :
+                             (viewingMedicine.quantity || 0) <= 10 ? 'Low Stock' :
+                             'Out of Stock'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600">Status</div>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                </div>
+                
+                {/* Stock Movement History */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                      Stock Movement History
+                    </h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[50px]">S NO</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Date</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Stock Change</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Type</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Stock After</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Description</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-6 sm:py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
+                              <span className="text-sm sm:text-base">No stock history recorded yet</span>
+                              <span className="text-xs text-gray-500 hidden sm:block">Stock movement tracking will appear here</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-100 px-3 sm:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
                 variant="outline"
                 onClick={() => setShowViewDialog(false)}
-                className="w-full"
+                className="w-full sm:w-auto modern-btn modern-btn-secondary text-sm sm:text-base"
               >
                 Close
               </Button>

@@ -244,6 +244,10 @@ router.get('/general-products', async (req, res) => {
   console.log('✅ General products requested');
   try {
     const [rows] = await db.execute('SELECT * FROM general_products ORDER BY id DESC');
+    console.log('📋 Sample general product data:', rows.length > 0 ? rows[0] : 'No products found');
+    if (rows.length > 0) {
+      console.log('🔍 Available columns:', Object.keys(rows[0]));
+    }
     res.json(rows);
   } catch (error) {
     console.error('❌ Error fetching general products:', error);

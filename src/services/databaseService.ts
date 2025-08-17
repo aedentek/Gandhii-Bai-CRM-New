@@ -447,13 +447,26 @@ export class DatabaseService {
   }
   
   static async addPatientHistory(data: any) {
+    console.log('🔗 DatabaseService.addPatientHistory called with:', data);
+    console.log('🔗 API URL:', `${this.apiBaseUrl}/patient-history`);
+    
     const res = await fetch(`${this.apiBaseUrl}/patient-history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Failed to add patient history record');
-    return res.json();
+    
+    console.log('🔗 Response status:', res.status, res.statusText);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('🔗 Response error:', errorText);
+      throw new Error(`Failed to add patient history record: ${res.status} - ${errorText}`);
+    }
+    
+    const result = await res.json();
+    console.log('🔗 Response result:', result);
+    return result;
   }
   
   static async updatePatientHistory(id: string | number, data: any) {

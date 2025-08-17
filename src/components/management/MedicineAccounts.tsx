@@ -30,7 +30,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, FileText, Pencil, Eye, CreditCard, Search, Trash2, RefreshCw, Activity, Calendar, Download, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileText, Pencil, Eye, CreditCard, Search, Trash2, RefreshCw, Activity, Calendar, Download, DollarSign, Package, BarChart3, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 
@@ -787,94 +787,214 @@ const MedicineAccounts: React.FC = () => {
         )}
       </div>
 
-        {/* View Settlement History Dialog */}
+        {/* View Settlement History Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
         <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Eye className="h-6 w-6 text-blue-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Settlement History
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="px-2 sm:px-6">
+              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <span className="truncate">Account Information History</span>
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Complete payment details and settlement records
-              </DialogDescription>
             </DialogHeader>
             
             {viewProduct && (
-              <div className="space-y-6 p-4">
-                {/* Product Details Section */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Product Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
-                    <div>
-                      <span className="font-semibold">Product Name:</span> {viewProduct.name}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Category:</span> {viewProduct.category}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Supplier:</span> {viewProduct.supplier}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Purchase Date:</span> {formatDateDDMMYYYY(viewProduct.purchase_date)}
+              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
+                {/* Product Details Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      Product Details
+                    </h3>
+                  </div>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product ID</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                          {viewProduct.id}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product Name</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewProduct.name}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewProduct.category}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Supplier</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
+                          {viewProduct.supplier}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Unit</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          Units
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Price</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          ₹{viewProduct.price || 0}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Purchase Date</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {formatDateDDMMYYYY(viewProduct.purchase_date)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Expiry Date</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {formatDateDDMMYYYY(viewProduct.expiry_date)}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs sm:text-sm font-medium text-gray-600">Quantity</label>
+                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                          {viewProduct.quantity || 0}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Settlement History Table */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Settlement History</h3>
+                
+                {/* Account Summary Card */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      Account Summary
+                    </h3>
+                  </div>
+                  
+                  <div className="p-3 sm:p-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">
+                          ₹{viewProduct.total_amount ? Number(viewProduct.total_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Amount</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
+                          ₹{viewProduct.paid_amount ? Number(viewProduct.paid_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Amount Paid</div>
+                      </div>
+                      <div className="text-center lg:col-start-3">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
+                          ₹{viewProduct.pending_amount ? Number(viewProduct.pending_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending</div>
+                      </div>
+                      <div className="text-center lg:col-start-4">
+                        <div className="mb-2">
+                          <Badge 
+                            variant={
+                              viewProduct.status === 'paid' ? 'default' : 
+                              viewProduct.status === 'pending' ? 'secondary' : 'destructive'
+                            }
+                            className={`text-xs sm:text-sm font-medium px-2 py-1 ${
+                              viewProduct.status === 'paid' ? 'bg-green-100 text-green-800' :
+                              viewProduct.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {viewProduct.status ? viewProduct.status.charAt(0).toUpperCase() + viewProduct.status.slice(1) : 'Pending'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600">Status</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Payment History */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 sm:px-6 py-3 sm:py-4 border-b">
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                      Payment History
+                    </h3>
+                  </div>
+                  
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-200 rounded-lg">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="px-3 py-2 text-center font-semibold">S NO</th>
-                          <th className="px-3 py-2 text-center font-semibold">Payment Date</th>
-                          <th className="px-3 py-2 text-center font-semibold">Amount Paid</th>
-                          <th className="px-3 py-2 text-center font-semibold">Payment Type</th>
-                          <th className="px-3 py-2 text-center font-semibold">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {viewSettlements.length === 0 && (
-                          <tr><td colSpan={5} className="text-center p-2">No payments found</td></tr>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[50px]">S NO</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Payment Date</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Amount Paid</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Payment Type</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Description</TableHead>
+                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewSettlements.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-6 sm:py-8 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-2">
+                                <CreditCard className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
+                                <span className="text-sm sm:text-base">No payment records found</span>
+                                <span className="text-xs text-gray-500 hidden sm:block">Payment history will appear here</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          viewSettlements.map((s, idx) => {
+                            const formattedDate = formatDateDDMMYYYY(s.payment_date);
+                            return (
+                              <TableRow key={idx} className="hover:bg-gray-50">
+                                <TableCell className="text-center font-medium text-xs sm:text-sm">{idx + 1}</TableCell>
+                                <TableCell className="text-center text-xs sm:text-sm">{formattedDate}</TableCell>
+                                <TableCell className="text-center font-bold text-green-600 text-xs sm:text-sm">
+                                  ₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="text-center text-xs sm:text-sm">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {s.payment_type || 'Cash'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center text-xs sm:text-sm">{s.description || '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                                    title="Delete Payment Record"
+                                    onClick={() => handleDeleteSettlement(idx)}
+                                    disabled={submitting}
+                                  >
+                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
-                        {viewSettlements.map((s, idx) => {
-                          const formattedDate = formatDateDDMMYYYY(s.payment_date);
-                          return (
-                            <tr key={idx}>
-                              <td className="px-3 py-2 text-center">{idx + 1}</td>
-                              <td className="px-3 py-2 text-center">{formattedDate}</td>
-                              <td className="px-3 py-2 text-center">₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                              <td className="px-3 py-2 text-center">{s.payment_type || '-'}</td>
-                              <td className="px-3 py-2 text-center">
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded transition-colors"
-                                  title="Delete"
-                                  onClick={() => handleDeleteSettlement(idx)}
-                                  disabled={submitting}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="flex justify-center pt-4">
+            <DialogFooter className="flex justify-center pt-4 px-3 sm:px-6 pb-4">
               <Button 
                 variant="outline" 
                 onClick={() => setViewModalOpen(false)}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto text-sm sm:text-base"
               >
                 Close
               </Button>

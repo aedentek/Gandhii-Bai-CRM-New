@@ -13,7 +13,7 @@ import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { Textarea } from '../../components/ui/textarea';
-import { uploadMedicalHistoryFile } from '../../services/simpleFileUpload';
+import { uploadMedicalHistoryFile, uploadCallRecordAudio, getFileUrl } from '../../services/simpleFileUpload';
 
 type AudioRecording = {
   blob: Blob;
@@ -123,6 +123,13 @@ const PatientCallRecord: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Function to format patient ID as P0001
+  const formatPatientId = (id: string | number): string => {
+    // Convert to number, removing any existing P prefix and leading zeros
+    const numericId = typeof id === 'string' ? parseInt(id.replace(/^P0*/, '')) : id;
+    return `P${numericId.toString().padStart(4, '0')}`;
+  };
 
   // Audio file upload handler (like PatientHistory)
   const handleAudioFileUpload = (files: FileList | null) => {
@@ -431,13 +438,12 @@ const PatientCallRecord: React.FC = () => {
         
         let audioUrl = '';
         if (record.audio_file_path) {
-          // If we have a full path, construct the URL properly
-          // Remove any leading slash and ensure it works with the backend static serving
-          const cleanPath = record.audio_file_path.startsWith('/') ? record.audio_file_path.substring(1) : record.audio_file_path;
-          audioUrl = `http://localhost:4000/${cleanPath}`;
+          // Use getFileUrl service to handle proper URL construction
+          audioUrl = getFileUrl(record.audio_file_path);
         } else if (record.audio_file_name) {
-          // Fallback: construct URL from filename
-          audioUrl = `http://localhost:4000/uploads/audio/${record.audio_file_name}`;
+          // Fallback: construct path for call records folder and use getFileUrl
+          const fallbackPath = `Photos/Patient Call Records/${record.patient_id}/audio/${record.audio_file_name}`;
+          audioUrl = getFileUrl(fallbackPath);
         }
         
         console.log('🔗 Constructed audio URL:', audioUrl);
@@ -766,11 +772,13 @@ const PatientCallRecord: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('Add Record button clicked',);
-console.log('Form Data:', formData);
-    console.log('Selected Patient ID:', selectedPatientId);
-    console.log('Audio Recording:', audioRecording);
+    console.log('🚀 Add Record button clicked');
+    console.log('📝 Form Data:', formData);
+    console.log('👤 Selected Patient ID:', selectedPatientId);
+    console.log('🎵 Audio Recording:', audioRecording);
+    
     if (!formData.patientId || !formData.date) {
+      console.log('❌ Validation failed - missing required fields');
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields (Patient and Date).",
@@ -779,8 +787,19 @@ console.log('Form Data:', formData);
       return;
     }
 
-    const patient = patients.find(p => p.id === formData.patientId);
-    if (!patient) return;
+    const patient = patients.find(p => String(p.id) === String(formData.patientId));
+    if (!patient) {
+      console.error('Patient not found for ID:', formData.patientId);
+      console.log('Available patients:', patients.map(p => ({ id: p.id, name: p.name })));
+      toast({
+        title: "Patient Error",
+        description: "Selected patient not found. Please try selecting the patient again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('Found patient:', patient.name, 'ID:', patient.id);
 
     try {
       const isEditing = editRecord !== null;
@@ -798,7 +817,7 @@ console.log('Form Data:', formData);
           
           // Create file from blob and upload to server
           const audioFile = new File([audioRecording.blob], audioFileName, { type: 'audio/wav' });
-          audioFilePath = await uploadMedicalHistoryFile(audioFile, formData.patientId, 'audio');
+          audioFilePath = await uploadCallRecordAudio(audioFile, formData.patientId);
           console.log('âœ… Recorded audio uploaded:', audioFilePath);
         } catch (error) {
           console.error('âŒ Audio upload error:', error);
@@ -810,7 +829,7 @@ console.log('Form Data:', formData);
       if (!audioRecording && formData.audioFiles.length > 0) {
         try {
           const firstAudioFile = formData.audioFiles[0];
-          audioFilePath = await uploadMedicalHistoryFile(firstAudioFile, formData.patientId, 'audio');
+          audioFilePath = await uploadCallRecordAudio(firstAudioFile, formData.patientId);
           audioFileName = firstAudioFile.name;
           audioDuration = 0; // Duration will be calculated later if needed
           console.log('âœ… Audio file uploaded:', audioFilePath);
@@ -832,20 +851,26 @@ console.log('Form Data:', formData);
         audio_duration: audioDuration
       };
 
+      console.log('💾 About to save DB record:', dbRecord);
+
       // Send JSON data directly (not FormData)
       if (isEditing) {
+        console.log('🔄 Updating existing record...');
         await CallRecordService.updatePatientCallRecord(recordId, dbRecord);
         toast({
           title: "Record Updated",
           description: "Call record has been successfully updated.",
         });
       } else {
+        console.log('➕ Adding new record...');
         await CallRecordService.addPatientCallRecord(dbRecord);
         toast({
           title: "Record Added",
           description: "Call record has been successfully added.",
         });
       }
+
+      console.log('✅ Record saved successfully!');
 
       setIsUpdatingRecords(true);
       await loadCallRecords();
@@ -1160,27 +1185,74 @@ console.log('Form Data:', formData);
                             <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                             <TableCell className="text-center">
                               <div className="flex justify-center items-center">
-                                {patient?.photo || patient?.photoUrl ? (
-                                  <img
-                                    src={patient.photo || patient.photoUrl}
-                                    alt={`${record.patientName}'s photo`}
-                                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                                    onError={(e) => {
-                                      // Fallback to default avatar if image fails to load
-                                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNGM0Y0RjYiLz4KPGF0aCBkPSJNMjAgMTJDMTcuNzkgMTIgMTYgMTMuNzkgMTYgMTZDMTYgMTguMjEgMTcuNzkgMjAgMjAgMjBDMjIuMjEgMjAgMjQgMTguMjEgMjQgMTZDMjQgMTMuNzkgMjIuMjEgMTIgMjAgMTJaTTIwIDI2QzE2LjY3IDI2IDEwIDI3LjY3IDEwIDMxVjMySDMwVjMxQzMwIDI3LjY3IDIzLjMzIDI2IDIwIDI2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <path d="M12 6C10.34 6 9 7.34 9 9C9 10.66 10.34 12 12 12C13.66 12 15 10.66 15 9C15 7.34 13.66 6 12 6ZM12 15C9.33 15 4 16.34 4 19V20H20V19C20 16.34 14.67 15 12 15Z" fill="#9CA3AF"/>
-                                    </svg>
-                                  </div>
-                                )}
+                                {(() => {
+                                  // Construct proper photo URL
+                                  let imageUrl = '';
+                                  
+                                  if (patient?.photo) {
+                                    // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                                    if (patient.photo.startsWith('http')) {
+                                      imageUrl = patient.photo;
+                                    } else {
+                                      // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                                      // Database stores: Photos/patient Admission/{patientId}/{filename}
+                                      // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                                      if (patient.photo.includes('Photos/patient Admission/')) {
+                                        // Photo path is already in correct format from database
+                                        imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
+                                      } else {
+                                        // Assume it's just filename and build full path
+                                        imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photo}`;
+                                      }
+                                    }
+                                  } else if (patient?.photoUrl) {
+                                    if (patient.photoUrl.startsWith('http')) {
+                                      imageUrl = patient.photoUrl;
+                                    } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                                      imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                                    } else {
+                                      imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photoUrl}`;
+                                    }
+                                  }
+
+                                  return imageUrl ? (
+                                    <>
+                                      <img
+                                        src={imageUrl}
+                                        alt={`${record.patientName}'s photo`}
+                                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                                        onError={(e) => {
+                                          console.log('❌ Image failed for:', record.patientName);
+                                          console.log('   Failed URL:', imageUrl);
+                                          
+                                          // Show fallback avatar
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          const avatarDiv = target.nextElementSibling as HTMLElement;
+                                          if (avatarDiv) avatarDiv.style.display = 'flex';
+                                        }}
+                                        onLoad={() => {
+                                          console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
+                                        }}
+                                      />
+                                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                                        <span className="text-sm font-semibold text-white">
+                                          {(record.patientName || 'P').charAt(0).toUpperCase()}
+                                        </span>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                                      <span className="text-sm font-semibold text-white">
+                                        {(record.patientName || 'P').charAt(0).toUpperCase()}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <span className="font-bold text-black">{record.patientId}</span>
+                              <span className="font-medium text-blue-600">{formatPatientId(record.patientId)}</span>
                             </TableCell>
                             <TableCell className="text-center font-semibold">{record.patientName}</TableCell>
                             <TableCell className="text-center">
@@ -1321,8 +1393,23 @@ console.log('Form Data:', formData);
                   // Non-editable patient display when pre-selected
                   <div className="w-full p-2 border rounded-md bg-gray-50 text-gray-700">
                     {(() => {
-                      const patient = patients.find(p => p.id === selectedPatientId);
-                      return patient ? `${patient.name} (${patient.id})` : 'Unknown Patient';
+                      // Try multiple matching strategies to find the patient
+                      let patient = patients.find(p => String(p.id) === String(selectedPatientId));
+                      
+                      if (!patient) {
+                        // Try matching with formData.patientId
+                        patient = patients.find(p => String(p.id) === String(formData.patientId));
+                      }
+                      
+                      if (!patient) {
+                        // Try matching by UHID or other identifiers
+                        patient = patients.find(p => 
+                          p.uhid === selectedPatientId || 
+                          String(p.id).toLowerCase() === String(selectedPatientId).toLowerCase()
+                        );
+                      }
+                      
+                      return patient ? `${patient.name} (${patient.id})` : `Unknown Patient (${selectedPatientId})`;
                     })()}
                   </div>
                 ) : (
@@ -1422,13 +1509,87 @@ console.log('Form Data:', formData);
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-primary">Patient Details</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {/* Patient Photo */}
+                  <div className="flex items-center space-x-4 col-span-2 md:col-span-3 mb-4">
+                    {(() => {
+                      const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                      
+                      // Construct proper photo URL
+                      let imageUrl = '';
+                      
+                      if (patient?.photo) {
+                        // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                        if (patient.photo.startsWith('http')) {
+                          imageUrl = patient.photo;
+                        } else {
+                          // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                          // Database stores: Photos/patient Admission/{patientId}/{filename}
+                          // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                          if (patient.photo.includes('Photos/patient Admission/')) {
+                            // Photo path is already in correct format from database
+                            imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
+                          } else {
+                            // Assume it's just filename and build full path
+                            imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photo}`;
+                          }
+                        }
+                      } else if (patient?.photoUrl) {
+                        if (patient.photoUrl.startsWith('http')) {
+                          imageUrl = patient.photoUrl;
+                        } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                          imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                        } else {
+                          imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photoUrl}`;
+                        }
+                      }
+
+                      return imageUrl ? (
+                        <>
+                          <img
+                            src={imageUrl}
+                            alt={`${viewRecord.patientName}'s photo`}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                            onError={(e) => {
+                              console.log('❌ Image failed for:', viewRecord.patientName);
+                              console.log('   Failed URL:', imageUrl);
+                              
+                              // Show fallback avatar
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const avatarDiv = target.nextElementSibling as HTMLElement;
+                              if (avatarDiv) avatarDiv.style.display = 'flex';
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Image loaded successfully for patient:', viewRecord.patientName, 'URL:', imageUrl);
+                            }}
+                          />
+                          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                            <span className="text-lg font-semibold text-white">
+                              {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                          <span className="text-lg font-semibold text-white">
+                            {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <p className="text-xl font-semibold text-foreground">{viewRecord.patientName}</p>
+                      <p className="text-sm text-muted-foreground">Patient ID: {formatPatientId(viewRecord.patientId)}</p>
+                    </div>
+                  </div>
+                  
                   <div>
                     <Label className="font-semibold text-muted-foreground">Patient Name:</Label>
                     <p className="text-foreground font-medium">{viewRecord.patientName}</p>
                   </div>
                   <div>
                     <Label className="font-semibold text-muted-foreground">Patient ID:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientId}</p>
+                    <p className="text-foreground font-medium">{formatPatientId(viewRecord.patientId)}</p>
                   </div>
                   <div>
                     <Label className="font-semibold text-muted-foreground">Joining Date:</Label>

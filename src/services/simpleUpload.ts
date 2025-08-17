@@ -37,7 +37,7 @@ export const movePatientFiles = async (patientId: string, tempPaths: { [key: str
 // Simplified file upload service without health check
 export const uploadPatientFileSimple = async (
   file: File, 
-  patientId: string = 'new', 
+  patientId: string = 'temp', 
   fieldName: string = 'photo'
 ): Promise<string> => {
   try {

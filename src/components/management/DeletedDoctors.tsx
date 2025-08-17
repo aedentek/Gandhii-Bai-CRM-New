@@ -130,55 +130,67 @@ const DeletedDoctors: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-destructive rounded-lg">
-            <Trash2 className="w-6 h-6 text-destructive-foreground" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Deleted Doctors</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 sm:p-3 bg-red-100 rounded-xl">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Deleted Doctors</h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1">Manage and restore deleted doctor records</p>
+              </div>
+            </div>
+
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <Button 
+                onClick={loadDeletedDoctors}
+                disabled={loading}
+                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <RotateCcw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-      <Card className="mb-6 shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
-            Search & Filter
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
+        {/* Search and Filters */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div>
+              <Label htmlFor="search" className="text-sm font-medium text-gray-700 mb-2 block">Search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
                   placeholder="Search by name, ID, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-filter">Date Deleted</Label>
+            <div>
+              <Label htmlFor="date-filter" className="text-sm font-medium text-gray-700 mb-2 block">Date Deleted</Label>
               <Input
                 id="date-filter"
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
+                className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="deleted-by">Deleted By</Label>
+            <div>
+              <Label htmlFor="deleted-by" className="text-sm font-medium text-gray-700 mb-2 block">Deleted By</Label>
               <select
                 id="deleted-by"
                 value={deletedByFilter}
                 onChange={e => setDeletedByFilter(e.target.value)}
-                className="w-full border rounded px-2 py-2"
+                className="w-full bg-white/80 border border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg px-3 py-2"
               >
                 <option value="all">All users</option>
                 {getDeletedByOptions().map((deletedBy) => (
@@ -186,35 +198,36 @@ const DeletedDoctors: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label>Clear Filters</Label>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Clear Filters</Label>
               <Button 
-                variant="outline" 
+                variant="outline"
                 onClick={() => {
                   setSearchTerm('');
                   setDateFilter('');
                   setDeletedByFilter('');
                 }}
-                className="w-full"
+                className="modern-btn modern-btn-secondary w-full text-xs sm:text-sm px-2 py-1"
               >
                 Clear All
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Deleted Doctors ({filteredDoctors.length})</span>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Users className="w-4 h-4" />
-              <span>Page {currentPage} of {totalPages}</span>
+        </div>
+        {/* Deleted Doctors Table */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                Deleted Doctors ({filteredDoctors.length})
+              </h2>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Users className="w-4 h-4" />
+                <span>Page {currentPage} of {totalPages}</span>
+              </div>
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredDoctors.length === 0 ? (
+          </div>
+          <div className="p-4 sm:p-6">{filteredDoctors.length === 0 ? (
             <div className="text-center py-12">
               <Trash2 className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No deleted doctors found</h3>
@@ -381,6 +394,7 @@ const DeletedDoctors: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
+                      className="modern-btn modern-btn-secondary text-xs px-2 py-1"
                     >
                       Next
                     </Button>
@@ -389,8 +403,9 @@ const DeletedDoctors: React.FC = () => {
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

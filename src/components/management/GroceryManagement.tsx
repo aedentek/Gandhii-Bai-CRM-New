@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, ShoppingCart, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, ShoppingCart, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GroceryProduct {

@@ -26,9 +26,63 @@ export const uploadMedicalHistoryFile = async (
   return result.filePath;
 };
 
+// Upload for patient history documents (saves to Patient Doctor Record folder)
+export const uploadPatientHistoryFile = async (
+  file: File, 
+  patientId: string, 
+  fileType: 'document' | 'audio' = 'document'
+): Promise<string> => {
+  console.log(`📤 Uploading patient history ${fileType}:`, file.name, 'Size:', file.size);
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('patientId', patientId);
+  formData.append('fileType', fileType);
+
+  const response = await fetch('/api/upload-patient-history-file', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Patient history upload failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('✅ Patient history upload successful:', result.filePath);
+  return result.filePath;
+};
+
+// Upload for call record audio files (saves to Patient Call Records folder)
+export const uploadCallRecordAudio = async (
+  file: File, 
+  patientId: string
+): Promise<string> => {
+  console.log(`📤 Uploading call record audio:`, file.name, 'Size:', file.size);
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('patientId', patientId);
+
+  const response = await fetch('/api/upload-call-record-audio', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Call record audio upload failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('✅ Call record audio upload successful:', result.filePath);
+  return result.filePath;
+};
+
 export const uploadPatientFile = async (
   file: File, 
-  patientId: string = 'new', 
+  patientId: string = 'temp', 
   fieldName: string = 'photo'
 ): Promise<string> => {
   try {
@@ -182,6 +236,9 @@ export const getFileUrl = (filePath: string): string => {
   
   if (cleanPath.startsWith('/uploads/')) {
     // Path already includes /uploads/ (for both patients and medical-history)
+    fullUrl = `http://localhost:4000${cleanPath}`;
+  } else if (cleanPath.startsWith('/Photos/')) {
+    // Photos directory (Patient History, Patient Medical Records, etc.)
     fullUrl = `http://localhost:4000${cleanPath}`;
   } else {
     // Add the uploads/patients/ prefix for legacy patient files

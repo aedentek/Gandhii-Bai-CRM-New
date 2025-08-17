@@ -295,96 +295,100 @@ const LeadsList: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
         <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Leads Management</h1>
-                {/* {(filterMonth !== null && filterYear !== null) && (
-                  <p className="text-sm text-blue-600 mt-1">
-                    Filtered by {months[filterMonth]} {filterYear}
-                  </p>
-                )} */}
+             
               </div>
             </div>
-          
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
-                onClick={() => {
-                  console.log('🔄 Manual refresh triggered');
-                  // Reset to current month and reload data
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setCurrentPage(1);
-                  loadLeads();
-                }}
-                disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
-              
-              {/* Month & Year Filter Button */}
-              <Button 
-                onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
-              
-              {/* Clear Filter Button */}
-              {(filterMonth !== currentMonth || filterYear !== currentYear) && (
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
+              <div className="flex gap-2">
                 <Button 
+                  type="button"
                   onClick={() => {
+                    console.log('🔄 Manual refresh triggered');
                     setFilterMonth(currentMonth);
                     setFilterYear(currentYear);
                     setSelectedMonth(currentMonth);
                     setSelectedYear(currentYear);
+                    setCurrentPage(1);
+                    loadLeads();
                   }}
-                  variant="outline"
-                  size="sm"
-                  className="modern-btn modern-btn-secondary text-xs px-2 py-1"
+                  disabled={loading}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
                 >
-                  <span className="hidden sm:inline">Reset to Current</span>
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
                   <span className="sm:hidden">↻</span>
                 </Button>
-              )}
+                
+                {/* Month & Year Filter Button */}
+                <Button 
+                  type="button"
+                  onClick={() => setShowMonthYearDialog(true)}
+                  variant="outline"
+                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden lg:inline">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth]} ${filterYear}`
+                      : `${months[selectedMonth]} ${selectedYear}`
+                    }
+                  </span>
+                  <span className="lg:hidden">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
+                      : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                    }
+                  </span>
+                </Button>
+
+                {/* Clear Filter Button */}
+                {(filterMonth !== currentMonth || filterYear !== currentYear) && (
+                  <Button 
+                    type="button"
+                    onClick={() => {
+                      setFilterMonth(currentMonth);
+                      setFilterYear(currentYear);
+                      setSelectedMonth(currentMonth);
+                      setSelectedYear(currentYear);
+                    }}
+                    variant="outline"
+                    className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[80px]"
+                  >
+                    <span className="hidden sm:inline">Reset</span>
+                    <span className="sm:hidden">↻</span>
+                  </Button>
+                )}
+              </div>
               
-              <Button 
-                onClick={exportToCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">⬇</span>
-              </Button>
-              <Button 
-                onClick={() => setShowAddDialog(true)}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Add Lead</span>
-                <span className="sm:hidden">+</span>
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  onClick={exportToCSV}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                  <span className="sm:hidden">CSV</span>
+                </Button>
+
+                <Button 
+                  type="button"
+                  onClick={() => setShowAddDialog(true)}
+                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                >
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Lead</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -677,17 +681,17 @@ const LeadsList: React.FC = () => {
 
         {/* Add/Edit Lead Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Plus className="h-5 w-5 text-blue-600" />
+          <DialogContent className="w-[calc(100vw-20px)] max-w-[500px] max-h-[90vh] overflow-y-auto m-2 sm:m-5 sm:mx-auto">
+            <DialogHeader className="relative pb-3 sm:pb-4 border-b border-blue-100 p-4 sm:p-5">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-base sm:text-lg font-bold text-gray-900 truncate">
                     {editingLead ? 'Edit Lead' : 'Add New Lead'}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="text-xs sm:text-sm text-gray-600 mt-1">
                     {editingLead ? 'Update lead information' : 'Enter new lead details'}
                   </DialogDescription>
                 </div>
@@ -699,34 +703,35 @@ const LeadsList: React.FC = () => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="space-y-3 sm:space-y-4"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                <div className="w-full">
                   <Label htmlFor="name" className="text-sm font-medium text-gray-700">Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Enter lead name"
-                    className="mt-1"
+                    className="mt-1 w-full h-11"
                     required
                   />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="date" className="text-sm font-medium text-gray-700">Date</Label>
                   <Input
                     id="date"
                     type="date"
                     value={formData.date}
                     onChange={e => setFormData({ ...formData, date: e.target.value })}
-                    className="mt-1"
+                    className="mt-1 w-full h-11"
                   />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="category" className="text-sm font-medium text-gray-700">Category *</Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1 w-full h-11">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -736,31 +741,31 @@ const LeadsList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="contactNumber" className="text-sm font-medium text-gray-700">Contact Number *</Label>
                   <Input
                     id="contactNumber"
                     value={formData.contactNumber}
                     onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
                     placeholder="Enter contact number"
-                    className="mt-1"
+                    className="mt-1 w-full h-11"
                     required
                   />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="reminderDate" className="text-sm font-medium text-gray-700">Reminder Date</Label>
                   <Input
                     id="reminderDate"
                     type="date"
                     value={formData.reminderDate}
                     onChange={e => setFormData({ ...formData, reminderDate: e.target.value })}
-                    className="mt-1"
+                    className="mt-1 w-full h-11"
                   />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
                   <Select value={formData.status} onValueChange={(value: 'Closed' | 'Reminder' | 'Not Interested') => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1 w-full h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -770,20 +775,21 @@ const LeadsList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
+              <div className="w-full">
                 <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Enter description (optional)"
-                  className="mt-1"
+                  className="mt-1 w-full resize-none min-h-[80px]"
                   rows={3}
                 />
               </div>
+              </div>
+              </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100 p-4 sm:p-5">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -793,14 +799,14 @@ const LeadsList: React.FC = () => {
                     resetForm();
                   }}
                   disabled={submitting}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto min-h-[44px] text-sm"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto modern-btn modern-btn-primary min-h-[44px] text-sm"
                 >
                   {submitting ? 'Saving...' : (editingLead ? 'Update Lead' : 'Add Lead')}
                 </Button>
@@ -811,12 +817,12 @@ const LeadsList: React.FC = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
+          <DialogContent className="w-[calc(100vw-40px)] max-w-[400px] m-5 sm:mx-auto">
+            <DialogHeader className="text-center pb-4 sm:pb-6 p-5 sm:p-6">
+              <div className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
+              <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">
                 Delete Lead
               </DialogTitle>
               <DialogDescription className="text-sm text-gray-600 mt-2">
@@ -825,16 +831,16 @@ const LeadsList: React.FC = () => {
             </DialogHeader>
             
             {leadToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 my-4">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">{leadToDelete.name}</div>
-                  <div className="text-gray-600">{leadToDelete.contactNumber}</div>
-                  <div className="text-gray-600">{leadToDelete.category}</div>
+              <div className="bg-gray-50 rounded-lg p-4 mx-5 my-4 sm:mx-6">
+                <div className="text-sm space-y-2">
+                  <div className="font-medium text-gray-900 text-center sm:text-left truncate">{leadToDelete.name}</div>
+                  <div className="text-gray-600 text-center sm:text-left">{leadToDelete.contactNumber}</div>
+                  <div className="text-gray-600 text-center sm:text-left">{leadToDelete.category}</div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100 p-5 sm:p-6">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -843,7 +849,7 @@ const LeadsList: React.FC = () => {
                   setLeadToDelete(null);
                 }}
                 disabled={submitting}
-                className="modern-btn modern-btn-secondary w-full sm:w-auto"
+                className="modern-btn modern-btn-secondary w-full sm:w-auto min-h-[44px] text-sm"
               >
                 Cancel
               </Button>
@@ -851,7 +857,7 @@ const LeadsList: React.FC = () => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="modern-btn modern-btn-danger w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="modern-btn modern-btn-danger w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white min-h-[44px] text-sm"
               >
                 {submitting ? (
                   <>

@@ -208,35 +208,35 @@ const DoctorSalary: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4 lg:p-6">
-      {/* Header */}
-      <div className="w-full bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg mb-4 lg:mb-6">
-        <div className="p-3 sm:p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl shadow-sm">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
                 <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Salary Management</h1>
-                {/* <p className="text-sm text-gray-600 mt-1">Manage and track doctor salary payments</p> */}
+                <p className="text-sm sm:text-base text-gray-600 mt-1">Manage and track doctor salary payments</p>
               </div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button
                 onClick={fetchDoctors}
-                // variant="outline"
-                className="modern-btn modern-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                disabled={loading}
+                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">Refresh</span>
+                <span className="sm:hidden">↻</span>
               </Button>
               
               <Button
                 variant="outline"
-                className="modern-btn modern-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">August 2025</span>
@@ -245,12 +245,11 @@ const DoctorSalary: React.FC = () => {
               
               <Button
                 onClick={exportToCSV}
-                // variant="outline"
-                className="modern-btn modern-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">Export</span>
+                <span className="sm:hidden">CSV</span>
               </Button>
               
               <Button
@@ -259,80 +258,79 @@ const DoctorSalary: React.FC = () => {
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Doctor</span>
-                <span className="sm:hidden">Add</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 mb-4 lg:mb-6">
-        <div className="modern-stat-card stat-card-blue">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="modern-stat-card stat-card-blue">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">{totalDoctors}</div>
+                <div className="text-xs text-gray-600">Total Doctors</div>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-blue-600">Total Doctors</p>
-              <p className="text-lg sm:text-2xl font-bold text-blue-900">{totalDoctors}</p>
+          </div>
+          <div className="modern-stat-card stat-card-green">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">₹{totalSalary.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Total Salary</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="modern-stat-card stat-card-orange">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">₹{totalPaid.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Total Paid</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="modern-stat-card stat-card-purple">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-red-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">₹{totalPending.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Pending</div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="modern-stat-card stat-card-green">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-green-600">Total Salary</p>
-              <p className="text-lg sm:text-2xl font-bold text-green-900">₹{totalSalary.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="modern-stat-card stat-card-orange">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-orange-600">Total Paid</p>
-              <p className="text-lg sm:text-2xl font-bold text-orange-900">₹{totalPaid.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="modern-stat-card stat-card-red">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-red-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-red-600">Pending</p>
-              <p className="text-lg sm:text-2xl font-bold text-red-900">₹{totalPending.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm mb-4 lg:mb-6">
-        <div className="p-3 sm:p-4 lg:p-6">
+        {/* Search and Filters */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search doctors..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 modern-input"
-              />
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search doctors by name or ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
+                />
+              </div>
             </div>
             
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-full sm:w-48 modern-select">
+              <SelectTrigger className="w-full sm:w-48 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
                 <SelectValue placeholder="Select month" />
               </SelectTrigger>
               <SelectContent>
@@ -346,34 +344,30 @@ const DoctorSalary: React.FC = () => {
             </Select>
           </div>
         </div>
-      </div>
 
-      {/* Salary Table */}
-      <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            <span className="hidden sm:inline">Salary Management ({filteredDoctors.length})</span>
-            <span className="sm:hidden">Salaries ({filteredDoctors.length})</span>
+        {/* Salary Table */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900">
+              Salary Management ({filteredDoctors.length})
+            </h2>
           </div>
-        </div>
-      
-        {/* Scrollable Table View for All Screen Sizes */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px]">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">S.No</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Profile</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Doctor Name</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Salary</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Total Paid</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Balance</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Status</th>
-                <th className="text-left p-3 text-xs sm:text-sm font-medium text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">S.No</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Profile</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Doctor Name</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Salary</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Total Paid</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Balance</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Status</th>
+                  <th className="text-center py-4 px-6 text-sm font-semibold text-gray-900">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center p-8">
@@ -395,57 +389,57 @@ const DoctorSalary: React.FC = () => {
                   const serialNumber = startIndex + index + 1;
                   
                   return (
-                    <tr key={doctor.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="p-3 text-xs sm:text-sm font-medium text-gray-900">{serialNumber}</td>
-                      <td className="p-3">
+                    <tr key={doctor.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
+                      <td className="py-4 px-6 text-sm font-medium text-gray-900">{serialNumber}</td>
+                      <td className="py-4 px-6">
                         {doctor.photo ? (
                           <img
                             src={doctor.photo}
                             alt={doctor.name}
-                            className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover border border-gray-200"
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
                         ) : null}
-                        <div className={`h-8 w-8 sm:h-10 sm:w-10 bg-blue-100 rounded-full flex items-center justify-center border border-gray-200 ${doctor.photo ? 'hidden' : 'flex'}`}>
-                          <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                        <div className={`h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center border border-gray-200 ${doctor.photo ? 'hidden' : 'flex'}`}>
+                          <Users className="h-4 w-4 text-blue-600" />
                         </div>
                       </td>
-                      <td className="p-3">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900">{doctor.name}</div>
-                        <div className="text-xs text-gray-500">{doctor.specialization || 'General'}</div>
+                      <td className="py-4 px-6">
+                        <div className="text-sm font-medium text-gray-900">{doctor.name}</div>
+                        <div className="text-sm text-gray-500">{doctor.specialization || 'General'}</div>
                       </td>
-                      <td className="p-3 text-xs sm:text-sm font-medium text-green-600">
+                      <td className="py-4 px-6 text-sm font-medium text-green-600">
                         ₹{parseFloat(doctor.salary || '0').toLocaleString()}
                       </td>
-                      <td className="p-3 text-xs sm:text-sm font-medium text-blue-600">
+                      <td className="py-4 px-6 text-sm font-medium text-blue-600">
                         ₹{parseFloat(doctor.total_paid || '0').toLocaleString()}
                       </td>
-                      <td className="p-3">
-                        <span className={`text-xs sm:text-sm font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <td className="py-4 px-6">
+                        <span className={`text-sm font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                           ₹{balance.toLocaleString()}
                         </span>
                       </td>
-                      <td className="p-3">
+                      <td className="py-4 px-6">
                         <Badge 
                           className={`text-xs ${balance > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
                         >
                           {balance > 0 ? 'Pending' : 'Paid'}
                         </Badge>
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1 sm:gap-2">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center justify-center space-x-2">
                           <button
                             onClick={() => {
                               setSelectedDoctor(doctor);
                               setViewModalOpen(true);
                             }}
-                            className="p-1 sm:p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-400 rounded-lg transition-all duration-300"
                             title="View Details"
                           >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Eye className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => {
@@ -458,30 +452,30 @@ const DoctorSalary: React.FC = () => {
                               });
                               setEditModalOpen(true);
                             }}
-                            className="p-1 sm:p-1.5 text-green-600 hover:bg-green-50 rounded"
+                            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-400 rounded-lg transition-all duration-300"
                             title="Edit Doctor"
                           >
-                            <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Edit2 className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => {
                               setSelectedDoctor(doctor);
                               setPaymentModalOpen(true);
                             }}
-                            className="p-1 sm:p-1.5 text-orange-600 hover:bg-orange-50 rounded"
+                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border border-green-200 hover:border-green-400 rounded-lg transition-all duration-300"
                             title="Record Payment"
                           >
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <DollarSign className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => {
                               setSelectedDoctor(doctor);
                               setDeleteModalOpen(true);
                             }}
-                            className="p-1 sm:p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-400 rounded-lg transition-all duration-300"
                             title="Delete Doctor"
                           >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -495,29 +489,29 @@ const DoctorSalary: React.FC = () => {
 
         {/* Pagination */}
         {filteredDoctors.length > rowsPerPage && (
-          <div className="px-4 py-3 border-t border-gray-200">
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-100">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-              <div className="text-xs sm:text-sm text-gray-600">
+              <div className="text-sm text-gray-700">
                 Showing {Math.min(startIndex + 1, filteredDoctors.length)} to {Math.min(endIndex, filteredDoctors.length)} of {filteredDoctors.length} doctors
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
+                  className="modern-btn modern-btn-secondary text-xs px-2 py-1 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 
-                <span className="text-xs sm:text-sm text-gray-600">
+                <span className="text-sm text-gray-700">
                   Page {currentPage} of {totalPages}
                 </span>
                 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
+                  className="modern-btn modern-btn-secondary text-xs px-2 py-1 disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -525,14 +519,13 @@ const DoctorSalary: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Add Doctor Modal */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="modern-dialog">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">Add New Doctor</DialogTitle>
-          </DialogHeader>
+        {/* Add Doctor Modal */}
+        <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+          <DialogContent className="modern-dialog">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold text-gray-900">Add New Doctor</DialogTitle>
+            </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="name" className="text-sm font-medium text-gray-700">Doctor Name</Label>
@@ -873,6 +866,8 @@ const DoctorSalary: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 };

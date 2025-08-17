@@ -39,6 +39,8 @@ interface Patient {
   balance?: number;
   registrationId?: string;
   registration_id?: string;
+  photo?: string;
+  photoUrl?: string;
 }
 
 export default function PatientPaymentFees() {
@@ -117,6 +119,13 @@ export default function PatientPaymentFees() {
     refreshData 
   } = usePatientPayments();
   const navigate = useNavigate();
+
+  // Function to format patient ID as P0001
+  const formatPatientId = (id: string | number): string => {
+    // Convert to number, removing any existing P prefix and leading zeros
+    const numericId = typeof id === 'string' ? parseInt(id.replace(/^P0*/, '')) : id;
+    return `P${numericId.toString().padStart(4, '0')}`;
+  };
 
   // Helper function to calculate exact balance for any month
   const calculateMonthBalance = (patientData: any, patient: any, admission: Date, monthIndex: number, yearValue: number) => {
@@ -260,7 +269,9 @@ export default function PatientPaymentFees() {
           admissionDate: p.admission_date || p.admissionDate || p.created_at,
           payAmount: p.pay_amount || p.payAmount || 0,
           balance: p.balance || 0,
-          registrationId: p.registration_id || p.registrationId || p.id
+          registrationId: p.registration_id || p.registrationId || p.id,
+          photo: p.photo || '',
+          photoUrl: p.photo_url || p.photoUrl || ''
         })));
       } catch (dbError) {
         console.warn('Database error, falling back to localStorage:', dbError);
@@ -280,7 +291,9 @@ export default function PatientPaymentFees() {
               admissionDate: p.admission_date || p.admissionDate || p.created_at,
               payAmount: p.pay_amount || p.payAmount || 0,
               balance: p.balance || 0,
-              registrationId: p.registration_id || p.registrationId || p.id
+              registrationId: p.registration_id || p.registrationId || p.id,
+              photo: p.photo || '',
+              photoUrl: p.photo_url || p.photoUrl || ''
             })));
           } catch (error) {
             console.error('Error loading patients from localStorage:', error);
@@ -902,6 +915,7 @@ export default function PatientPaymentFees() {
                 <TableHeader>
                   <TableRow className="border-b border-gray-200">
                     <TableHead className="text-gray-700 font-semibold text-center">S NO</TableHead>
+                    <TableHead className="text-gray-700 font-semibold text-center">Photo</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Patient ID</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Patient Name</TableHead>
                     <TableHead className="text-gray-700 font-semibold text-center">Monthly Fees</TableHead>
@@ -1041,7 +1055,86 @@ export default function PatientPaymentFees() {
                     return (
                       <TableRow key={patient.patientId} className="hover:bg-gray-50 border-b border-gray-100">
                         <TableCell className="font-medium text-gray-900 text-center">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                        <TableCell className="font-medium text-gray-900 text-center">{patient.patientId}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center items-center">
+                            {(() => {
+                              // Construct proper photo URL
+                              let imageUrl = '';
+                              
+                              // Debug logging
+                              console.log('Photo debug for patient:', patient.name, {
+                                patientData: patientData ? { id: patientData.id, photo: patientData.photo, photoUrl: patientData.photoUrl } : 'not found',
+                                patient: { patientId: patient.patientId, name: patient.name }
+                              });
+                              
+                              if (patientData?.photo) {
+                                // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                                if (patientData.photo.startsWith('http')) {
+                                  imageUrl = patientData.photo;
+                                } else {
+                                  // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
+                                  // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
+                                  // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
+                                  if (patientData.photo.includes('Photos/patient Admission/')) {
+                                    // Photo path is already in correct format from database
+                                    imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
+                                  } else {
+                                    // Assume it's just filename and build full path using formatted Patient ID
+                                    const formattedId = formatPatientId(patient.patientId);
+                                    imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
+                                  }
+                                }
+                              } else if (patientData?.photoUrl) {
+                                if (patientData.photoUrl.startsWith('http')) {
+                                  imageUrl = patientData.photoUrl;
+                                } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
+                                  imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
+                                } else {
+                                  // Use formatted Patient ID for photo URL construction
+                                  const formattedId = formatPatientId(patient.patientId);
+                                  imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
+                                }
+                              }
+
+                              return imageUrl ? (
+                                <>
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${patient.name}'s photo`}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                                    onError={(e) => {
+                                      console.log('❌ Image failed for:', patient.name);
+                                      console.log('   Failed URL:', imageUrl);
+                                      
+                                      // Show fallback avatar
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const avatarDiv = target.nextElementSibling as HTMLElement;
+                                      if (avatarDiv) avatarDiv.style.display = 'flex';
+                                    }}
+                                    onLoad={() => {
+                                      console.log('✅ Image loaded successfully for patient:', patient.name, 'URL:', imageUrl);
+                                    }}
+                                  />
+                                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                                    <span className="text-sm font-semibold text-white">
+                                      {(patient.name || 'P').charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                                  <span className="text-sm font-semibold text-white">
+                                    {(patient.name || 'P').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="font-medium text-blue-600">{formatPatientId(patient.patientId)}</span>
+                        </TableCell>
                         <TableCell className="text-gray-900 text-center">{patient.name}</TableCell>
                         <TableCell className="text-gray-900 text-center">₹{monthlyFees.toLocaleString()}</TableCell>
                         <TableCell className="text-gray-900 text-center">{otherFees}</TableCell>
@@ -1188,10 +1281,86 @@ export default function PatientPaymentFees() {
           </DialogHeader>
           <div className="space-y-4">
             {selectedPatient && (
-              <div className="bg-gray-50 p-3 rounded-md">
-                <div className="text-sm text-gray-600">
-                  <div><strong>Patient ID:</strong> {selectedPatient.id}</div>
-                  <div><strong>Name:</strong> {selectedPatient.name}</div>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="flex items-center space-x-4 mb-3">
+                  {(() => {
+                    // Find patient data for photo
+                    const patientData = patients.find((p) =>
+                      (p.id && p.id === selectedPatient.id) ||
+                      (p.registrationId && p.registrationId === selectedPatient.id) ||
+                      (p.name && p.name === selectedPatient.name)
+                    );
+                    
+                    // Construct proper photo URL
+                    let imageUrl = '';
+                    
+                    if (patientData?.photo) {
+                      // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                      if (patientData.photo.startsWith('http')) {
+                        imageUrl = patientData.photo;
+                      } else {
+                        // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
+                        // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
+                        // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
+                        if (patientData.photo.includes('Photos/patient Admission/')) {
+                          // Photo path is already in correct format from database
+                          imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
+                        } else {
+                          // Assume it's just filename and build full path using formatted Patient ID
+                          const formattedId = formatPatientId(selectedPatient.id);
+                          imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
+                        }
+                      }
+                    } else if (patientData?.photoUrl) {
+                      if (patientData.photoUrl.startsWith('http')) {
+                        imageUrl = patientData.photoUrl;
+                      } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
+                        imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
+                      } else {
+                        // Use formatted Patient ID for photo URL construction
+                        const formattedId = formatPatientId(selectedPatient.id);
+                        imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
+                      }
+                    }
+
+                    return imageUrl ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt={`${selectedPatient.name}'s photo`}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                          onError={(e) => {
+                            console.log('❌ Image failed for:', selectedPatient.name);
+                            console.log('   Failed URL:', imageUrl);
+                            
+                            // Show fallback avatar
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const avatarDiv = target.nextElementSibling as HTMLElement;
+                            if (avatarDiv) avatarDiv.style.display = 'flex';
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Image loaded successfully for patient:', selectedPatient.name, 'URL:', imageUrl);
+                          }}
+                        />
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                          <span className="text-sm font-semibold text-white">
+                            {(selectedPatient.name || 'P').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                        <span className="text-sm font-semibold text-white">
+                          {(selectedPatient.name || 'P').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  <div>
+                    <p className="font-semibold text-gray-900">{selectedPatient.name}</p>
+                    <p className="text-sm text-gray-600">Patient ID: {formatPatientId(selectedPatient.id)}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1644,10 +1813,86 @@ export default function PatientPaymentFees() {
           {selectedPatientForFees && (
             <div className="space-y-6">
               {/* Patient Info */}
-              <div className="bg-gray-50 p-3 rounded-md">
-                <div className="text-sm text-gray-600">
-                  <div><strong>Patient ID:</strong> {selectedPatientForFees.patientId}</div>
-                  <div><strong>Name:</strong> {selectedPatientForFees.name}</div>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="flex items-center space-x-4 mb-3">
+                  {(() => {
+                    // Find patient data for photo
+                    const patientData = patients.find((p) =>
+                      (p.id && p.id === selectedPatientForFees.patientId) ||
+                      (p.registrationId && p.registrationId === selectedPatientForFees.patientId) ||
+                      (p.name && p.name === selectedPatientForFees.name)
+                    );
+                    
+                    // Construct proper photo URL
+                    let imageUrl = '';
+                    
+                    if (patientData?.photo) {
+                      // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                      if (patientData.photo.startsWith('http')) {
+                        imageUrl = patientData.photo;
+                      } else {
+                        // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
+                        // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
+                        // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
+                        if (patientData.photo.includes('Photos/patient Admission/')) {
+                          // Photo path is already in correct format from database
+                          imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
+                        } else {
+                          // Assume it's just filename and build full path using formatted Patient ID
+                          const formattedId = formatPatientId(selectedPatientForFees.patientId);
+                          imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
+                        }
+                      }
+                    } else if (patientData?.photoUrl) {
+                      if (patientData.photoUrl.startsWith('http')) {
+                        imageUrl = patientData.photoUrl;
+                      } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
+                        imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
+                      } else {
+                        // Use formatted Patient ID for photo URL construction
+                        const formattedId = formatPatientId(selectedPatientForFees.patientId);
+                        imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
+                      }
+                    }
+
+                    return imageUrl ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt={`${selectedPatientForFees.name}'s photo`}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                          onError={(e) => {
+                            console.log('❌ Image failed for:', selectedPatientForFees.name);
+                            console.log('   Failed URL:', imageUrl);
+                            
+                            // Show fallback avatar
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const avatarDiv = target.nextElementSibling as HTMLElement;
+                            if (avatarDiv) avatarDiv.style.display = 'flex';
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Image loaded successfully for patient:', selectedPatientForFees.name, 'URL:', imageUrl);
+                          }}
+                        />
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
+                          <span className="text-sm font-semibold text-white">
+                            {(selectedPatientForFees.name || 'P').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                        <span className="text-sm font-semibold text-white">
+                          {(selectedPatientForFees.name || 'P').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  <div>
+                    <p className="font-semibold text-gray-900">{selectedPatientForFees.name}</p>
+                    <p className="text-sm text-gray-600">Patient ID: {formatPatientId(selectedPatientForFees.patientId)}</p>
+                  </div>
                 </div>
               </div>
 

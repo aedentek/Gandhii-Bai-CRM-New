@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test - NULL Values Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>🔧 NULL Values Fix Test</h1>
+    <p>Testing if marriageStatus, employeeStatus, and attenderRelationship save correctly</p>
+    
+    <button onclick="testAPI()" style="padding: 10px 20px; font-size: 16px;">Test Patient Creation</button>
+    <div id="result"></div>
+
+    <script>
+    async function testAPI() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = '<div class="result">🔄 Testing API...</div>';
+        
+        const testData = {
+            name: 'API Test Patient ' + Date.now(),
+            age: 30,
+            gender: 'Male',
+            phone: '9999999999',
+            marriageStatus: 'Married',
+            employeeStatus: 'Self Employed',
+            attenderRelationship: 'Son',
+            email: 'test@example.com',
+            address: 'Test Address'
+        };
+        
+        try {
+            console.log('Sending data:', testData);
+            
+            const response = await fetch('http://localhost:4000/api/patients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(testData)
+            });
+            
+            const result = await response.json();
+            console.log('Response:', result);
+            
+            if (response.ok) {
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h2>✅ SUCCESS! Patient Created</h2>
+                        <p><strong>Patient ID:</strong> ${result.patientId || result.id}</p>
+                        <p><strong>Name:</strong> ${testData.name}</p>
+                        <p><strong>Marriage Status:</strong> ${testData.marriageStatus}</p>
+                        <p><strong>Employee Status:</strong> ${testData.employeeStatus}</p>
+                        <p><strong>Attender Relationship:</strong> ${testData.attenderRelationship}</p>
+                        <h3>Full Response:</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            resultDiv.innerHTML = `
+                <div class="result error">
+                    <h2>❌ ERROR</h2>
+                    <p><strong>Message:</strong> ${error.message}</p>
+                    <p>Check browser console for details</p>
+                </div>
+            `;
+        }
+    }
+    </script>
+</body>
+</html>
