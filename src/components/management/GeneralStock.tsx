@@ -586,7 +586,7 @@ const GeneralStock: React.FC = () => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Reset to current month and refresh data"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -618,7 +618,7 @@ const GeneralStock: React.FC = () => {
               {/* Export CSV Button */}
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Export filtered stock to CSV"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />

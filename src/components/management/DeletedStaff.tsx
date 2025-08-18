@@ -223,7 +223,7 @@ const DeletedStaff: React.FC = () => {
                 onClick={() => loadDeletedStaff()}
                 disabled={loading}
                 variant="outline"
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} transition-transform duration-300 hover:rotate-180`} />
                 <span className="font-medium">Refresh</span>

@@ -1138,7 +1138,7 @@ const PatientMedicalRecord: React.FC = () => {
                   type="button"
                   onClick={refreshData}
                   disabled={isLoadingPatients || isLoadingRecords}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
                 >
                   {isLoadingPatients || isLoadingRecords ? (
                     <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />

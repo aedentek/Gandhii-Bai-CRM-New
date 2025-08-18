@@ -590,7 +590,7 @@ const handleRefresh = React.useCallback(() => {
                     handleGlobalRefresh();
                   }}
                   disabled={loading}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
                   title="Reset to current month and refresh data"
                 >
                   {loading ? (
@@ -630,7 +630,7 @@ const handleRefresh = React.useCallback(() => {
                 <Button 
                   type="button"
                   onClick={handleExportCSV}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
                   title="Export filtered products to CSV"
                 >
                   <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -652,7 +652,7 @@ const handleRefresh = React.useCallback(() => {
                     });
                     setIsAddingProduct(true);
                   }}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Add Product</span>
@@ -1130,7 +1130,7 @@ const handleRefresh = React.useCallback(() => {
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {editingProduct ? 'Update Product' : 'Add Product'}
                 </Button>

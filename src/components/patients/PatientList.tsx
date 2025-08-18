@@ -1172,30 +1172,30 @@ const PatientList: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
-                      <div className="flex space-x-1 justify-center">
+                      <div className="action-buttons-container">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => setViewPatient(patient)}
-                          className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Patient"
                         >
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleEdit(patient)}
-                          className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Patient"
                         >
                           <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleDelete(patient)}
-                          className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200 w-6 h-6 sm:w-8 sm:h-8 p-0"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Patient"
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />

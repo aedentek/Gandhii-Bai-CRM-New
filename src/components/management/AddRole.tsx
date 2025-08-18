@@ -9,7 +9,7 @@ import '../../styles/modern-settings.css';
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   if (error) {
-    return <div                 className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+    return <div                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
 >Error: {error.message}</div>;
   }
   return (
@@ -400,7 +400,7 @@ const AddRole: React.FC = () => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
@@ -409,7 +409,7 @@ const AddRole: React.FC = () => {
               
               <Button 
                 onClick={() => setAddModalOpen(true)}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Role</span>
@@ -418,7 +418,7 @@ const AddRole: React.FC = () => {
               
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
@@ -721,7 +721,7 @@ const AddRole: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -872,7 +872,7 @@ const AddRole: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>

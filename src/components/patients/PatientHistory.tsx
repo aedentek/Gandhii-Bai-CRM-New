@@ -1282,7 +1282,7 @@ const PatientHistory: React.FC = () => {
                 console.log('🔵 Add Record button clicked');
                 setShowAddDialog(true);
               }}
-              className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
             >
               <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Add Record</span>

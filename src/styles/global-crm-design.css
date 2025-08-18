@@ -1,0 +1,651 @@
+/* Global CRM Button Styles - Consistent Design System */
+/* ================================================================= */
+
+/* 1. GLOBAL PRIMARY BUTTON CLASS (.global-btn) */
+/* Based on Export CSV button from Doctor Attendance page */
+/* ================================================================= */
+
+.global-btn {
+  /* Base structure from .modern-btn */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  
+  /* Primary button styling from .modern-btn-primary */
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+/* Shimmer effect for global-btn */
+.global-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.global-btn:hover::before {
+  left: 100%;
+}
+
+/* Global button hover states */
+.global-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+}
+
+.global-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.global-btn:focus {
+  outline: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4), 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.global-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.global-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+/* Responsive sizing for global-btn */
+.global-btn.flex-1 {
+  flex: 1;
+}
+
+.global-btn.sm\:flex-none {
+  flex: none;
+}
+
+@media (min-width: 640px) {
+  .global-btn.sm\:flex-none {
+    flex: none;
+  }
+}
+
+/* Text size variants for global-btn */
+.global-btn.text-xs {
+  font-size: 0.75rem;
+}
+
+.global-btn.text-sm {
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .global-btn.sm\:text-sm {
+    font-size: 0.875rem;
+  }
+}
+
+/* Padding variants for global-btn */
+.global-btn.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.global-btn.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.global-btn.py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.global-btn.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .global-btn.sm\:px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .global-btn.sm\:py-2 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Min-width variants for global-btn */
+.global-btn.lg\:min-w-\[120px\] {
+  min-width: 120px;
+}
+
+@media (min-width: 1024px) {
+  .global-btn.lg\:min-w-\[120px\] {
+    min-width: 120px;
+  }
+}
+
+/* ================================================================= */
+/* 2. ACTION BUTTON CLASS FOR TABLES (.action-btn-lead) */
+/* Based on Edit/Delete buttons from Lead Categories page */
+/* ================================================================= */
+
+/* USAGE GUIDE:
+ * Base class: action-btn-lead (always include this)
+ * Add color variant: action-btn-[type]
+ * 
+ * Available variants:
+ * - action-btn-edit     (Blue)    - Edit/Modify actions
+ * - action-btn-delete   (Red)     - Delete/Remove actions  
+ * - action-btn-view     (Green)   - View/Info actions
+ * - action-btn-add      (Violet)  - Add/Plus actions
+ * - action-btn-download (Cyan)    - Download/Export actions
+ * - action-btn-settings (Orange)  - Settings/Configure actions
+ * - action-btn-warning  (Amber)   - Warning/Alert actions
+ * - action-btn-disable  (Gray)    - Disable/Block actions
+ * - action-btn-send     (Purple)  - Send/Share actions
+ * - action-btn-print    (Black)   - Print actions
+ * - action-btn-refresh  (Teal)    - Refresh/Reload actions
+ *
+ * Example usage:
+ * <Button className="action-btn-lead action-btn-edit h-8 w-8 p-0">
+ *   <Edit2 className="h-4 w-4" />
+ * </Button>
+ */
+
+.action-btn-lead {
+  /* Base structure */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem; /* rounded-lg */
+  border: 1px solid;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  font-weight: 500;
+  
+  /* Default sizing */
+  height: 2rem; /* h-8 */
+  width: 2rem; /* w-8 */
+  padding: 0;
+}
+
+/* Responsive sizing for action buttons */
+@media (min-width: 640px) {
+  .action-btn-lead.sm\:h-9 {
+    height: 2.25rem;
+  }
+  
+  .action-btn-lead.sm\:w-9 {
+    width: 2.25rem;
+  }
+}
+
+/* Edit button variant */
+.action-btn-lead.action-btn-edit {
+  color: #2563eb !important; /* text-blue-600 */
+  border-color: #93c5fd !important; /* border-blue-200 */
+  background-color: #eff6ff !important; /* bg-blue-50 */
+}
+
+.action-btn-lead.action-btn-edit:hover {
+  color: #1d4ed8 !important; /* hover:text-blue-700 */
+  background-color: #dbeafe !important; /* hover:bg-blue-100 */
+  border-color: #60a5fa !important; /* hover:border-blue-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+/* Delete button variant */
+.action-btn-lead.action-btn-delete {
+  color: #dc2626; /* text-red-600 */
+  border-color: #fecaca; /* border-red-200 */
+  background-color: #fef2f2; /* bg-red-50 */
+}
+
+.action-btn-lead.action-btn-delete:hover {
+  color: #b91c1c; /* hover:text-red-700 */
+  background-color: #fecaca; /* hover:bg-red-50 */
+  border-color: #fca5a5; /* hover:border-red-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+}
+
+/* View/Info button variant */
+.action-btn-lead.action-btn-view {
+  color: #16a34a !important; /* text-green-600 */
+  border-color: #bbf7d0 !important; /* border-green-200 */
+  background-color: #f0fdf4 !important; /* bg-green-50 */
+}
+
+.action-btn-lead.action-btn-view:hover {
+  color: #15803d !important; /* hover:text-green-700 */
+  background-color: #dcfce7 !important; /* hover:bg-green-100 */
+  border-color: #4ade80 !important; /* hover:border-green-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.2);
+}
+
+/* Add/Plus button variant */
+.action-btn-lead.action-btn-add {
+  color: #7c3aed; /* text-violet-600 */
+  border-color: #c4b5fd; /* border-violet-200 */
+  background-color: #f5f3ff; /* bg-violet-50 */
+}
+
+.action-btn-lead.action-btn-add:hover {
+  color: #6d28d9; /* hover:text-violet-700 */
+  background-color: #ede9fe; /* hover:bg-violet-50 */
+  border-color: #a78bfa; /* hover:border-violet-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.2);
+}
+
+/* Download/Export button variant */
+.action-btn-lead.action-btn-download {
+  color: #0891b2; /* text-cyan-600 */
+  border-color: #67e8f9; /* border-cyan-200 */
+  background-color: #ecfeff; /* bg-cyan-50 */
+}
+
+.action-btn-lead.action-btn-download:hover {
+  color: #0e7490; /* hover:text-cyan-700 */
+  background-color: #cffafe; /* hover:bg-cyan-50 */
+  border-color: #22d3ee; /* hover:border-cyan-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(8, 145, 178, 0.2);
+}
+
+/* Settings/Configure button variant */
+.action-btn-lead.action-btn-settings {
+  color: #ea580c; /* text-orange-600 */
+  border-color: #fed7aa; /* border-orange-200 */
+  background-color: #fff7ed; /* bg-orange-50 */
+}
+
+.action-btn-lead.action-btn-settings:hover {
+  color: #c2410c; /* hover:text-orange-700 */
+  background-color: #ffedd5; /* hover:bg-orange-50 */
+  border-color: #fb923c; /* hover:border-orange-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2);
+}
+
+/* Warning/Alert button variant */
+.action-btn-lead.action-btn-warning {
+  color: #d97706; /* text-amber-600 */
+  border-color: #fde68a; /* border-amber-200 */
+  background-color: #fffbeb; /* bg-amber-50 */
+}
+
+.action-btn-lead.action-btn-warning:hover {
+  color: #b45309; /* hover:text-amber-700 */
+  background-color: #fef3c7; /* hover:bg-amber-50 */
+  border-color: #fbbf24; /* hover:border-amber-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.2);
+}
+
+/* Disable/Block button variant */
+.action-btn-lead.action-btn-disable {
+  color: #6b7280; /* text-gray-600 */
+  border-color: #d1d5db; /* border-gray-200 */
+  background-color: #f9fafb; /* bg-gray-50 */
+}
+
+.action-btn-lead.action-btn-disable:hover {
+  color: #4b5563; /* hover:text-gray-700 */
+  background-color: #f3f4f6; /* hover:bg-gray-50 */
+  border-color: #9ca3af; /* hover:border-gray-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(107, 114, 128, 0.2);
+}
+
+/* Send/Share button variant */
+.action-btn-lead.action-btn-send {
+  color: #8b5cf6; /* text-purple-600 */
+  border-color: #c4b5fd; /* border-purple-200 */
+  background-color: #faf5ff; /* bg-purple-50 */
+}
+
+.action-btn-lead.action-btn-send:hover {
+  color: #7c3aed; /* hover:text-purple-700 */
+  background-color: #f3e8ff; /* hover:bg-purple-50 */
+  border-color: #a78bfa; /* hover:border-purple-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.2);
+}
+
+/* Print button variant */
+.action-btn-lead.action-btn-print {
+  color: #1f2937; /* text-gray-800 */
+  border-color: #e5e7eb; /* border-gray-200 */
+  background-color: #ffffff; /* bg-white */
+}
+
+.action-btn-lead.action-btn-print:hover {
+  color: #111827; /* hover:text-gray-900 */
+  background-color: #f9fafb; /* hover:bg-gray-50 */
+  border-color: #d1d5db; /* hover:border-gray-300 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(31, 41, 55, 0.2);
+}
+
+/* Refresh/Reload button variant */
+.action-btn-lead.action-btn-refresh {
+  color: #0d9488; /* text-teal-600 */
+  border-color: #99f6e4; /* border-teal-200 */
+  background-color: #f0fdfa; /* bg-teal-50 */
+}
+
+.action-btn-lead.action-btn-refresh:hover {
+  color: #0f766e; /* hover:text-teal-700 */
+  background-color: #ccfbf1; /* hover:bg-teal-50 */
+  border-color: #5eead4; /* hover:border-teal-400 */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.2);
+}
+
+/* Focus states for action buttons */
+.action-btn-lead:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Active states for action buttons */
+.action-btn-lead:active {
+  transform: translateY(0);
+}
+
+/* Disabled states for action buttons */
+.action-btn-lead:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn-lead:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Icon sizing within action buttons */
+.action-btn-lead .h-3 {
+  height: 0.75rem;
+  width: 0.75rem;
+}
+
+.action-btn-lead .h-4 {
+  height: 1rem;
+  width: 1rem;
+}
+
+@media (min-width: 640px) {
+  .action-btn-lead .sm\:h-4 {
+    height: 1rem;
+    width: 1rem;
+  }
+}
+
+/* ================================================================= */
+/* 3. UTILITY CLASSES FOR QUICK APPLICATION */
+/* ================================================================= */
+
+/* Quick application classes for common use cases */
+.btn-export-csv {
+  /* Applies global-btn with common export button sizing */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.btn-export-csv::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-export-csv:hover::before {
+  left: 100%;
+}
+
+.btn-export-csv:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+}
+
+@media (min-width: 640px) {
+  .btn-export-csv {
+    flex: none;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+.btn-add-item {
+  /* Applies global-btn with common add button styling */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.btn-add-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-add-item:hover::before {
+  left: 100%;
+}
+
+.btn-add-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+}
+
+@media (min-width: 640px) {
+  .btn-add-item {
+    flex: none;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+.btn-refresh {
+  /* Applies global-btn with common refresh button styling */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.btn-refresh::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-refresh:hover::before {
+  left: 100%;
+}
+
+.btn-refresh:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+}
+
+@media (min-width: 640px) {
+  .btn-refresh {
+    flex: none;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Action button containers */
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .action-buttons-container {
+    gap: 0.75rem;
+  }
+}
+
+/* ================================================================= */
+/* 4. RESPONSIVE AND ACCESSIBILITY IMPROVEMENTS */
+/* ================================================================= */
+
+/* Ensure buttons work well on touch devices */
+@media (hover: none) {
+  .global-btn:hover,
+  .action-btn-lead:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .global-btn {
+    border: 2px solid currentColor;
+  }
+  
+  .action-btn-lead {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .global-btn,
+  .action-btn-lead {
+    transition: none;
+  }
+  
+  .global-btn::before {
+    display: none;
+  }
+}
+
+/* ================================================================= */
+/* 5. DARK MODE SUPPORT (Optional - for future use) */
+/* ================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  .global-btn {
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    box-shadow: 0 4px 14px rgba(30, 64, 175, 0.4);
+  }
+  
+  .global-btn:hover {
+    box-shadow: 0 8px 25px rgba(30, 64, 175, 0.5);
+  }
+  
+  .action-btn-lead.action-btn-edit {
+    background-color: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+  
+  .action-btn-lead.action-btn-delete {
+    background-color: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+  
+  .action-btn-lead.action-btn-view {
+    background-color: rgba(5, 150, 105, 0.1);
+    border-color: rgba(5, 150, 105, 0.3);
+  }
+}

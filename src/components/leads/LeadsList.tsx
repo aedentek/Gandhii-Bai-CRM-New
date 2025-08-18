@@ -308,10 +308,10 @@ const LeadsList: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
               <div className="flex gap-2">
-                <Button 
-                  type="button"
+                <Button
                   onClick={() => {
-                    console.log('🔄 Manual refresh triggered');
+                    setStatusFilter('all');
+                    setSearchTerm('');
                     setFilterMonth(currentMonth);
                     setFilterYear(currentYear);
                     setSelectedMonth(currentMonth);
@@ -320,7 +320,7 @@ const LeadsList: React.FC = () => {
                     loadLeads();
                   }}
                   disabled={loading}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
                 >
                   <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">Refresh</span>
@@ -372,7 +372,7 @@ const LeadsList: React.FC = () => {
                 <Button 
                   type="button"
                   onClick={exportToCSV}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
                 >
                   <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Export CSV</span>
@@ -382,7 +382,7 @@ const LeadsList: React.FC = () => {
                 <Button 
                   type="button"
                   onClick={() => setShowAddDialog(true)}
-                  className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Add Lead</span>
@@ -806,7 +806,7 @@ const LeadsList: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary min-h-[44px] text-sm"
+                  className="w-full sm:w-auto global-btn min-h-[44px] text-sm"
                 >
                   {submitting ? 'Saving...' : (editingLead ? 'Update Lead' : 'Add Lead')}
                 </Button>

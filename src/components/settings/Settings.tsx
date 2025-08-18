@@ -172,7 +172,7 @@ const Settings: React.FC = () => {
               <Download className="h-4 w-4 mr-2" />
               Export Settings
             </Button>
-            <Button className="modern-btn modern-btn-primary">
+            <Button className="global-btn">
               <Save className="h-4 w-4 mr-2" />
               Save Changes
             </Button>
@@ -359,7 +359,7 @@ const Settings: React.FC = () => {
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
-                      <Button className="modern-btn modern-btn-primary modern-btn-sm">
+                      <Button className="global-btn modern-btn-sm">
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>

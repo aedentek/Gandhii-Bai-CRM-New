@@ -319,7 +319,7 @@ const GeneralSuppliers: React.FC = () => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Reset to current month and refresh data"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -351,7 +351,7 @@ const GeneralSuppliers: React.FC = () => {
               {/* Export CSV Button */}
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Export filtered suppliers to CSV"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -372,7 +372,7 @@ const GeneralSuppliers: React.FC = () => {
                   setEditingSupplier(null);
                   setIsAddingSupplier(true);
                 }}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Supplier</span>
@@ -622,7 +622,7 @@ const GeneralSuppliers: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditSupplier(supplier)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                        className="action-btn-lead"
                         title="Edit Supplier"
                       >
                         <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -631,7 +631,7 @@ const GeneralSuppliers: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteSupplier(supplier)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                        className="action-btn-lead action-btn-lead-delete"
                         title="Delete Supplier"
                       >
                         <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -832,7 +832,7 @@ const GeneralSuppliers: React.FC = () => {
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full sm:w-auto global-btn"
                   disabled={submitting}
                 >
                   {submitting ? (

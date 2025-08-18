@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GeneralCategory {
@@ -488,7 +488,7 @@ const GeneralCategories: React.FC = () => {
                 {/* Export CSV Button */}
                 <Button 
                   onClick={handleExportCSV}
-                  className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm lg:min-w-[120px]"
+                  className="global-btn flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm lg:min-w-[120px]"
                   title="Export filtered categories to CSV"
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -727,8 +727,20 @@ const GeneralCategories: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
+                        onClick={() => {
+                          // View category details - you can implement this
+                          console.log('View category:', category);
+                        }}
+                        className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
+                        title="View Category Details"
+                      >
+                        <Eye className="h-4 w-4 sm:h-4 sm:w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
                         onClick={() => handleEditCategory(category)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Category"
                       >
                         <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -737,7 +749,7 @@ const GeneralCategories: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteCategory(category)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Category"
                       >
                         <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />

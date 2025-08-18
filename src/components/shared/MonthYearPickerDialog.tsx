@@ -118,7 +118,7 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
           <Button 
             type="button" 
             onClick={onApply}
-            className="w-full sm:w-auto modern-btn modern-btn-primary"
+            className="w-full sm:w-auto global-btn"
           >
             Apply Filter
           </Button>
