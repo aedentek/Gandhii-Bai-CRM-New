@@ -1261,191 +1261,240 @@ const PatientHistory: React.FC = () => {
     return records;
   }, [medicalRecords, viewRecord?.patientId, refreshCounter, viewDialogFilterMonth, viewDialogFilterYear]);
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
-              <FileText className="w-6 h-6 text-white" />
+    return (
+      <div className="crm-page-bg">
+        {/* Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="crm-header-icon">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient History</h1>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Patient History</h1>
-              <p className="text-sm text-gray-600 mt-1">Medical records and patient documentation</p>
+            
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button 
+                onClick={() => {
+                  console.log('🔵 Add Record button clicked');
+                  setShowAddDialog(true);
+                }}
+                className="global-btn global-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Record</span>
+                <span className="sm:hidden">+</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-6">
+          
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{patients.filter(p => p.status === 'Active').length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In treatment</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Audio Files Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Audio Files</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {(() => {
+                      let totalAudioCount = 0;
+                      // Count audio files from medical records, not history records
+                      let filteredMedicalRecords = medicalRecords;
+                      
+                      // Apply same filtering as main table
+                      if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        filteredMedicalRecords = filteredMedicalRecords.filter(record =>
+                          record.title.toLowerCase().includes(searchLower) ||
+                          record.patientName.toLowerCase().includes(searchLower) ||
+                          record.doctor.toLowerCase().includes(searchLower) ||
+                          record.patientId.toLowerCase().includes(searchLower)
+                        );
+                      }
+
+                      // Month & Year filtering
+                      if (filterMonth !== null && filterYear !== null) {
+                        filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                          const recordDate = new Date(record.date);
+                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                        });
+                      }
+
+                      // Filter to show only active patients
+                      filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                        const patient = patients.find(p => String(p.id) === String(record.patientId));
+                        return patient && patient.status === 'Active';
+                      });
+
+                      filteredMedicalRecords.forEach(record => {
+                        // Count each record as having at most 1 audio file to avoid double counting
+                        if (record.audioRecording) {
+                          totalAudioCount += 1;
+                        } else if (record.audioFiles && record.audioFiles.length > 0) {
+                          totalAudioCount += record.audioFiles.length;
+                        }
+                      });
+                      return totalAudioCount;
+                    })()}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Volume2 className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Recordings</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documents Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Documents</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
+                    {(() => {
+                      let totalDocumentCount = 0;
+                      // Count documents from medical records, not history records
+                      let filteredMedicalRecords = medicalRecords;
+                      
+                      // Apply same filtering as main table
+                      if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        filteredMedicalRecords = filteredMedicalRecords.filter(record =>
+                          record.title.toLowerCase().includes(searchLower) ||
+                          record.patientName.toLowerCase().includes(searchLower) ||
+                          record.doctor.toLowerCase().includes(searchLower) ||
+                          record.patientId.toLowerCase().includes(searchLower)
+                        );
+                      }
+
+                      // Month & Year filtering
+                      if (filterMonth !== null && filterYear !== null) {
+                        filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                          const recordDate = new Date(record.date);
+                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                        });
+                      }
+
+                      // Filter to show only active patients
+                      filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                        const patient = patients.find(p => String(p.id) === String(record.patientId));
+                        return patient && patient.status === 'Active';
+                      });
+
+                      filteredMedicalRecords.forEach(record => {
+                        if (record.documents && record.documents.length > 0) {
+                          totalDocumentCount += record.documents.length;
+                        }
+                      });
+                      return totalDocumentCount;
+                    })()}
+                  </p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <File className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Files</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <File className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <div className="crm-controls-container">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search records..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button 
+                onClick={exportToExcel} 
+                className="global-btn global-btn-secondary flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+              <Button 
+                onClick={exportToPDF} 
+                className="global-btn global-btn-secondary flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+            </div>
+
+            {/* Month & Year Selector */}
+            <Button
+              type="button"
+              variant="outline"
+              className="crm-month-year-btn"
+              onClick={() => setShowMonthYearDialog(true)}
+            >
+              <Calendar className="crm-month-year-btn-icon" />
+              <span className="crm-month-year-btn-text">
+                {filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth]} ${filterYear}`
+                  : `${months[selectedMonth]} ${selectedYear}`
+                }
+              </span>
+              <span className="crm-month-year-btn-text-mobile">
+                {filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                  : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                }
+              </span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Records Table */}
+        <div className="crm-table-container">
+          <div className="crm-table-header">
+            <div className="crm-table-title">
+              <FileText className="crm-table-title-icon" />
+              <h2 className="crm-table-title-text">Patients Medical Records</h2>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Button 
-              onClick={() => {
-                console.log('🔵 Add Record button clicked');
-                setShowAddDialog(true);
-              }}
-              className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-            >
-              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Add Record</span>
-              <span className="sm:hidden">+</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 w-full">
-        <div className="modern-stat-card">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{patients.filter(p => p.status === 'Active').length}</div>
-            <div className="text-sm text-gray-600">Active Patients</div>
-          </div>
-        </div>
-
-        <div className="modern-stat-card">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {(() => {
-                let totalAudioCount = 0;
-                // Count audio files from medical records, not history records
-                let filteredMedicalRecords = medicalRecords;
-                
-                // Apply same filtering as main table
-                if (searchTerm) {
-                  const searchLower = searchTerm.toLowerCase();
-                  filteredMedicalRecords = filteredMedicalRecords.filter(record =>
-                    record.title.toLowerCase().includes(searchLower) ||
-                    record.patientName.toLowerCase().includes(searchLower) ||
-                    record.doctor.toLowerCase().includes(searchLower) ||
-                    record.patientId.toLowerCase().includes(searchLower)
-                  );
-                }
-
-                // Month & Year filtering
-                if (filterMonth !== null && filterYear !== null) {
-                  filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                    const recordDate = new Date(record.date);
-                    return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
-                  });
-                }
-
-                // Filter to show only active patients
-                filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                  const patient = patients.find(p => String(p.id) === String(record.patientId));
-                  return patient && patient.status === 'Active';
-                });
-
-                filteredMedicalRecords.forEach(record => {
-                  // Count each record as having at most 1 audio file to avoid double counting
-                  if (record.audioRecording) {
-                    totalAudioCount += 1;
-                  } else if (record.audioFiles && record.audioFiles.length > 0) {
-                    totalAudioCount += record.audioFiles.length;
-                  }
-                });
-                return totalAudioCount;
-              })()}
-            </div>
-            <div className="text-sm text-gray-600">Audio Files</div>
-          </div>
-        </div>
-
-        <div className="modern-stat-card">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {(() => {
-                let totalDocumentCount = 0;
-                // Count documents from medical records, not history records
-                let filteredMedicalRecords = medicalRecords;
-                
-                // Apply same filtering as main table
-                if (searchTerm) {
-                  const searchLower = searchTerm.toLowerCase();
-                  filteredMedicalRecords = filteredMedicalRecords.filter(record =>
-                    record.title.toLowerCase().includes(searchLower) ||
-                    record.patientName.toLowerCase().includes(searchLower) ||
-                    record.doctor.toLowerCase().includes(searchLower) ||
-                    record.patientId.toLowerCase().includes(searchLower)
-                  );
-                }
-
-                // Month & Year filtering
-                if (filterMonth !== null && filterYear !== null) {
-                  filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                    const recordDate = new Date(record.date);
-                    return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
-                  });
-                }
-
-                // Filter to show only active patients
-                filteredMedicalRecords = filteredMedicalRecords.filter(record => {
-                  const patient = patients.find(p => String(p.id) === String(record.patientId));
-                  return patient && patient.status === 'Active';
-                });
-
-                filteredMedicalRecords.forEach(record => {
-                  if (record.documents && record.documents.length > 0) {
-                    totalDocumentCount += record.documents.length;
-                  }
-                });
-                return totalDocumentCount;
-              })()}
-            </div>
-            <div className="text-sm text-gray-600">Documents</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 mb-6 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search records..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button 
-              onClick={exportToExcel} 
-              className="modern-btn modern-btn-outline flex-1"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Excel
-            </Button>
-            <Button 
-              onClick={exportToPDF} 
-              className="modern-btn modern-btn-outline flex-1"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
-          </div>
-
-          {/* Month & Year Selector */}
-          <button
-            type="button"
-            className="modern-btn modern-btn-outline min-w-[140px] justify-center"
-            onClick={() => setShowMonthYearDialog(true)}
-          >
-            {filterMonth !== null && filterYear !== null 
-              ? `${months[filterMonth]} ${filterYear}`
-              : `${months[selectedMonth]} ${selectedYear}`
-            }
-          </button>
-        </div>
-      </div>
-
-      {/* Records Table */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Patients Medical Records</h2>
-        </div>
-        
-        <div className="p-6">
+          <div className="p-4 sm:p-6">
           {/* Loading Indicator */}
           {(!isLoadingComplete && (isLoadingPatients || isLoadingDoctors || isLoadingHistory)) && (
             <div className="flex items-center justify-center py-8">
@@ -1664,7 +1713,7 @@ const PatientHistory: React.FC = () => {
                           size="sm"
                           onClick={() => setViewRecord(record)}
                           title="View Details"
-                          className="bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-200"
+                          className="action-btn-lead action-btn-view"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -1688,7 +1737,7 @@ const PatientHistory: React.FC = () => {
                               setShowAddDialog(true);
                             }}
                             title="Add Medical Record"
-                            className="bg-emerald-100 hover:bg-emerald-200 text-emerald-600 border-emerald-200"
+                            className="action-btn-lead action-btn-success"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -1699,7 +1748,7 @@ const PatientHistory: React.FC = () => {
                             size="sm"
                             onClick={() => handleEdit(record)}
                             title="Edit Record"
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
+                            className="action-btn-lead action-btn-edit"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -1710,7 +1759,7 @@ const PatientHistory: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(record)}
-                            className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+                            className="action-btn-lead action-btn-delete"
                             title="Delete Record"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2198,16 +2247,13 @@ const PatientHistory: React.FC = () => {
                 setShowAddDialog(false);
                 resetForm(); // Reset form when canceling
               }}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-200"
+              className="global-btn global-btn-secondary"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit} 
-              className={editRecord 
-                ? "bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200" 
-                : "bg-emerald-100 hover:bg-emerald-200 text-emerald-600 border-emerald-200"
-              }
+              className="global-btn global-btn-primary"
             >
               <Edit2 className="w-4 h-4 mr-2" />
               {editRecord ? 'Update Record' : 'Add Record'}
@@ -2778,7 +2824,7 @@ const PatientHistory: React.FC = () => {
                   setViewDialogSelectedMonth(new Date().getMonth());
                   setViewDialogSelectedYear(currentYear);
                 }} 
-                className="w-full"
+                className="global-btn global-btn-secondary w-full"
               >
                 Close
               </Button>
@@ -2822,10 +2868,15 @@ const PatientHistory: React.FC = () => {
                   setViewDialogFilterYear(viewDialogSelectedYear);
                   setShowViewDialogMonthYearDialog(false);
                 }}
+                className="global-btn global-btn-primary"
               >
                 Apply Filter
               </Button>
-              <Button type="button" onClick={() => setShowViewDialogMonthYearDialog(false)}>
+              <Button 
+                type="button" 
+                onClick={() => setShowViewDialogMonthYearDialog(false)}
+                className="global-btn global-btn-secondary"
+              >
                 Cancel
               </Button>
               <Button 
@@ -2836,6 +2887,7 @@ const PatientHistory: React.FC = () => {
                   setViewDialogFilterYear(null);
                   setShowViewDialogMonthYearDialog(false);
                 }}
+                className="global-btn global-btn-secondary"
               >
                 Clear Filter
               </Button>
@@ -2861,13 +2913,13 @@ const PatientHistory: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={() => setShowDeleteConfirm(false)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-200"
+              className="global-btn global-btn-secondary"
             >
               Cancel
             </Button>
             <Button 
               onClick={confirmDelete}
-              className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+              className="global-btn global-btn-danger"
             >
               Delete Record
             </Button>
@@ -2910,14 +2962,14 @@ const PatientHistory: React.FC = () => {
                   setFilterYear(selectedYear);
                   setShowMonthYearDialog(false);
                 }}
-                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-600 border-emerald-200"
+                className="global-btn global-btn-primary"
               >
                 Apply Filter
               </Button>
               <Button 
                 type="button" 
                 onClick={() => setShowMonthYearDialog(false)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-200"
+                className="global-btn global-btn-secondary"
               >
                 Cancel
               </Button>
@@ -2929,7 +2981,7 @@ const PatientHistory: React.FC = () => {
                   setFilterYear(null);
                   setShowMonthYearDialog(false);
                 }}
-                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-600 border-yellow-200"
+                className="global-btn global-btn-secondary"
               >
                 Clear Filter
               </Button>

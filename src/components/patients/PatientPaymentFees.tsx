@@ -893,10 +893,10 @@ export default function PatientPaymentFees() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-green-700 hover:scale-110">
@@ -913,7 +913,7 @@ export default function PatientPaymentFees() {
             <div className="flex items-center space-x-3">
               <Button 
                 onClick={printReport}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="global-btn global-btn-primary"
               >
                 <Printer className="h-4 w-4" />
                 <span className="font-medium">Print Report</span>
@@ -923,57 +923,57 @@ export default function PatientPaymentFees() {
         </div>
         
         {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <Receipt className="h-6 w-6 text-green-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Fees</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{totals.totalFees.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Receipt className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Collected fees</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Fees</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">₹{totals.totalFees.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-300">
-                  <CreditCard className="h-6 w-6 text-orange-600" />
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Balance</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">₹{totals.totalBalance.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <CreditCard className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Outstanding amount</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Balance</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">₹{totals.totalBalance.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-orange-200 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <CheckCircle className="h-6 w-6 text-blue-600" />
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Amount</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">₹{totals.total.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Overall total</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Amount</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">₹{totals.total.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
@@ -1007,7 +1007,7 @@ export default function PatientPaymentFees() {
         )}
 
         {/* Search and Filter Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="crm-controls-container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
@@ -1022,8 +1022,7 @@ export default function PatientPaymentFees() {
             <div className="flex space-x-2">
               <Button
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="flex-1 h-12 border-gray-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600 transition-all duration-300"
+                className="crm-month-year-btn flex-1"
               >
                 {filterMonth !== null && filterYear !== null 
                   ? `${months[filterMonth]} ${filterYear}`
@@ -1039,8 +1038,7 @@ export default function PatientPaymentFees() {
                     setFilterMonth(null);
                     setFilterYear(null);
                   }}
-                  variant="outline"
-                  className="flex-1 h-12 border-gray-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-all duration-300"
+                  className="global-btn global-btn-danger flex-1"
                 >
                   Clear Filter
                 </Button>
@@ -1069,11 +1067,12 @@ export default function PatientPaymentFees() {
         )}
 
         {/* Main Patient Payment Table */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
+        <div className="crm-table-container">
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="crm-table-title">
+                  <CreditCard className="crm-table-title-icon" />
                   Patient Payment Summary
                   {(filterMonth !== null && filterYear !== null) && (
                     <span className="text-green-600 ml-2">
@@ -1438,18 +1437,16 @@ export default function PatientPaymentFees() {
                           <div className="flex gap-2 justify-center">
                             <Button
                               size="sm"
-                              variant="outline"
                               onClick={() => handleViewPayments(patient)}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-view rounded-lg transition-all duration-300"
+                              className="action-btn-lead action-btn-view"
                               title="View Payments"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
                               onClick={() => handleAddFees(patient)}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 action-btn-add rounded-lg transition-all duration-300"
+                              className="action-btn-lead action-btn-success"
                               title="Add Fees"
                             >
                               <Receipt className="h-4 w-4" />
@@ -1465,7 +1462,6 @@ export default function PatientPaymentFees() {
                               return (
                                 <Button
                                   size="sm"
-                                  variant="outline"
                                   onClick={() => {
                                     if (!isCurrentMonth) return;
                                     setSelectedPatient({ id: patient.patientId, name: patient.name, phone: '', email: '' });
@@ -1478,11 +1474,7 @@ export default function PatientPaymentFees() {
                                     });
                                     setIsAddPaymentOpen(true);
                                   }}
-                                  className={`h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg transition-all duration-300 ${
-                                    !isCurrentMonth 
-                                      ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-400' 
-                                      : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 hover:border-orange-400 action-btn-edit'
-                                  }`}
+                                  className={`action-btn-lead ${!isCurrentMonth ? 'action-btn-disabled' : 'action-btn-edit'}`}
                                   disabled={!isCurrentMonth}
                                   title="Add Payment"
                                 >
@@ -1500,7 +1492,7 @@ export default function PatientPaymentFees() {
 
               {filteredPatients.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
-                  No patients found. <Button variant="link" onClick={() => navigate('/patients/add')}>Add a patient</Button> to get started.
+                  No patients found. <Button variant="link" onClick={() => navigate('/patients/add')} className="global-btn global-btn-primary">Add a patient</Button> to get started.
                 </div>
               )}
 
@@ -1731,10 +1723,10 @@ export default function PatientPaymentFees() {
               </Select>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddPaymentOpen(false)}>
+              <Button onClick={() => setIsAddPaymentOpen(false)} className="global-btn global-btn-secondary">
                 Cancel
               </Button>
-              <Button onClick={handleAddPayment} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={handleAddPayment} className="global-btn global-btn-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Payment
               </Button>
@@ -1876,10 +1868,10 @@ export default function PatientPaymentFees() {
             </div>
             
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditPaymentOpen(false)}>
+              <Button onClick={() => setIsEditPaymentOpen(false)} className="global-btn global-btn-secondary">
                 Cancel
               </Button>
-              <Button onClick={handleUpdatePayment} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={handleUpdatePayment} className="global-btn global-btn-primary">
                 <Edit className="h-4 w-4 mr-2" />
                 Update Payment
               </Button>
@@ -1926,14 +1918,14 @@ export default function PatientPaymentFees() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMonthYearDialog(false)}>
+            <Button onClick={() => setShowMonthYearDialog(false)} className="global-btn global-btn-secondary">
               Cancel
             </Button>
             <Button onClick={() => {
               setFilterMonth(dialogSelectedMonth);
               setFilterYear(dialogSelectedYear);
               setShowMonthYearDialog(false);
-            }}>
+            }} className="global-btn global-btn-primary">
               Apply Filter
             </Button>
           </DialogFooter>
@@ -2201,12 +2193,12 @@ export default function PatientPaymentFees() {
               </div>
               
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setIsEditFeeOpen(false)}>
+                <Button onClick={() => setIsEditFeeOpen(false)} className="global-btn global-btn-secondary">
                   Cancel
                 </Button>
                 <Button 
                   onClick={() => handleUpdateFee(editingFee)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="global-btn global-btn-primary"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Update Fee

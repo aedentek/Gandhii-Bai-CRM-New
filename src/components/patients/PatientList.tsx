@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
+import '@/styles/global-crm-design.css';
+import '@/styles/global-crm-design.css';
 
 // Utility function to create timezone-safe dates
 const createLocalDate = (year: number, month: number, day: number): Date => {
@@ -954,7 +956,7 @@ const PatientList: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+        <div className="crm-stats-grid">
           {/* Total Patients Card */}
           <Card className="crm-stat-card crm-stat-card-blue">
             <CardContent className="relative p-3 sm:p-4 lg:p-6">
@@ -1074,10 +1076,10 @@ const PatientList: React.FC = () => {
         {/* Patients Table */}
         <Card className="crm-table-container">
           <CardHeader className="crm-table-header">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Patients List ({filteredPatients.length})</span>
-              <span className="sm:hidden">Patients ({filteredPatients.length})</span>
+            <div className="crm-table-title">
+              <Users className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Patients List ({filteredPatients.length})</span>
+              <span className="crm-table-title-text-mobile">Patients ({filteredPatients.length})</span>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -1301,8 +1303,8 @@ const PatientList: React.FC = () => {
                       onClick={() => setCurrentPage(pageNumber)}
                       className={`w-8 h-8 p-0 text-xs ${
                         currentPage === pageNumber 
-                          ? "bg-primary text-white" 
-                          : "bg-white hover:bg-gray-50 text-gray-600 border-gray-300"
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                          : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300'
                       }`}
                     >
                       {pageNumber}

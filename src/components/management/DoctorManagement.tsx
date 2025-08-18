@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
+import '@/styles/global-crm-design.css';
 
 // Utility function to create timezone-safe dates
 const createLocalDate = (year: number, month: number, day: number): Date => {
@@ -358,104 +359,125 @@ const DoctorManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Modern Floating Header */}
-        <div className="bg-white/95 backdrop-blur-lg border border-white/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl mb-4 sm:mb-6 lg:mb-8 relative overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-indigo-600/5 to-purple-600/5"></div>
-          <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -mr-12 sm:-mr-16 -mt-12 sm:-mt-16"></div>
-          
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
-            <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl sm:rounded-2xl shadow-lg">
-              <Stethoscope className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* CRM Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <Stethoscope className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Management</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage medical professionals and their information</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Doctor Management
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
-                Manage medical professionals and their information
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
+
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => navigate('/management/doctors/add')}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl shadow-lg"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Doctor
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Doctor</span>
+                <span className="sm:hidden">+</span>
               </Button>
               <Button 
                 onClick={loadDoctors}
                 variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl"
+                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-600" />
+        <div className="crm-stats-grid">
+          {/* Total Doctors Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Doctors</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{doctors.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Doctors</p>
-                  <p className="text-2xl font-bold text-gray-900">{doctors.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <UserCheck className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Active Doctors</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {doctors.filter(d => d.status.toLowerCase() === 'active').length}
-                  </p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Specializations</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {new Set(doctors.map(d => d.specialization)).size}
+          
+          {/* Active Doctors Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Doctors</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {doctors.filter(doc => doc.status === 'Active').length}
                   </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">On duty</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Departments</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {new Set(doctors.map(d => d.department)).size}
+          
+          {/* Specialists Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Specialists</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {doctors.filter(doc => doc.specialization && doc.specialization !== 'General').length}
                   </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Specialized</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Recent Additions Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Recent</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
+                    {doctors.filter(doc => {
+                      const joinDate = new Date(doc.join_date);
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return joinDate >= weekAgo;
+                    }).length}
+                  </p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">This week</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>

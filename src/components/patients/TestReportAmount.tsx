@@ -548,7 +548,7 @@ const TestReportAmount: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+        <div className="crm-stats-grid">
           {/* Total Patients Card */}
           <Card className="crm-stat-card crm-stat-card-blue">
             <CardContent className="relative p-3 sm:p-4 lg:p-6">

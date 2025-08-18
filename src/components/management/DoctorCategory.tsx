@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, FolderOpen, CheckCircle, XCircle, Stethoscope } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, FolderOpen, CheckCircle, XCircle, Stethoscope, Activity, Users, TrendingUp, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import '@/styles/global-crm-design.css';
 
 interface DoctorCategoryType {
   id: number;
@@ -28,6 +29,7 @@ const DoctorCategory: React.FC = () => {
   const [isEditingCategory, setIsEditingCategory] = React.useState(false);
   const [editingCategoryId, setEditingCategoryId] = React.useState<number | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
   const [deleteCategory, setDeleteCategory] = React.useState<DoctorCategoryType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [formData, setFormData] = React.useState({
@@ -190,10 +192,27 @@ const DoctorCategory: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const rowsPerPage = 10;
 
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCategories = categories.filter(category => {
+    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || category.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleEdit = (category: DoctorCategoryType) => {
+    setEditingCategoryId(category.id);
+    setFormData({
+      name: category.name,
+      description: category.description,
+      status: category.status,
+    });
+    setIsEditingCategory(true);
+  };
+
+  const handleDelete = (category: DoctorCategoryType) => {
+    setDeleteCategory(category);
+    setShowDeleteConfirm(true);
+  };
 
   const totalPages = Math.ceil(filteredCategories.length / rowsPerPage);
   const paginatedCategories = filteredCategories.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -203,108 +222,214 @@ const DoctorCategory: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-blue-700 hover:scale-110">
-                <FolderOpen className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* CRM Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-blue-600">Doctor Categories</h1>
-                <p className="text-sm text-gray-600 mt-1">Manage doctor specializations and categories</p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Categories</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage doctor specializations and categories</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
+
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button
                 onClick={() => setIsAddingCategory(true)}
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md bg-blue-600 hover:bg-blue-700 text-white"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Plus className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
-                <span className="font-medium">Add Category</span>
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Category</span>
+                <span className="sm:hidden">+</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <FolderOpen className="h-6 w-6 text-blue-600" />
+        <div className="crm-stats-grid">
+          {/* Total Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{categories.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <FolderOpen className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All types</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Categories</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{categories.length}</p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+          
+          {/* Active Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{categories.filter(c => c.status === 'active').length}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In use</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Categories</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">{categories.filter(c => c.status === 'active').length}</p>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-300">
-                  <XCircle className="h-6 w-6 text-orange-600" />
+          
+          {/* Inactive Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{categories.filter(c => c.status === 'inactive').length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <XCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Disabled</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Inactive Categories</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">{categories.filter(c => c.status === 'inactive').length}</p>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-orange-200 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <Stethoscope className="h-6 w-6 text-purple-600" />
+          
+          {/* Specializations Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Specializations</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{categories.filter(c => c.status === 'active').length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Stethoscope className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Specializations</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">{categories.filter(c => c.status === 'active').length}</p>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search categories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Categories Table */}
+        <div className="crm-table-container">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                Categories ({filteredCategories.length})
+              </h2>
+            </div>
+          </div>
+          <div className="p-4 sm:p-6">
+            {filteredCategories.length === 0 ? (
+              <div className="text-center py-12">
+                <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No categories found</h3>
+                <p className="text-gray-600">
+                  {searchTerm || statusFilter !== 'all' 
+                    ? 'Try adjusting your search criteria'
+                    : 'Start by adding your first category'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Description</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCategories.map((category) => (
+                      <tr key={category.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium">{category.name}</td>
+                        <td className="py-3 px-4 text-gray-600">{category.description}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            category.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {category.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(category)}
+                              className="action-btn-lead px-3 py-1 text-sm rounded"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(category)}
+                              className="action-btn-danger px-3 py-1 text-sm rounded"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+      {/* Add Category Dialog */}
       <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
         <DialogContent>
           <DialogHeader>

@@ -24,13 +24,15 @@ import {
   UserCheck,
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import '@/styles/global-crm-design.css';
 
 interface Staff {
   id: string;
@@ -203,168 +205,154 @@ const DeletedStaff: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-red-700 hover:scale-110">
-                <UserMinus className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* CRM Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <UserMinus className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-red-600">Deleted Staff</h1>
-                <p className="text-sm text-gray-600 mt-1">Manage and restore deleted staff members</p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Deleted Staff</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage and restore deleted staff members</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => loadDeletedStaff()}
                 disabled={loading}
-                variant="outline"
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} transition-transform duration-300 hover:rotate-180`} />
-                <span className="font-medium">Refresh</span>
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
               </Button>
 
               <Button 
                 onClick={exportToExcel}
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md bg-green-600 hover:bg-green-700 text-white"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Download className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
-                <span className="font-medium">Export</span>
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+                <span className="sm:hidden">↓</span>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors duration-300">
-                  <Trash2 className="h-6 w-6 text-red-600" />
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          {/* Total Deleted Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Total Deleted</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{deletedStaff.length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Removed</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Deleted</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-red-600 transition-colors duration-300">{deletedStaff.length}</p>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-red-200 rounded-full overflow-hidden">
-                <div className="h-full bg-red-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-300">
-                  <Filter className="h-6 w-6 text-orange-600" />
+          {/* Filtered Results Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Filtered Results</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{filteredStaff.length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Showing</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Filtered Results</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">{filteredStaff.length}</p>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Filter className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-orange-200 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <CalendarIcon className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+          {/* This Month Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">This Month</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
                     {deletedStaff.filter(s => {
                       const deletedDate = new Date(s.deleted_at);
                       const now = new Date();
                       return deletedDate.getMonth() === now.getMonth() && deletedDate.getFullYear() === now.getFullYear();
                     }).length}
                   </p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Recent</span>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <RotateCcw className="h-6 w-6 text-green-600" />
+          {/* Can Restore Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Can Restore</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{filteredStaff.length}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Can Restore</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">{filteredStaff.length}</p>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-8">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-              <Search className="w-5 h-5 mr-2 text-blue-600" />
-              Search & Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="search" className="text-sm font-medium text-gray-700">
-                  Search Staff
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="search"
-                    placeholder="Search by name, ID, phone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="dateFilter" className="text-sm font-medium text-gray-700">
-                  Deleted Date
-                </Label>
+        <div className="crm-controls-container">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  id="dateFilter"
+                  placeholder="Search by name, ID, phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="min-w-[150px]">
+                <Input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="deletedByFilter" className="text-sm font-medium text-gray-700">
-                  Deleted By
-                </Label>
+              <div className="min-w-[150px]">
                 <select
-                  id="deletedByFilter"
                   className="w-full h-10 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={deletedByFilter}
                   onChange={(e) => setDeletedByFilter(e.target.value)}
@@ -377,44 +365,31 @@ const DeletedStaff: React.FC = () => {
                   ))}
                 </select>
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Clear Filters</Label>
-                <Button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setDateFilter('');
-                    setDeletedByFilter('');
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Reset
-                </Button>
-              </div>
+              <Button
+                onClick={() => {
+                  setSearchTerm('');
+                  setDateFilter('');
+                  setDeletedByFilter('');
+                }}
+                className="global-btn"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Staff Table */}
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <CardTitle className="text-lg font-semibold text-gray-900">
-                Deleted Staff Records
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-                  {filteredStaff.length} deleted
-                </Badge>
-                <Badge variant="outline">
-                  Page {currentPage} of {totalPages}
-                </Badge>
-              </div>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <UserMinus className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Deleted Staff Records ({filteredStaff.length})</span>
+              <span className="crm-table-title-text-mobile">Deleted ({filteredStaff.length})</span>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {currentStaff.length === 0 ? (
               <div className="text-center py-12">
                 <UserMinus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -477,14 +452,14 @@ const DeletedStaff: React.FC = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <div className="flex items-center justify-center space-x-2">
+                            <div className="action-buttons-container">
                               <Button
-                                variant="outline"
                                 size="sm"
                                 onClick={() => handleRestore(staff)}
-                                className="h-8 w-8 p-0 border-green-300 hover:border-green-500 hover:bg-green-50 hover:scale-105 transition-all duration-300"
+                                className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                title="Restore Staff"
                               >
-                                <RotateCcw className="h-4 w-4 text-green-600" />
+                                <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -494,39 +469,47 @@ const DeletedStaff: React.FC = () => {
                   </Table>
                 </div>
 
-                {/* Professional Pagination */}
+                {/* CRM Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200">
-                    <div className="text-sm text-gray-700">
-                      Showing {startIndex + 1} to {Math.min(endIndex, filteredStaff.length)} of {filteredStaff.length} results
+                  <div className="crm-pagination-container">
+                    <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+                      <span className="hidden sm:inline">
+                        Showing {startIndex + 1} to {Math.min(endIndex, filteredStaff.length)} of {filteredStaff.length} results
+                      </span>
+                      <span className="sm:hidden">
+                        {currentPage} / {totalPages}
+                      </span>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2 order-1 sm:order-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className="flex items-center"
+                        className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
                       >
-                        <ChevronLeft className="w-4 h-4 mr-1" />
-                        Previous
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
                       </Button>
                       
-                      <div className="flex items-center space-x-1">
+                      {/* Page Numbers */}
+                      <div className="hidden sm:flex items-center gap-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const pageNum = i + 1;
+                          const pageNumber = i + Math.max(1, currentPage - 2);
+                          if (pageNumber > totalPages) return null;
                           return (
                             <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
+                              key={pageNumber}
+                              variant={currentPage === pageNumber ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={cn(
-                                "w-8 h-8 p-0",
-                                currentPage === pageNum && "bg-blue-600 text-white"
-                              )}
+                              onClick={() => setCurrentPage(pageNumber)}
+                              className={`w-8 h-8 p-0 text-xs ${
+                                currentPage === pageNumber 
+                                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                                  : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300'
+                              }`}
                             >
-                              {pageNum}
+                              {pageNumber}
                             </Button>
                           );
                         })}
@@ -537,10 +520,10 @@ const DeletedStaff: React.FC = () => {
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
-                        className="flex items-center"
+                        className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
                       >
-                        Next
-                        <ChevronRight className="w-4 h-4 ml-1" />
+                        <span className="hidden sm:inline">Next</span>
+                        <span className="sm:hidden">Next</span>
                       </Button>
                     </div>
                   </div>
@@ -567,12 +550,13 @@ const DeletedStaff: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowRestoreConfirm(false)}
+                className="global-btn"
               >
                 Cancel
               </Button>
               <Button
                 onClick={confirmRestore}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="global-btn"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Restore Staff

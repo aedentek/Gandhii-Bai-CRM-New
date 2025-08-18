@@ -969,17 +969,17 @@ const PatientCallRecord: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-blue-700 hover:scale-110">
-                <FileText className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+              <div className="crm-header-icon">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-blue-600">Patients Call Record</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patients Call Record</h1>
                 <p className="text-sm text-gray-600 mt-1">
                   Manage patient call records and audio recordings
                 </p>
@@ -995,21 +995,21 @@ const PatientCallRecord: React.FC = () => {
                   setRefreshCounter(prev => prev + 1);
                 }}
                 disabled={isUpdatingRecords}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="global-btn global-btn-secondary"
               >
                 {isUpdatingRecords ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4 mr-2" />
                 )}
                 <span className="font-medium">Refresh</span>
               </Button>
               
               <Button 
                 onClick={() => setShowAddDialog(true)}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="global-btn global-btn-primary"
               >
-                <FileText className="h-4 w-4" />
+                <FileText className="h-4 w-4 mr-2" />
                 <span className="font-medium">Add Record</span>
               </Button>
             </div>
@@ -1017,55 +1017,55 @@ const PatientCallRecord: React.FC = () => {
         </div>
 
         {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <FileText className="h-6 w-6 text-blue-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-6">
+          
+          {/* Total Records Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Records</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredRecords?.length || 0}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <FileText className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Call records</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Records</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{filteredRecords?.length || 0}</p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Patients</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
                     {new Set(filteredRecords?.filter(record => !record.id.startsWith('patient_')).map(record => record.patientId)).size || 0}
                   </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <User className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">With calls</span>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <Mic className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Audio Files</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">
+          {/* Audio Files Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Audio Files</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
                     {(() => {
                       const totalAudioCount = filteredRecords?.reduce((total, record) => {
                         const patientAudioCount = callRecords.filter(callRecord => {
@@ -1076,68 +1076,83 @@ const PatientCallRecord: React.FC = () => {
                       return totalAudioCount;
                     })()}
                   </p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <Mic className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Recordings</span>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <Mic className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by patient name, ID, contact, UHID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button 
+                onClick={() => handleExportExcel()} 
+                className="global-btn global-btn-secondary flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+              <Button 
+                onClick={() => handleExportPDF()} 
+                className="global-btn global-btn-secondary flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+            </div>
 
-      {/* Filters */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 mb-6 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search by patient name, ID, contact, UHID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+            <Button
+              type="button"
+              variant="outline"
+              className="crm-month-year-btn"
+              onClick={() => setShowMonthYearDialog(true)}
+            >
+              <FileIcon className="crm-month-year-btn-icon" />
+              <span className="crm-month-year-btn-text">
+                {filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth]} ${filterYear}`
+                  : `${months[selectedMonth]} ${selectedYear}`
+                }
+              </span>
+              <span className="crm-month-year-btn-text-mobile">
+                {filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                  : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                }
+              </span>
+            </Button>
+          </div>
+        </div>
+
+
+        {/* Records Table */}
+        <div className="crm-table-container">
+          <div className="crm-table-header">
+            <div className="crm-table-title">
+              <FileText className="crm-table-title-icon" />
+              <h2 className="crm-table-title-text">Patients List</h2>
+            </div>
           </div>
           
-          <div className="flex space-x-2">
-            <Button 
-              onClick={() => handleExportExcel()} 
-              className="modern-btn modern-btn-outline flex-1"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Excel
-            </Button>
-            <Button 
-              onClick={() => handleExportPDF()} 
-              className="modern-btn modern-btn-outline flex-1"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
-          </div>
-
-          <button
-            type="button"
-            className="modern-btn modern-btn-outline min-w-[140px] justify-center"
-            onClick={() => setShowMonthYearDialog(true)}
-          >
-            {filterMonth !== null && filterYear !== null 
-              ? `${months[filterMonth]} ${filterYear}`
-              : `${months[selectedMonth]} ${selectedYear}`
-            }
-          </button>
-        </div>
-      </div>
-
-
-      {/* Records Table */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Patients List</h2>
-        </div>
-        
-        <div className="p-6">
+          <div className="p-4 sm:p-6">
           {/* Loading Indicator */}
           {(!isLoadingComplete && (isLoadingPatients || isLoadingRecords)) && (
             <div className="flex items-center justify-center py-8">
@@ -1297,10 +1312,10 @@ const PatientCallRecord: React.FC = () => {
                               <div className="flex justify-center gap-2">
                                 <button
                                   onClick={() => handleView(record)}
-                                  className="w-8 h-8 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 hover:border-green-300 flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+                                  className="action-btn-lead action-btn-view"
                                   title="View Patient Details"
                                 >
-                                  <Eye className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                                  <Eye className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -1313,10 +1328,10 @@ const PatientCallRecord: React.FC = () => {
                                       handleEdit(record);
                                     }
                                   }}
-                                  className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 hover:border-blue-300 flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+                                  className="action-btn-lead action-btn-edit"
                                   title={record.id.toString().startsWith('patient_') ? 'Add Call Record' : 'Edit Call Record'}
                                 >
-                                  <Mic className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                                  <Mic className="w-4 h-4" />
                                 </button>
                               </div>
                             </TableCell>

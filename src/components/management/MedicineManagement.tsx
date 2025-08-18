@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import '@/styles/global-crm-design.css';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
@@ -698,10 +699,10 @@ const handleRefresh = React.useCallback(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
@@ -793,58 +794,66 @@ const handleRefresh = React.useCallback(() => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Pill className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-blue-600">Total Medicines</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalMedicines}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Pill className="h-6 w-6 text-blue-600" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{totalMedicines}</div>
-                <div className="text-xs text-gray-600">Total Medicines</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-green-600">Active</p>
+                  <p className="text-3xl font-bold text-gray-900">{activeMedicines}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{activeMedicines}</div>
-                <div className="text-xs text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <AlertTriangle className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-orange-600">Low Stock</p>
+                  <p className="text-3xl font-bold text-gray-900">{lowStockMedicines}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{lowStockMedicines}</div>
-                <div className="text-xs text-gray-600">Low Stock</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-red">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-gray-600" />
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-red-600">Inactive</p>
+                  <p className="text-3xl font-bold text-gray-900">{inactiveMedicines}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-red-600" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{inactiveMedicines}</div>
-                <div className="text-xs text-gray-600">Inactive</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+        <div className="crm-controls-container">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <div className="relative">

@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, RotateCcw, Search, Eye, Users, Calendar, Filter } from 'lucide-react';
+import { Trash2, RotateCcw, Search, Eye, Users, Calendar, Filter, Activity, Download, RefreshCw, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { DatabaseService } from '@/services/databaseService';
+import '@/styles/global-crm-design.css';
 
 interface Doctor {
   id: string;
@@ -130,18 +131,18 @@ const DeletedDoctors: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        {/* CRM Header */}
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-red-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Deleted Doctors</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1">Manage and restore deleted doctor records</p>
+                <p className="text-sm sm:text-base text-gray-600">Manage and restore deleted doctor records</p>
               </div>
             </div>
 
@@ -151,15 +152,108 @@ const DeletedDoctors: React.FC = () => {
                 disabled={loading}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RotateCcw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
                 <span className="sm:hidden">↻</span>
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          {/* Total Deleted Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Total Deleted</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{deletedDoctors.length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Trash2 className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Removed</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Deleted Today Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Deleted Today</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
+                    {deletedDoctors.filter(doctor => {
+                      const deletedDate = new Date(doctor.deletedAt);
+                      const today = new Date();
+                      return deletedDate.toDateString() === today.toDateString();
+                    }).length}
+                  </p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Recent (7 days) Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Recent (7 days)</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {deletedDoctors.filter(doctor => {
+                      const deletedDate = new Date(doctor.deletedAt);
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return deletedDate >= weekAgo;
+                    }).length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">This week</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Can Restore Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Can Restore</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{deletedDoctors.length}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Search and Filters */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-controls-container">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search" className="text-sm font-medium text-gray-700 mb-2 block">Search</Label>
@@ -215,7 +309,7 @@ const DeletedDoctors: React.FC = () => {
           </div>
         </div>
         {/* Deleted Doctors Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+        <div className="crm-table-container">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
@@ -373,8 +467,8 @@ const DeletedDoctors: React.FC = () => {
                 </Table>
               </div>
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="crm-pagination-container">
+                  <p className="text-sm text-gray-600">
                     Showing {startIndex + 1} to {Math.min(endIndex, filteredDoctors.length)} of {filteredDoctors.length} entries
                   </p>
                   <div className="flex items-center space-x-2">
@@ -383,10 +477,11 @@ const DeletedDoctors: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
+                      className="action-btn-lead"
                     >
                       Previous
                     </Button>
-                    <span className="text-sm">
+                    <span className="text-sm text-gray-700 font-medium">
                       Page {currentPage} of {totalPages}
                     </span>
                     <Button
@@ -394,7 +489,7 @@ const DeletedDoctors: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="modern-btn modern-btn-secondary text-xs px-2 py-1"
+                      className="action-btn-lead"
                     >
                       Next
                     </Button>

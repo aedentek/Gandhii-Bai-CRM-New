@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import '@/styles/global-crm-design.css';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
@@ -361,9 +362,9 @@ const handleRefresh = React.useCallback(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="crm-page-bg">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="crm-header-container">
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               <span className="ml-3 text-lg">Loading...</span>
@@ -375,17 +376,18 @@ const handleRefresh = React.useCallback(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
-                <Pill className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
+                <Pill className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Categories Management</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Categories</h1>
+                <p className="text-sm lg:text-base text-gray-600 mt-1">Manage and organize medicine categories</p>
               </div>
             </div>
           
@@ -462,64 +464,84 @@ const handleRefresh = React.useCallback(() => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Pill className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Total Categories Card */}
+          <div className="bg-blue-50 rounded-lg p-4 lg:p-6 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-600 flex items-center gap-2">
+                  <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
+                  All types
+                </p>
+                <p className="text-2xl lg:text-3xl font-bold text-blue-800">{filteredCategories.length}</p>
+                <p className="text-base lg:text-lg font-semibold text-blue-700">Total Categories</p>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredCategories.length}</div>
-                <div className="text-xs text-gray-600">Total Categories</div>
+              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
+                <Pill className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
           
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+          {/* Active Categories Card */}
+          <div className="bg-green-50 rounded-lg p-4 lg:p-6 border border-green-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-green-600 flex items-center gap-2">
+                  <span className="h-2 w-2 bg-green-500 rounded-full"></span>
+                  In use
+                </p>
+                <p className="text-2xl lg:text-3xl font-bold text-green-800">
                   {filteredCategories.filter(c => c.status === 'active').length}
-                </div>
-                <div className="text-xs text-gray-600">Active</div>
+                </p>
+                <p className="text-base lg:text-lg font-semibold text-green-700">Active Categories</p>
+              </div>
+              <div className="bg-green-500 rounded-lg p-3 lg:p-4">
+                <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
           
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredCategories.filter(c => c.description && c.description.length > 0).length}
-                </div>
-                <div className="text-xs text-gray-600">With Description</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-purple">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+          {/* Inactive Categories Card */}
+          <div className="bg-red-50 rounded-lg p-4 lg:p-6 border border-red-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-red-600 flex items-center gap-2">
+                  <span className="h-2 w-2 bg-red-500 rounded-full"></span>
+                  Disabled
+                </p>
+                <p className="text-2xl lg:text-3xl font-bold text-red-800">
                   {filteredCategories.filter(c => c.status === 'inactive').length}
-                </div>
-                <div className="text-xs text-gray-600">Inactive</div>
+                </p>
+                <p className="text-base lg:text-lg font-semibold text-red-700">Inactive Categories</p>
+              </div>
+              <div className="bg-red-500 rounded-lg p-3 lg:p-4">
+                <AlertCircle className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Specializations Card */}
+          <div className="bg-orange-50 rounded-lg p-4 lg:p-6 border border-orange-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
+                  <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
+                  Available
+                </p>
+                <p className="text-2xl lg:text-3xl font-bold text-orange-800">
+                  {filteredCategories.filter(c => c.description && c.description.length > 0).length}
+                </p>
+                <p className="text-base lg:text-lg font-semibold text-orange-700">Specializations</p>
+              </div>
+              <div className="bg-orange-500 rounded-lg p-3 lg:p-4">
+                <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+        <div className="crm-controls-container">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <div className="relative">
@@ -566,7 +588,7 @@ const handleRefresh = React.useCallback(() => {
         />
 
         {/* Categories Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
+        <div className="crm-table-container">
           <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
             <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
               <Pill className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />

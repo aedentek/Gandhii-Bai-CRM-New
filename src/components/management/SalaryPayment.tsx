@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User } from 'lucide-react';
+import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import '@/styles/global-crm-design.css';
 
 interface StaffSalary {
   id: string;
@@ -245,29 +246,22 @@ const SalaryPayment: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-green-700 hover:scale-110">
-                <CreditCard className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* CRM Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-green-600">Staff Salary Payment</h1>
-                <p className="text-gray-600 mt-1 transition-colors duration-300 hover:text-gray-700">
-                  <span className="inline-flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2 transition-transform duration-300 hover:scale-125"></div>
-                    System Online
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span>{filteredStaff.length} Active Staff</span>
-                </p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Staff Salary Payment</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage and track staff salary payments</p>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full lg:w-auto">
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => {
                   setSearchTerm('');
@@ -275,102 +269,106 @@ const SalaryPayment: React.FC = () => {
                   refreshData();
                 }}
                 disabled={loading}
-                variant="outline"
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md hover:border-green-300 hover:bg-green-50 w-full sm:w-auto"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} transition-transform duration-300 hover:rotate-180`} />
-                <span className="font-medium">Refresh</span>
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
               </Button>
               
               <Button 
                 onClick={exportToExcel}
-                variant="outline"
-                className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 hover:shadow-md hover:border-blue-300 hover:bg-blue-50 w-full sm:w-auto"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Download className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
-                <span className="font-medium">Export</span>
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+                <span className="sm:hidden">↓</span>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center">
-                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-300">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          {/* Total Staff Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Staff</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.total}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Active</span>
+                  </div>
                 </div>
-                <div className="ml-3 sm:ml-4">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Staff</p>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">{stats.total}</p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-3 sm:mt-4 h-1 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center">
-                <div className="p-2 sm:p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+          {/* Total Salary Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Salary</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{stats.totalSalary.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Monthly</span>
+                  </div>
                 </div>
-                <div className="ml-3 sm:ml-4">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Salary</p>
-                  <p className="text-sm sm:text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">₹{stats.totalSalary.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-3 sm:mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center">
-                <div className="p-2 sm:p-3 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors duration-300">
-                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
+          {/* Total Paid Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Total Paid</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">₹{stats.totalPaid.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Completed</span>
+                  </div>
                 </div>
-                <div className="ml-3 sm:ml-4">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Paid</p>
-                  <p className="text-sm sm:text-2xl font-bold text-gray-900 group-hover:text-emerald-600 transition-colors duration-300">₹{stats.totalPaid.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-3 sm:mt-4 h-1 bg-emerald-200 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500"></div>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center">
-                <div className="p-2 sm:p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-300">
-                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
+          {/* Total Pending Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Pending</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">₹{stats.totalPending.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Outstanding</span>
+                  </div>
                 </div>
-                <div className="ml-3 sm:ml-4">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Total Pending</p>
-                  <p className="text-sm sm:text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">₹{stats.totalPending.toLocaleString()}</p>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-3 sm:mt-4 h-1 bg-orange-200 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+        <div className="crm-controls-container">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -379,14 +377,14 @@ const SalaryPayment: React.FC = () => {
                   placeholder="Search staff by name or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="border-gray-300 hover:border-green-500 hover:bg-green-50">
+                  <Button className="global-btn">
                     <CalendarIcon className="h-4 w-4 mr-2" />
                     {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Pick a date'}
                   </Button>
@@ -405,11 +403,15 @@ const SalaryPayment: React.FC = () => {
         </div>
 
         {/* Salary Payment Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-4 sm:p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Staff Salary Payment</h3>
-            <p className="text-sm text-gray-600 mt-1">Manage and track staff salary payments</p>
-          </div>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <CreditCard className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Staff Salary Payment ({filteredStaff.length})</span>
+              <span className="crm-table-title-text-mobile">Salary ({filteredStaff.length})</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
           
           <div className="overflow-x-auto">
             <Table>
@@ -504,23 +506,23 @@ const SalaryPayment: React.FC = () => {
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center space-x-2">
+                          <div className="action-buttons-container">
                             <Button
                               size="sm"
                               onClick={() => handleEditStaff(staff)}
-                              variant="outline"
-                              className="h-8 w-8 p-0 border-orange-300 hover:border-orange-500 hover:bg-orange-50 hover:scale-105 transition-all duration-300"
+                              className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
+                              title="Edit Salary Payment"
                             >
-                              <Edit2 className="h-4 w-4 text-orange-600" />
+                              <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
                             {(parseFloat(staff.total_paid || '0') > 0) && (
                               <Button
                                 size="sm"
                                 onClick={() => handleDeleteClick(staff)}
-                                variant="outline"
-                                className="h-8 w-8 p-0 border-red-300 hover:border-red-500 hover:bg-red-50 hover:scale-105 transition-all duration-300"
+                                className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                title="Reset Payment"
                               >
-                                <RotateCcw className="h-4 w-4 text-red-600" />
+                                <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
                               </Button>
                             )}
                           </div>
@@ -549,22 +551,29 @@ const SalaryPayment: React.FC = () => {
 
           {/* Professional Pagination */}
           {Math.ceil(filteredStaff.length / itemsPerPage) > 1 && (
-            <div className="bg-gray-50/80 px-4 sm:px-6 py-4 border-t border-gray-200">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <p className="text-sm text-gray-600">
+            <div className="crm-pagination-container">
+              <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+                <span className="hidden sm:inline">
                   Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredStaff.length)} of {filteredStaff.length} staff
-                </p>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="border-gray-300 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition-all duration-200 hover:scale-105"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
+                </span>
+                <span className="sm:hidden">
+                  {currentPage} / {Math.ceil(filteredStaff.length / itemsPerPage)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 order-1 sm:order-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
+                </Button>
+                
+                {/* Page Numbers */}
+                <div className="hidden sm:flex items-center gap-1">
                   {Array.from({ length: Math.min(5, Math.ceil(filteredStaff.length / itemsPerPage)) }, (_, i) => {
                     const pageNumber = i + Math.max(1, currentPage - 2);
                     if (pageNumber > Math.ceil(filteredStaff.length / itemsPerPage)) return null;
@@ -574,32 +583,33 @@ const SalaryPayment: React.FC = () => {
                         variant={currentPage === pageNumber ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(pageNumber)}
-                        className={cn(
-                          "w-10 h-8 transition-all duration-200 hover:scale-110",
+                        className={`w-8 h-8 p-0 text-xs ${
                           currentPage === pageNumber 
-                            ? "bg-green-600 text-white hover:bg-green-700 shadow-lg" 
-                            : "border-gray-300 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600"
-                        )}
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                            : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300'
+                        }`}
                       >
                         {pageNumber}
                       </Button>
                     );
                   })}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(Math.ceil(filteredStaff.length / itemsPerPage), currentPage + 1))}
-                    disabled={currentPage === Math.ceil(filteredStaff.length / itemsPerPage)}
-                    className="border-gray-300 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition-all duration-200 hover:scale-105"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
                 </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(Math.ceil(filteredStaff.length / itemsPerPage), currentPage + 1))}
+                  disabled={currentPage === Math.ceil(filteredStaff.length / itemsPerPage)}
+                  className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <span className="sm:hidden">Next</span>
+                </Button>
               </div>
             </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Edit Staff Salary Dialog */}
         {editStaff && (
@@ -659,10 +669,17 @@ const SalaryPayment: React.FC = () => {
               </div>
               
               <DialogFooter>
-                <Button variant="outline" onClick={() => setEditStaff(null)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEditStaff(null)}
+                  className="global-btn"
+                >
                   Cancel
                 </Button>
-                <Button onClick={saveEditedStaff} className="bg-green-600 hover:bg-green-700 text-white">
+                <Button 
+                  onClick={saveEditedStaff} 
+                  className="global-btn"
+                >
                   Save Changes
                 </Button>
               </DialogFooter>
@@ -689,13 +706,13 @@ const SalaryPayment: React.FC = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-6 border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200 hover:scale-105"
+                className="global-btn px-6"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={confirmDeleteStaff}
-                className="px-6 bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="global-btn px-6"
               >
                 Reset Payment
               </Button>

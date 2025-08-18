@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DatabaseService } from '@/services/databaseService';
+import '@/styles/global-crm-design.css';
+import '../../styles/modern-forms.css';
+import '../../styles/modern-tables.css';
 
 interface StaffAttendance {
   id: number;
@@ -404,58 +407,122 @@ const AttendanceManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="p-2 bg-primary rounded-lg">
-            <Users className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Staff Attendance</h1>
-            {/* <p className="text-muted-foreground">Track daily staff attendance</p> */}
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Staff Attendance</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage daily attendance and track staff presence</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                onClick={refreshData}
+                disabled={loading}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
+
+              <Button 
+                onClick={exportAttendance}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="shadow-card">
-            <CardContent className="pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{staff.length}</div>
-                <div className="text-sm text-muted-foreground">Total Staff</div>
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Staff</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{staff.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-card">
-            <CardContent className="pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-success">{stats.present}</div>
-                <div className="text-sm text-muted-foreground">Present Today</div>
+          
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Present Today</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{stats.present}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Active</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-card">
-            <CardContent className="pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-destructive">{stats.absent}</div>
-                <div className="text-sm text-muted-foreground">Absent Today</div>
+          
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Absent Today</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{stats.absent}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <XCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Missing</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-card">
-            <CardContent className="pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-warning">{stats.late}</div>
-                <div className="text-sm text-muted-foreground">Late Today</div>
+          
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Late Today</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{stats.late}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Delayed</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* Date Selection and Controls */}
-      <Card className="mb-6 shadow-card">
-        <CardContent className="pt-6">
+        {/* Date Selection and Controls */}
+        <Card className="crm-controls-container">
+          <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             {/* Daily Attendance Section */}
             <div className="flex flex-col md:flex-row gap-4 items-center border-b pb-4">
@@ -529,7 +596,11 @@ const AttendanceManagement: React.FC = () => {
               </div>
 
               <div>
-                <Button variant="outline" onClick={exportAttendance}>
+                <Button 
+                  variant="outline" 
+                  onClick={exportAttendance}
+                  className="global-btn global-btn-secondary"
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Monthly CSV
                 </Button>
@@ -540,14 +611,13 @@ const AttendanceManagement: React.FC = () => {
       </Card>
 
       {/* Attendance Table */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>
-            Staff Attendance for {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
-          </CardTitle>
-          {/* <CardDescription>
-            Mark attendance for staff members
-          </CardDescription> */}
+      <Card className="crm-table-container">
+        <CardHeader className="crm-table-header">
+          <div className="crm-table-title">
+            <Users className="crm-table-title-icon" />
+            <span className="crm-table-title-text">Staff Attendance for {format(selectedDate, 'EEEE, MMMM dd, yyyy')}</span>
+            <span className="crm-table-title-text-mobile">Attendance {format(selectedDate, 'dd/MM')}</span>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -603,10 +673,7 @@ const AttendanceManagement: React.FC = () => {
                             size="sm"
                             onClick={() => markAttendance(member.id, member.name, 'Present')}
                             variant={attendance?.status === 'Present' ? "default" : "outline"}
-                            className={attendance?.status === 'Present' 
-                              ? "bg-green-600 hover:bg-green-700 text-white px-2" 
-                              : "border-green-600 text-green-600 hover:bg-green-600 hover:text-white px-2"
-                            }
+                            className={`action-btn-lead ${attendance?.status === 'Present' ? 'action-btn-present active' : 'action-btn-present'}`}
                             title="Present"
                             disabled={markingAttendance === member.id || loading}
                           >
@@ -616,10 +683,7 @@ const AttendanceManagement: React.FC = () => {
                             size="sm"
                             onClick={() => markAttendance(member.id, member.name, 'Late')}
                             variant={attendance?.status === 'Late' ? "default" : "outline"}
-                            className={attendance?.status === 'Late'
-                              ? "bg-yellow-600 hover:bg-yellow-700 text-white px-2"
-                              : "border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white px-2"
-                            }
+                            className={`action-btn-lead ${attendance?.status === 'Late' ? 'action-btn-late active' : 'action-btn-late'}`}
                             title="Late"
                             disabled={markingAttendance === member.id || loading}
                           >
@@ -629,10 +693,7 @@ const AttendanceManagement: React.FC = () => {
                             size="sm"
                             onClick={() => markAttendance(member.id, member.name, 'Absent')}
                             variant={attendance?.status === 'Absent' ? "default" : "outline"}
-                            className={attendance?.status === 'Absent'
-                              ? "bg-red-600 hover:bg-red-700 text-white px-2"
-                              : "border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-2"
-                            }
+                            className={`action-btn-lead ${attendance?.status === 'Absent' ? 'action-btn-absent active' : 'action-btn-absent'}`}
                             title="Absent"
                             disabled={markingAttendance === member.id || loading}
                           >
@@ -673,7 +734,7 @@ const AttendanceManagement: React.FC = () => {
                               }
                             }}
                             variant="outline"
-                            className="border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white px-2"
+                            className="action-btn-lead action-btn-reset"
                             title="Reset Attendance"
                             disabled={!attendance || markingAttendance === member.id || loading}
                           >
@@ -746,6 +807,7 @@ const AttendanceManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

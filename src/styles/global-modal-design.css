@@ -1,0 +1,1438 @@
+/* Global CRM Modal/Dialog Design System */
+/* ================================================================= */
+/* Based on PatientList view dialog design patterns */
+/* Professional, responsive, and reusable modal components */
+/* ================================================================= */
+
+/* 1. MODAL OVERLAY & CONTAINER */
+/* ================================================================= */
+
+.crm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: modalOverlayIn 0.2s ease-out;
+}
+
+@keyframes modalOverlayIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+.crm-modal-container {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(239, 246, 255, 0.3) 100%);
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 0;
+  margin: 1rem;
+  border-radius: 1rem;
+  animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  .crm-modal-container {
+    max-width: 6xl;
+    border-radius: 1.5rem;
+  }
+}
+
+/* 2. MODAL HEADER */
+/* ================================================================= */
+
+.crm-modal-header {
+  position: relative;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-header {
+    padding-bottom: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-header {
+    padding-bottom: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+
+/* Header gradient accent line */
+.crm-modal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+}
+
+/* Header content wrapper */
+.crm-modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-header-content {
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-header-content {
+    gap: 1rem;
+  }
+}
+
+/* Header photo/avatar container */
+.crm-modal-header-photo {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.crm-modal-header-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-header-avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-width: 4px;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-header-avatar {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-header-avatar {
+    width: 5rem;
+    height: 5rem;
+  }
+}
+
+/* Header badge (status indicator) */
+.crm-modal-header-badge {
+  position: absolute;
+  bottom: -0.25rem;
+  right: -0.25rem;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  font-size: 0.75rem;
+}
+
+/* Header text container */
+.crm-modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Header title */
+.crm-modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-title {
+    font-size: 1.25rem;
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-title {
+    font-size: 1.875rem;
+  }
+}
+
+/* Header title icon */
+.crm-modal-title-icon {
+  height: 1rem;
+  width: 1rem;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-title-icon {
+    height: 1.25rem;
+    width: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-title-icon {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-title-icon {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+}
+
+/* Header description */
+.crm-modal-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-description {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-description {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-description {
+    font-size: 1.25rem;
+  }
+}
+
+/* 3. MODAL BODY */
+/* ================================================================= */
+
+.crm-modal-body {
+  overflow-y: auto;
+  max-height: calc(95vh - 100px);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-body {
+    max-height: calc(95vh - 120px);
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-body {
+    max-height: calc(95vh - 140px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-body {
+    max-height: calc(95vh - 200px);
+  }
+}
+
+/* Custom scrollbar for modal body */
+.crm-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.crm-modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.crm-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.crm-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Modal content wrapper */
+.crm-modal-content {
+  padding: 0.5rem;
+}
+
+.crm-modal-content > * + * {
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-content {
+    padding: 0.75rem;
+  }
+  
+  .crm-modal-content > * + * {
+    margin-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-content {
+    padding: 1rem;
+  }
+  
+  .crm-modal-content > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-content {
+    padding: 1.5rem;
+  }
+  
+  .crm-modal-content > * + * {
+    margin-top: 2rem;
+  }
+}
+
+/* 4. MODAL SECTIONS */
+/* ================================================================= */
+
+/* Section container */
+.crm-modal-section {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-section {
+    border-radius: 0.75rem;
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-section {
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-section {
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+  }
+}
+
+/* Section color variants */
+.crm-modal-section-blue {
+  border-color: rgba(59, 130, 246, 0.1);
+}
+
+.crm-modal-section-green {
+  border-color: rgba(34, 197, 94, 0.1);
+}
+
+.crm-modal-section-red {
+  border-color: rgba(239, 68, 68, 0.1);
+}
+
+.crm-modal-section-purple {
+  border-color: rgba(147, 51, 234, 0.1);
+}
+
+.crm-modal-section-orange {
+  border-color: rgba(249, 115, 22, 0.1);
+}
+
+.crm-modal-section-amber {
+  border-color: rgba(245, 158, 11, 0.1);
+}
+
+/* Section header */
+.crm-modal-section-header {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-section-header {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-section-header {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Section header icon container */
+.crm-modal-section-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-section-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-section-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* Section icon color variants */
+.crm-modal-section-icon-blue {
+  background-color: #dbeafe;
+}
+
+.crm-modal-section-icon-green {
+  background-color: #dcfce7;
+}
+
+.crm-modal-section-icon-red {
+  background-color: #fee2e2;
+}
+
+.crm-modal-section-icon-purple {
+  background-color: #f3e8ff;
+}
+
+.crm-modal-section-icon-orange {
+  background-color: #fed7aa;
+}
+
+.crm-modal-section-icon-amber {
+  background-color: #fef3c7;
+}
+
+/* 5. MODAL CARDS */
+/* ================================================================= */
+
+/* Base card grid */
+.crm-modal-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Information card */
+.crm-modal-info-card {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-info-card {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-info-card {
+    padding: 1rem;
+  }
+}
+
+.crm-modal-info-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Card color variants */
+.crm-modal-info-card-blue {
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border-color: #bfdbfe;
+}
+
+.crm-modal-info-card-green {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  border-color: #bbf7d0;
+}
+
+.crm-modal-info-card-red {
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+  border-color: #fecaca;
+}
+
+.crm-modal-info-card-purple {
+  background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%);
+  border-color: #e9d5ff;
+}
+
+.crm-modal-info-card-orange {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+  border-color: #fed7aa;
+}
+
+.crm-modal-info-card-amber {
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+  border-color: #fde68a;
+}
+
+.crm-modal-info-card-gray {
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-color: #e5e7eb;
+}
+
+/* Card content layout */
+.crm-modal-card-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-card-content {
+    gap: 0.75rem;
+  }
+}
+
+/* Card icon container */
+.crm-modal-card-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-card-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-card-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+/* Card icon color variants */
+.crm-modal-card-icon-blue {
+  background-color: #dbeafe;
+}
+
+.crm-modal-card-icon-green {
+  background-color: #dcfce7;
+}
+
+.crm-modal-card-icon-red {
+  background-color: #fee2e2;
+}
+
+.crm-modal-card-icon-purple {
+  background-color: #f3e8ff;
+}
+
+.crm-modal-card-icon-orange {
+  background-color: #fed7aa;
+}
+
+.crm-modal-card-icon-amber {
+  background-color: #fef3c7;
+}
+
+.crm-modal-card-icon-gray {
+  background-color: #f3f4f6;
+}
+
+/* Card text container */
+.crm-modal-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Card label */
+.crm-modal-card-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.25rem;
+}
+
+/* Card value */
+.crm-modal-card-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-card-value {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-card-value {
+    font-size: 1.125rem;
+  }
+}
+
+/* Card label color variants */
+.crm-modal-card-label-blue {
+  color: #2563eb;
+}
+
+.crm-modal-card-label-green {
+  color: #16a34a;
+}
+
+.crm-modal-card-label-red {
+  color: #dc2626;
+}
+
+.crm-modal-card-label-purple {
+  color: #9333ea;
+}
+
+.crm-modal-card-label-orange {
+  color: #ea580c;
+}
+
+.crm-modal-card-label-amber {
+  color: #d97706;
+}
+
+.crm-modal-card-label-gray {
+  color: #6b7280;
+}
+
+/* 6. SPECIAL SECTIONS */
+/* ================================================================= */
+
+/* Payment information section with special styling */
+.crm-modal-payment-section {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #fffbeb 0%, #fed7aa 20%, #fbbf24 100%);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-section {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-payment-section {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-payment-section {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+}
+
+/* Payment section header */
+.crm-modal-payment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-header {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-payment-header {
+    margin-bottom: 1.5rem;
+  }
+}
+
+.crm-modal-payment-icon {
+  width: 2rem;
+  height: 2rem;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-payment-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.crm-modal-payment-title {
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #d97706, #ea580c);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-title {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-payment-title {
+    font-size: 1.25rem;
+  }
+}
+
+.crm-modal-payment-subtitle {
+  font-size: 0.75rem;
+  color: rgba(217, 119, 6, 0.7);
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-subtitle {
+    font-size: 0.875rem;
+  }
+}
+
+/* Payment cards with special styling */
+.crm-modal-payment-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-payment-card {
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-payment-card {
+    padding: 1rem;
+  }
+}
+
+.crm-modal-payment-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Special highlighted payment cards */
+.crm-modal-payment-card-highlight {
+  background: linear-gradient(135deg, #f3e8ff 0%, #c7d2fe 100%);
+  border: 1px solid rgba(147, 51, 234, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.crm-modal-payment-card-success {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.crm-modal-payment-card-warning {
+  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 7. UTILITY CLASSES */
+/* ================================================================= */
+
+/* Responsive text sizing */
+.crm-modal-text-xs {
+  font-size: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-text-xs {
+    font-size: 0.875rem;
+  }
+}
+
+.crm-modal-text-sm {
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-text-sm {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-text-sm {
+    font-size: 1.125rem;
+  }
+}
+
+.crm-modal-text-base {
+  font-size: 1rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-text-base {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-text-base {
+    font-size: 1.25rem;
+  }
+}
+
+/* Responsive spacing */
+.crm-modal-space-y > * + * {
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-space-y > * + * {
+    margin-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-modal-space-y > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .crm-modal-space-y > * + * {
+    margin-top: 2rem;
+  }
+}
+
+/* ================================================================= */
+/* 8. GLOBAL EDIT FORM DESIGN SYSTEM */
+/* ================================================================= */
+/* Based on SupplierManagement edit dialog design patterns */
+/* Professional form layout with responsive design */
+/* ================================================================= */
+
+/* Form Modal Container - Optimized for editing */
+.crm-edit-modal-container {
+  max-width: min(95vw, 700px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(239, 246, 255, 0.3) 100%);
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 1rem;
+  animation: editModalIn 0.3s ease-out;
+}
+
+@keyframes editModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Edit Form Header */
+.crm-edit-form-header {
+  position: relative;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-edit-form-header {
+    padding-bottom: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-edit-form-header {
+    padding-bottom: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+
+/* Edit Form Header Content */
+.crm-edit-form-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Edit Form Icon Container */
+.crm-edit-form-icon {
+  padding: 0.5rem;
+  background-color: #dbeafe;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crm-edit-form-icon-edit {
+  color: #2563eb;
+}
+
+.crm-edit-form-icon-add {
+  color: #059669;
+}
+
+.crm-edit-form-icon-delete {
+  color: #dc2626;
+}
+
+/* Edit Form Titles */
+.crm-edit-form-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.crm-edit-form-description {
+  color: #6b7280;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* Form Container */
+.crm-edit-form {
+  padding: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .crm-edit-form {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .crm-edit-form {
+    padding: 1.5rem;
+  }
+}
+
+/* Form Grid Layout */
+.crm-edit-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .crm-edit-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Full width form fields */
+.crm-edit-form-grid-full {
+  grid-column: 1 / -1;
+}
+
+/* Form Field Groups */
+.crm-edit-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Form Labels */
+.crm-edit-form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.crm-edit-form-label-required::after {
+  content: ' *';
+  color: #dc2626;
+}
+
+/* Form Inputs */
+.crm-edit-form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.crm-edit-form-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.crm-edit-form-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Form Textarea */
+.crm-edit-form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.crm-edit-form-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.crm-edit-form-textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* Form Select */
+.crm-edit-form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.crm-edit-form-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Form Footer */
+.crm-edit-form-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+@media (min-width: 640px) {
+  .crm-edit-form-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
+  }
+}
+
+/* Form Buttons */
+.crm-edit-form-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .crm-edit-form-btn {
+    width: auto;
+    min-width: 120px;
+  }
+}
+
+/* Form Button Variants */
+.crm-edit-form-btn-cancel {
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.crm-edit-form-btn-cancel:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.crm-edit-form-btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.crm-edit-form-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+}
+
+.crm-edit-form-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.crm-edit-form-btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+.crm-edit-form-btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+/* Loading States */
+.crm-edit-form-btn-loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.crm-edit-form-btn-loading .crm-edit-form-btn-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ================================================================= */
+/* 9. DELETE CONFIRMATION DIALOG */
+/* ================================================================= */
+
+/* Delete Dialog Container */
+.crm-delete-modal-container {
+  max-width: min(95vw, 400px);
+  background: linear-gradient(135deg, #ffffff 0%, rgba(254, 242, 242, 0.3) 100%);
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 1rem;
+  animation: deleteModalIn 0.3s ease-out;
+}
+
+@keyframes deleteModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Delete Dialog Header */
+.crm-delete-form-header {
+  text-align: center;
+  padding-bottom: 0.5rem;
+}
+
+/* Delete Icon Container */
+.crm-delete-form-icon {
+  margin: 0 auto 1rem;
+  height: 3rem;
+  width: 3rem;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crm-delete-form-icon-danger {
+  color: #dc2626;
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+/* Delete Dialog Title */
+.crm-delete-form-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+/* Delete Dialog Description */
+.crm-delete-form-description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Delete Preview Card */
+.crm-delete-preview-card {
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+}
+
+.crm-delete-preview-content {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.crm-delete-preview-title {
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.crm-delete-preview-detail {
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.crm-delete-preview-detail:last-child {
+  margin-bottom: 0;
+}
+
+.crm-delete-preview-status {
+  text-transform: capitalize;
+}
+
+/* ================================================================= */
+/* 10. FORM VALIDATION STYLES */
+/* ================================================================= */
+
+/* Error States */
+.crm-edit-form-input-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.crm-edit-form-textarea-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.crm-edit-form-select-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Success States */
+.crm-edit-form-input-success {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.crm-edit-form-textarea-success {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.crm-edit-form-select-success {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+/* Field Error Messages */
+.crm-edit-form-error-message {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* Field Help Text */
+.crm-edit-form-help-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* ================================================================= */
+/* 11. RESPONSIVE FORM UTILITIES */
+/* ================================================================= */
+
+/* Responsive form widths */
+.crm-edit-form-full-width {
+  width: 100%;
+}
+
+.crm-edit-form-half-width {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .crm-edit-form-half-width {
+    width: calc(50% - 0.5rem);
+  }
+}
+
+/* Form section spacing */
+.crm-edit-form-section {
+  margin-bottom: 1.5rem;
+}
+
+.crm-edit-form-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Form group spacing */
+.crm-edit-form-group {
+  margin-bottom: 1rem;
+}
+
+.crm-edit-form-group:last-child {
+  margin-bottom: 0;
+}

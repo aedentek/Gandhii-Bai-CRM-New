@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from '../../hooks/use-toast';
-import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File } from 'lucide-react';
+import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File, TrendingUp, Clock } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -1031,7 +1031,7 @@ const PatientMedicalRecord: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       
       {/* Image Viewer Modal */}
       {viewImageModal.show && (
@@ -1121,10 +1121,10 @@ const PatientMedicalRecord: React.FC = () => {
       
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
@@ -1138,7 +1138,7 @@ const PatientMedicalRecord: React.FC = () => {
                   type="button"
                   onClick={refreshData}
                   disabled={isLoadingPatients || isLoadingRecords}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
+                  className="global-btn global-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
                 >
                   {isLoadingPatients || isLoadingRecords ? (
                     <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
@@ -1154,16 +1154,16 @@ const PatientMedicalRecord: React.FC = () => {
                   type="button"
                   onClick={() => setShowMonthYearDialog(true)}
                   variant="outline"
-                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  className="crm-month-year-btn"
                 >
-                  <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">
+                  <CalendarDays className="crm-month-year-btn-icon" />
+                  <span className="crm-month-year-btn-text">
                     {filterMonth !== null && filterYear !== null 
                       ? `${months[filterMonth]} ${filterYear}`
                       : `${months[selectedMonth]} ${selectedYear}`
                     }
                   </span>
-                  <span className="sm:hidden">
+                  <span className="crm-month-year-btn-text-mobile">
                     {filterMonth !== null && filterYear !== null 
                       ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
                       : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
@@ -1181,48 +1181,50 @@ const PatientMedicalRecord: React.FC = () => {
 
 
 
-        {/* Professional Stats Cards - Full Width */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+        {/* Professional Stats Cards - 2-Card Grid using Patient Management Design */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-300">
-                  <Eye className="h-6 w-6 text-green-600" />
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{patients.length}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In treatment</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Active Patients</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">{patients.length}</p>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-300">
-                  <Image className="h-6 w-6 text-purple-600" />
+          {/* Medical Records Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Medical Records</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{medicalRecords.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <FileText className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Total records</span>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors duration-300">Media Files</p>
-                  <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">{medicalRecords.reduce((acc, record) => acc + (record.images?.length || 0), 0)}</p>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-              </div>
-              <div className="mt-4 h-1 bg-purple-200 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filter and Search Section - Full Width */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-controls-container">
           <div className="flex flex-col gap-4">
             {/* Month & Year Filter Button for mobile */}
             <div className="block sm:hidden">
@@ -1230,13 +1232,21 @@ const PatientMedicalRecord: React.FC = () => {
                 type="button"
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="modern-btn modern-btn-secondary w-full text-sm px-4 py-2"
+                className="crm-month-year-btn w-full"
               >
-                <CalendarDays className="h-4 w-4 mr-2" />
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth]} ${filterYear}`
-                  : `${months[selectedMonth]} ${selectedYear}`
-                }
+                <CalendarDays className="crm-month-year-btn-icon" />
+                <span className="crm-month-year-btn-text">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth]} ${filterYear}`
+                    : `${months[selectedMonth]} ${selectedYear}`
+                  }
+                </span>
+                <span className="crm-month-year-btn-text-mobile">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                  }
+                </span>
               </Button>
             </div>
 
@@ -1258,9 +1268,12 @@ const PatientMedicalRecord: React.FC = () => {
         
 
         {/* Records Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg">
-          <div className="p-4 sm:p-6 border-b border-gray-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Medical Records</h2>
+        <div className="crm-table-container">
+          <div className="crm-table-header">
+            <div className="crm-table-title">
+              <FileText className="crm-table-title-icon" />
+              <h2 className="crm-table-title-text">Medical Records</h2>
+            </div>
           </div>
           
           <div className="p-4 sm:p-6">
@@ -1417,7 +1430,7 @@ const PatientMedicalRecord: React.FC = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleView(record)}
-                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 bg-green-100 hover:bg-green-200 border-green-200 hover:border-green-400 action-btn-edit rounded-lg"
+                                  className="action-btn-lead action-btn-view"
                                   title="View Patient Details"
                                 >
                                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1435,7 +1448,7 @@ const PatientMedicalRecord: React.FC = () => {
                                       handleEdit(record);
                                     }
                                   }}
-                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg transition-all duration-300"
+                                  className="action-btn-lead action-btn-edit"
                                   title={record.id.toString().startsWith('patient_') ? 'Add Medical Record' : 'Edit Medical Record'}
                                 >
                                   <FileText className="w-4 h-4" />
@@ -1786,12 +1799,14 @@ const PatientMedicalRecord: React.FC = () => {
                 setEditRecord(null);
                 resetForm();
               }}
+              className="global-btn global-btn-secondary"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit}
               disabled={isUpdatingRecords || !formData.patientId || !formData.description.trim()}
+              className="global-btn global-btn-primary"
             >
               {isUpdatingRecords ? (
                 <>
@@ -2086,7 +2101,7 @@ const PatientMedicalRecord: React.FC = () => {
                                   setDeleteRecord(record);
                                   setShowDeleteConfirm(true);
                                 }}
-                                className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 border-red-200 border flex items-center justify-center transition-colors"
+                                className="action-btn-lead action-btn-delete w-8 h-8 rounded-lg flex items-center justify-center"
                                 title="Delete Medical Record"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2157,14 +2172,21 @@ const PatientMedicalRecord: React.FC = () => {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowViewDialogMonthYearDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowViewDialogMonthYearDialog(false)}
+              className="global-btn global-btn-secondary"
+            >
               Cancel
             </Button>
-            <Button onClick={() => {
-              setViewDialogFilterMonth(viewDialogSelectedMonth);
-              setViewDialogFilterYear(viewDialogSelectedYear);
-              setShowViewDialogMonthYearDialog(false);
-            }}>
+            <Button 
+              onClick={() => {
+                setViewDialogFilterMonth(viewDialogSelectedMonth);
+                setViewDialogFilterYear(viewDialogSelectedYear);
+                setShowViewDialogMonthYearDialog(false);
+              }}
+              className="global-btn global-btn-primary"
+            >
               Apply Filter
             </Button>
           </DialogFooter>
@@ -2192,13 +2214,21 @@ const PatientMedicalRecord: React.FC = () => {
           )}
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowDeleteConfirm(false);
-              setDeleteRecord(null);
-            }}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteRecord(null);
+              }}
+              className="global-btn global-btn-secondary"
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+              className="global-btn global-btn-danger"
+            >
               Delete Record
             </Button>
           </DialogFooter>

@@ -1,17 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Search, Users, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Download, Search, Users, Plus, Eye, Edit2, Trash2, RefreshCw, Activity, UserCheck, UserX, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { parseISO, format as formatDate } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { DatabaseService } from '@/services/databaseService';
 import { getStaffFileUrl } from '@/services/staffFileUpload';
+import '@/styles/global-crm-design.css';
+import '../../styles/modern-forms.css';
+import '../../styles/modern-tables.css';
 
 const StaffManagement: React.FC = () => {
   const [staff, setStaff] = useState<any[]>([]);
@@ -302,263 +305,442 @@ const StaffManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Users className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Staff Management</h1>
-            </div>
-          </div>
-          <Button onClick={() => window.location.href = '/management/add-staff'} 
-            className="bg-emerald-100 hover:bg-emerald-200 text-emerald-600 border-emerald-200">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Staff
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <Card className="mb-6 shadow-card">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, ID, or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Staff Management</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage staff members and their information</p>
               </div>
             </div>
-            <div className="w-full md:w-48">
+          
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                onClick={() => window.location.reload()}
+                disabled={false}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
+              <Button 
+                onClick={exportToCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              <Button 
+                onClick={() => window.location.href = '/management/add-staff'}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Staff</span>
+                <span className="sm:hidden">+</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          {/* Total Staff Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Staff</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredStaff.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Active Staff Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Staff</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredStaff.filter(s => s.status === 'Active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Working</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Inactive Staff Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive Staff</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredStaff.filter(s => s.status === 'Inactive').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Not active</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <UserX className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{staffCategories.length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search staff by name, email, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="w-full sm:w-auto min-w-[200px]">
               <select
-                className="w-full border rounded-md px-3 py-2 text-sm"
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
               >
                 <option value="All">All Status</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
-            <Button
-              onClick={exportToCSV}
-              className="bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-200 flex items-center"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Staff Table */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>Staff List ({filteredStaff.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">S No</TableHead>
-                  <TableHead className="text-center">Profile Photo</TableHead>
-                  <TableHead className="text-center">Staff ID</TableHead>
-                  <TableHead className="text-center">Name</TableHead>
-                  <TableHead className="text-center">Email</TableHead>
-                  <TableHead className="text-center">Phone</TableHead>
-                  <TableHead className="text-center">Role</TableHead>
-                  <TableHead className="text-center">Join Date</TableHead>
-                  <TableHead className="text-center">Salary</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStaff.length > 0 ? (
-                  filteredStaff
-                    .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
-                    .map((s, idx) => (
-                      <TableRow key={s.id} className="hover:bg-muted/50">
-                        <TableCell className="text-center">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                        <TableCell className="text-center">
-                          {s.photo ? (
-                            <img
-                              src={getImageUrl(s.photo)}
-                              alt={s.name || 'Profile'}
-                              className="w-8 h-8 rounded-full object-cover mx-auto"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (fallback) fallback.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          {!s.photo && (
-                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mx-auto text-xs text-muted-foreground">
-                              N/A
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">{s.id}</TableCell>
-                        <TableCell className="text-center">{s.name}</TableCell>
-                        <TableCell className="text-center">{s.email}</TableCell>
-                        <TableCell className="text-center">{s.phone}</TableCell>
-                        <TableCell className="text-center">{s.role}</TableCell>
-                        <TableCell className="text-center">{
-                          s.joinDate ? (() => {
-                            // Try to parse as ISO, fallback to original if fails
-                            try {
-                              const d = parseISO(s.joinDate);
-                              if (!isNaN(d.getTime())) {
-                                return formatDate(d, 'dd-MM-yyyy');
-                              }
-                            } catch {}
-                            // fallback: try to split yyyy-mm-dd
-                            if (/^\d{4}-\d{2}-\d{2}$/.test(s.joinDate)) {
-                              const [y, m, d] = s.joinDate.split('-');
-                              return `${d}-${m}-${y}`;
-                            }
-                            return s.joinDate;
-                          })() : ''
-                        }</TableCell>
-                        <TableCell className="text-center">{s.salary}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge className={getStatusBadge(s.status)}>
-                            {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex space-x-2 justify-center">
-                            <Button 
-                              size="sm" 
-                              onClick={() => setViewStaff(s)}
-                              className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              onClick={() => {
-                                // Initialize edit staff with all fields properly
-                                const staffToEdit = {
-                                  ...s,
-                                  // Handle photo initialization
-                                  photo: s.photo || '',
-                                  // Handle document fields
-                                  aadharFront: s.aadharFront || s.documents?.aadharFront || '',
-                                  aadharBack: s.aadharBack || s.documents?.aadharBack || '',
-                                  aadharNumber: s.aadharNumber || s.documents?.aadharNumber || '',
-                                  panFront: s.panFront || s.documents?.panFront || '',
-                                  panBack: s.panBack || s.documents?.panBack || '',
-                                  panNumber: s.panNumber || s.documents?.panNumber || '',
-                                  // Ensure other fields are initialized
-                                  name: s.name || '',
-                                  email: s.email || '',
-                                  phone: s.phone || '',
-                                  role: s.role || '',
-                                  department: s.department || '',
-                                  address: s.address || '',
-                                  status: s.status || 'Active',
-                                  salary: s.salary || '',
-                                  joinDate: s.joinDate || ''
-                                };
-                                
-                                console.log('Initializing edit staff:', staffToEdit.id);
-                                console.log('Initial photo present:', !!staffToEdit.photo);
-                                setEditStaff(staffToEdit);
-                              }}
-                              className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleDelete(s)}
-                              className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                      No staff found.
+        </div>
+        {/* Staff Table */}
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Users className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Staff List ({filteredStaff.length})</span>
+              <span className="crm-table-title-text-mobile">Staff ({filteredStaff.length})</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+        
+        {/* Scrollable Table View for All Screen Sizes */}
+        <div className="overflow-x-auto">
+          <Table className="w-full min-w-[800px]">
+            <TableHeader>
+              <TableRow className="bg-gray-50 border-b">
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>S No</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Photo</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Staff ID</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Name</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Email</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Phone</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Role</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Join Date</span>
+                    <span className="sm:hidden">Date</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Salary</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Status</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Actions</span>
+                  </div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStaff
+                .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+                .map((s, idx) => (
+                  <TableRow key={s.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
+                      {s.photo ? (
+                        <img
+                          src={getImageUrl(s.photo)}
+                          alt={s.name || 'Profile'}
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover mx-auto border bg-muted"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center mx-auto text-xs text-muted-foreground border">
+                          N/A
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">
+                      <span className="text-primary font-medium hover:underline hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 p-1 h-auto text-xs sm:text-sm cursor-pointer rounded-md inline-flex items-center gap-1">
+                        {s.id}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm max-w-[100px] sm:max-w-[120px] truncate">{s.name}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.email}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.phone}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.role}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
+                      {s.joinDate ? (() => {
+                        try {
+                          const d = parseISO(s.joinDate);
+                          if (!isNaN(d.getTime())) {
+                            return formatDate(d, 'dd/MM/yyyy');
+                          }
+                        } catch {}
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(s.joinDate)) {
+                          const [y, m, d] = s.joinDate.split('-');
+                          return `${d}/${m}/${y}`;
+                        }
+                        return s.joinDate;
+                      })() : <span className="text-gray-400 text-xs">Not Set</span>}
+                    </TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.salary}</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
+                      <Badge className={`${getStatusBadge(s.status)} text-xs`}>
+                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
+                      <div className="action-buttons-container">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewStaff(s)}
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
+                          title="View Staff"
+                        >
+                          <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const staffToEdit = {
+                              ...s,
+                              photo: s.photo || '',
+                              aadharFront: s.aadharFront || s.documents?.aadharFront || '',
+                              aadharBack: s.aadharBack || s.documents?.aadharBack || '',
+                              aadharNumber: s.aadharNumber || s.documents?.aadharNumber || '',
+                              panFront: s.panFront || s.documents?.panFront || '',
+                              panBack: s.panBack || s.documents?.panBack || '',
+                              panNumber: s.panNumber || s.documents?.panNumber || '',
+                              name: s.name || '',
+                              email: s.email || '',
+                              phone: s.phone || '',
+                              role: s.role || '',
+                              department: s.department || '',
+                              address: s.address || '',
+                              status: s.status || 'Active',
+                              salary: s.salary || '',
+                              joinDate: s.joinDate || ''
+                            };
+                            setEditStaff(staffToEdit);
+                          }}
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
+                          title="Edit Staff"
+                        >
+                          <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(s)}
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                          title="Delete Staff"
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            {filteredStaff.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No staff found matching your criteria.
-              </div>
-            )}
+                ))}
+            </TableBody>
+          </Table>
+          
+          {filteredStaff.length === 0 && (
+            <div className="text-center py-12 bg-white">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 mb-2">No staff found</h3>
+              <p className="text-sm text-gray-500">
+                No staff match your search criteria. Try adjusting your filters.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Responsive Pagination */}
+        {filteredStaff.length > rowsPerPage && (
+          <div className="crm-pagination-container">
+            {/* Pagination Info */}
+            <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+              <span className="hidden sm:inline">
+                Page {currentPage} of {Math.ceil(filteredStaff.length / rowsPerPage)} 
+                ({filteredStaff.length} total staff)
+              </span>
+              <span className="sm:hidden">
+                {currentPage} / {Math.ceil(filteredStaff.length / rowsPerPage)}
+              </span>
+            </div>
+            
             {/* Pagination Controls */}
-            {filteredStaff.length > 0 && (
-              <div className="flex justify-between items-center px-6 py-4 border-t">
-                <div className="text-sm text-gray-600">
-                  Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, filteredStaff.length)} of {filteredStaff.length} staff
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button 
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    variant="outline"
-                    className="px-3 py-1 text-sm"
-                  >
-                    Previous
-                  </Button>
-                  {[...Array(Math.ceil(filteredStaff.length / rowsPerPage))].map((_, idx) => {
-                    const pageNum = idx + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        className={`px-3 py-1 text-sm min-w-[32px] ${
-                          currentPage === pageNum 
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
-                            : "hover:bg-gray-50"
-                        }`}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                  <Button 
-                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredStaff.length / rowsPerPage), p + 1))}
-                    disabled={currentPage === Math.ceil(filteredStaff.length / rowsPerPage)}
-                    variant="outline"
-                    className="px-3 py-1 text-sm"
-                  >
-                    Next
-                  </Button>
-                </div>
+            <div className="flex items-center gap-2 order-1 sm:order-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
+              </Button>
+              
+              {/* Page Numbers for Desktop */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: Math.min(5, Math.ceil(filteredStaff.length / rowsPerPage)) }, (_, i) => {
+                  const totalPages = Math.ceil(filteredStaff.length / rowsPerPage);
+                  let pageNumber;
+                  
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`w-8 h-8 p-0 text-xs ${
+                        currentPage === pageNumber 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                          : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300'
+                      }`}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                })}
               </div>
-            )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredStaff.length / rowsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(filteredStaff.length / rowsPerPage)}
+                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">Next</span>
+              </Button>
+            </div>
           </div>
+        )}
         </CardContent>
-      </Card>
-      {/* View Staff Dialog */}
-      {viewStaff && (
-        <Dialog open={!!viewStaff} onOpenChange={() => setViewStaff(null)}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Staff Details - {viewStaff.id}</DialogTitle>
-              <DialogDescription>Complete information for {viewStaff.name}</DialogDescription>
-            </DialogHeader>
+        </Card>
+
+        {/* View Staff Dialog */}
+        {viewStaff && (
+          <Dialog open={!!viewStaff} onOpenChange={() => setViewStaff(null)}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Staff Details - {viewStaff.id}</DialogTitle>
+                <DialogDescription>Complete information for {viewStaff.name}</DialogDescription>
+              </DialogHeader>
             <div className="flex flex-col items-center py-2">
               {viewStaff.photo ? (
                 <img
@@ -943,13 +1125,13 @@ const StaffManagement: React.FC = () => {
             <DialogFooter>
               <Button 
                 onClick={() => setEditStaff(null)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-200"
+                className="global-btn"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSaveEdit} 
-                className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
+                className="global-btn"
               >
                 Save Changes
               </Button>
@@ -972,19 +1154,20 @@ const StaffManagement: React.FC = () => {
           <DialogFooter className="justify-center space-x-4">
             <Button 
               onClick={() => setShowDeleteConfirm(false)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-200"
+              className="global-btn"
             >
               Cancel
             </Button>
             <Button 
               onClick={confirmDelete}
-              className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+              className="global-btn"
             >
               Delete Staff
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

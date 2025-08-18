@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, Truck, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, Phone, Mail, MapPin, Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
+import '@/styles/global-crm-design.css';
 
 type Supplier = {
   id: number;
@@ -363,10 +364,10 @@ const SupplierManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
@@ -453,60 +454,68 @@ const SupplierManagement: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Building className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredSuppliers.length}</div>
-                <div className="text-xs text-gray-600">Total Suppliers</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.status === 'active').length}
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-blue-600">Total Suppliers</p>
+                  <p className="text-3xl font-bold text-gray-900">{filteredSuppliers.length}</p>
                 </div>
-                <div className="text-xs text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.email && s.email.includes('@')).length}
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Building className="h-6 w-6 text-blue-600" />
                 </div>
-                <div className="text-xs text-gray-600">With Email</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-purple">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.status === 'inactive').length}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-green-600">Active</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {filteredSuppliers.filter(s => s.status === 'active').length}
+                  </p>
                 </div>
-                <div className="text-xs text-gray-600">Inactive</div>
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-orange-600">With Email</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {filteredSuppliers.filter(s => s.email && s.email.includes('@')).length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-red-600">Inactive</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {filteredSuppliers.filter(s => s.status === 'inactive').length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Section */}
