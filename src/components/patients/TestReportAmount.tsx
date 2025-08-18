@@ -506,13 +506,13 @@ const TestReportAmount: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <TestTube className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
@@ -529,81 +529,109 @@ const TestReportAmount: React.FC = () => {
                   loadTestReports();
                 }}
                 disabled={loading}
-                variant="outline"
-                className="bg-white hover:bg-gray-50"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
               </Button>
               <Button 
                 onClick={exportToCSV}
-                variant="outline"
-                className="bg-white hover:bg-gray-50"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="bg-white/90 backdrop-blur-sm border border-blue-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredPatients.length}</div>
-                <div className="text-xs text-gray-600">Total Patients</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/90 backdrop-blur-sm border border-green-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredPatients.filter(p => p.status === 'Active').length}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+          {/* Total Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredPatients.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Active Patients</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/90 backdrop-blur-sm border border-orange-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <TestTube className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{testReports.length}</div>
-                <div className="text-xs text-gray-600">Test Reports</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/90 backdrop-blur-sm border border-purple-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Receipt className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {testReports.filter(r => r.status === 'Pending').length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">Pending Reports</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredPatients.filter(p => p.status === 'Active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In treatment</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Test Reports Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Test Reports</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{testReports.length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <TestTube className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Total tests</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TestTube className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Pending Reports Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Pending Reports</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {testReports.filter(r => r.status === 'Pending').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Receipt className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Awaiting</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 sm:p-6 shadow-sm">
+        <div className="crm-controls-container">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <Input
@@ -631,14 +659,15 @@ const TestReportAmount: React.FC = () => {
         </div>
 
         {/* Patients Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
             <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
               <TestTube className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               <span className="hidden sm:inline">Active Patients List ({filteredPatients.length})</span>
               <span className="sm:hidden">Patients ({filteredPatients.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
           <div className="overflow-x-auto">
             <Table className="w-full min-w-[1000px]">
@@ -727,7 +756,7 @@ const TestReportAmount: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewReports(patient)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-lead action-btn-view"
                           title="View Test Reports"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -736,7 +765,7 @@ const TestReportAmount: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleAddTestReport(patient)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                          className="action-btn-lead action-btn-success"
                           title="Add Test Report"
                         >
                           <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -758,7 +787,7 @@ const TestReportAmount: React.FC = () => {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-50/50 border-t">
+            <div className="crm-pagination-container">
               <div className="text-sm text-gray-600">
                 Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredPatients.length)} of {filteredPatients.length} patients
               </div>
@@ -813,7 +842,8 @@ const TestReportAmount: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Add Test Report Modal */}
@@ -1101,7 +1131,7 @@ const TestReportAmount: React.FC = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEditTestReport(report)}
-                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                              className="action-btn-lead action-btn-edit"
                               title="Edit Report"
                             >
                               <Edit className="h-4 w-4" />
@@ -1110,7 +1140,7 @@ const TestReportAmount: React.FC = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDeleteTestReport(report.id!)}
-                              className="h-8 w-8 p-0 hover:bg-gray-100 text-red-600"
+                              className="action-btn-lead action-btn-delete"
                               title="Delete Report"
                             >
                               <Trash2 className="h-4 w-4" />

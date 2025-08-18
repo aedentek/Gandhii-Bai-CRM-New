@@ -903,13 +903,13 @@ const PatientList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
@@ -920,95 +920,126 @@ const PatientList: React.FC = () => {
               </div>
             </div>
           
-            <div className="header-actions-container">
-              <button 
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <Button 
                 onClick={() => {
                   console.log('🔄 Manual refresh triggered');
                   loadPatients();
                 }}
                 disabled={loading}
-                className="header-action-btn--refresh"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <RefreshCw className={`header-action-btn__icon ${loading ? 'animate-spin' : ''}`} />
-                <span className="header-action-btn__text">Refresh</span>
-              </button>
-              <button 
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
+              <Button 
                 onClick={exportToCSV}
-                className="header-action-btn--export"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Download className="header-action-btn__icon" />
-                <span className="header-action-btn__text header-action-btn__text--sm-hidden">Export CSV</span>
-              </button>
-              <button 
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              <Button 
                 onClick={() => navigate('/patients/add')}
-                className="header-action-btn--primary"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Plus className="header-action-btn__icon" />
-                <span className="header-action-btn__text">Add Patient</span>
-              </button>
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Patient</span>
+                <span className="sm:hidden">+</span>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="bg-white/90 backdrop-blur-sm border border-blue-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredPatients.length}</div>
-                <div className="text-xs text-gray-600">Total Patients</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/90 backdrop-blur-sm border border-green-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredPatients.filter(p => p.status === 'Active').length}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+          {/* Total Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredPatients.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Active Patients</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/90 backdrop-blur-sm border border-orange-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredPatients.filter(p => p.status === 'Critical').length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">Critical Cases</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="bg-white/90 backdrop-blur-sm border border-purple-100 rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {new Date().toLocaleDateString()}
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredPatients.filter(p => p.status === 'Active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In treatment</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Last Updated</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Critical Cases Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Critical Cases</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredPatients.filter(p => p.status === 'Critical').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Urgent care</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Last Updated Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Last Updated</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+        <div className="crm-controls-container">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -1041,14 +1072,15 @@ const PatientList: React.FC = () => {
         </div>
 
         {/* Patients Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
             <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
               <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               <span className="hidden sm:inline">Patients List ({filteredPatients.length})</span>
               <span className="sm:hidden">Patients ({filteredPatients.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
         {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
@@ -1220,7 +1252,7 @@ const PatientList: React.FC = () => {
 
         {/* Mobile Responsive Pagination */}
         {filteredPatients.length > rowsPerPage && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 py-3 sm:py-4 px-4 sm:px-6 bg-white border-t">
+          <div className="crm-pagination-container">
             {/* Pagination Info */}
             <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
               <span className="hidden sm:inline">
@@ -1292,7 +1324,8 @@ const PatientList: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* View Patient Dialog */}
       {viewPatient && (

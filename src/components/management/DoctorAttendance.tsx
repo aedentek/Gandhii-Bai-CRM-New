@@ -657,15 +657,14 @@ const DoctorAttendance: React.FC = () => {
                               {attendance?.check_in || '-'}
                             </TableCell>
                             <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3">
-                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                              <div className="action-buttons-container">
                                 <Button
                                   size="sm"
                                   onClick={() => markAttendance(doctor.id, doctor.name, 'Present')}
                                   variant="outline"
-                                  className={attendance?.status === 'Present' 
-                                    ? "h-8 w-8 sm:h-9 sm:w-9 p-0 bg-green-600 text-white hover:bg-green-700 border-green-600 action-btn-present rounded-lg" 
-                                    : "h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 action-btn-present rounded-lg"
-                                  }
+                                  className={`action-btn-lead action-btn-present h-8 w-8 sm:h-9 sm:w-9 p-0 ${
+                                    attendance?.status === 'Present' ? 'active' : ''
+                                  }`}
                                   title="Mark Present"
                                 >
                                   <CheckCircle className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -674,10 +673,9 @@ const DoctorAttendance: React.FC = () => {
                                   size="sm"
                                   onClick={() => markAttendance(doctor.id, doctor.name, 'Late')}
                                   variant="outline"
-                                  className={attendance?.status === 'Late'
-                                    ? "h-8 w-8 sm:h-9 sm:w-9 p-0 bg-yellow-600 text-white hover:bg-yellow-700 border-yellow-600 action-btn-late rounded-lg"
-                                    : "h-8 w-8 sm:h-9 sm:w-9 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 border-yellow-200 hover:border-yellow-400 action-btn-late rounded-lg"
-                                  }
+                                  className={`action-btn-lead action-btn-late h-8 w-8 sm:h-9 sm:w-9 p-0 ${
+                                    attendance?.status === 'Late' ? 'active' : ''
+                                  }`}
                                   title="Mark Late"
                                 >
                                   <Clock className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -686,10 +684,9 @@ const DoctorAttendance: React.FC = () => {
                                   size="sm"
                                   onClick={() => markAttendance(doctor.id, doctor.name, 'Absent')}
                                   variant="outline"
-                                  className={attendance?.status === 'Absent'
-                                    ? "h-8 w-8 sm:h-9 sm:w-9 p-0 bg-red-600 text-white hover:bg-red-700 border-red-600 action-btn-absent rounded-lg"
-                                    : "h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-absent rounded-lg"
-                                  }
+                                  className={`action-btn-lead action-btn-absent h-8 w-8 sm:h-9 sm:w-9 p-0 ${
+                                    attendance?.status === 'Absent' ? 'active' : ''
+                                  }`}
                                   title="Mark Absent"
                                 >
                                   <XCircle className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -698,7 +695,7 @@ const DoctorAttendance: React.FC = () => {
                                   size="sm"
                                   onClick={() => resetAttendance(doctor.id, doctor.name)}
                                   variant="outline"
-                                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50 border-gray-200 hover:border-gray-400 action-btn-reset rounded-lg"
+                                  className="action-btn-lead action-btn-reset h-8 w-8 sm:h-9 sm:w-9 p-0"
                                   title="Reset Attendance"
                                 >
                                   <RotateCcw className="h-4 w-4 sm:h-4 sm:w-4" />
