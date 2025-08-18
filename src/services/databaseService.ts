@@ -1300,14 +1300,14 @@ export class DatabaseService {
     try {
       console.log('DatabaseService.addDoctor() - Starting with data:', doctorData);
       
-      // First, get the next available ID
+      // First, get the next available sequential ID (DOC001, DOC002, etc.)
       const nextIdResponse = await fetch(`${this.apiBaseUrl}/doctors/next-id`);
       if (!nextIdResponse.ok) {
         throw new Error('Failed to get next doctor ID');
       }
       const nextIdData = await nextIdResponse.json();
       const doctorId = nextIdData.nextId;
-      console.log('DatabaseService.addDoctor() - Got next ID:', doctorId);
+      console.log('DatabaseService.addDoctor() - Got next sequential ID:', doctorId);
 
       // Prepare the doctor data with the correct field names and structure
       const doctorPayload = {
@@ -1318,7 +1318,7 @@ export class DatabaseService {
         address: doctorData.address,
         specialization: doctorData.specialization,
         department: doctorData.department,
-        join_date: doctorData.joinDate, // Convert joinDate to join_date
+        join_date: doctorData.join_date, // Use join_date field directly
         salary: doctorData.salary,
         status: 'Active', // Default status
         photo: doctorData.photo,

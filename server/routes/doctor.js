@@ -2,13 +2,22 @@ import express from 'express';
 import db from '../db/config.js'; // Assuming you have a db.js file for database connection
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs/promises';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = express.Router();
+
+console.log('🩺 Doctor routes module loaded!');
+
+// Simple test endpoint
+router.get('/test-doctor-route', (req, res) => {
+  console.log('🩺 Test doctor route hit!');
+  res.json({ message: 'Doctor routes are working!' });
+});
 
 // Configure multer for doctor file uploads
 const storage = multer.diskStorage({
@@ -23,13 +32,14 @@ const storage = multer.diskStorage({
     
     console.log('📂 Using temp upload path:', tempPath);
     
-    // Create temp directory if it doesn't exist
-    fs.mkdir(tempPath, { recursive: true }).then(() => {
+    // Create temp directory synchronously to avoid callback issues
+    try {
+      fs.mkdirSync(tempPath, { recursive: true });
       cb(null, tempPath);
-    }).catch(err => {
+    } catch (err) {
       console.error('Error creating directory:', err);
       cb(err);
-    });
+    }
   },
   filename: function (req, file, cb) {
     const { fieldName = 'general' } = req.body;
@@ -66,6 +76,7 @@ const upload = multer({
 
 // Upload endpoint for doctor files
 router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
+  console.log('🩺 Doctor upload endpoint hit!');
   try {
     console.log('📤 Doctor upload request received:', {
       doctorId: req.body.doctorId,
@@ -99,20 +110,20 @@ router.post('/upload-doctor-file', upload.single('file'), async (req, res) => {
     // Move file from temp to proper doctor directory
     const properDoctorPath = path.join(__dirname, '../Photos/Doctor Admission', doctorId);
     console.log('📂 Creating doctor directory:', properDoctorPath);
-    await fs.mkdir(properDoctorPath, { recursive: true });
+    await fsPromises.mkdir(properDoctorPath, { recursive: true });
     
     const newFilePath = path.join(properDoctorPath, req.file.filename);
     
     console.log('📂 Moving file from temp to proper directory...');
     console.log('📂 From:', req.file.path);
     console.log('📂 To:', newFilePath);
-    console.log('📂 Source file exists:', await fs.access(req.file.path).then(() => true).catch(() => false));
+    console.log('📂 Source file exists:', await fsPromises.access(req.file.path).then(() => true).catch(() => false));
     
     // Move file from temp to doctor directory
     try {
-      await fs.rename(req.file.path, newFilePath);
+      await fsPromises.rename(req.file.path, newFilePath);
       console.log('✅ File moved successfully');
-      console.log('📂 Destination file exists:', await fs.access(newFilePath).then(() => true).catch(() => false));
+      console.log('📂 Destination file exists:', await fsPromises.access(newFilePath).then(() => true).catch(() => false));
     } catch (moveError) {
       console.error('❌ File move failed:', moveError);
       throw new Error(`Failed to move file: ${moveError.message}`);
@@ -338,7 +349,8 @@ router.get('/doctors/deleted', async (req, res) => {
 // Get next doctor ID
 router.get('/doctors/next-id', async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT id FROM doctors WHERE id REGEXP '^DOC[0-9]+$' ORDER BY CAST(SUBSTRING(id, 4) AS UNSIGNED) DESC LIMIT 1");
+    // Only consider properly formatted 3-digit sequential IDs (DOC001, DOC002, etc.)
+    const [rows] = await db.query("SELECT id FROM doctors WHERE id REGEXP '^DOC[0-9]{3}$' ORDER BY CAST(SUBSTRING(id, 4) AS UNSIGNED) DESC LIMIT 1");
     let nextId = 'DOC001';
     if (rows.length > 0) {
       const lastId = rows[0].id;

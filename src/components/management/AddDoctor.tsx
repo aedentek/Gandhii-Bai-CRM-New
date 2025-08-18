@@ -39,11 +39,29 @@ const AddDoctor: React.FC = () => {
 
   useEffect(() => {
     loadSpecializations();
-    // Pre-generate doctor ID for consistent photo uploads
-    const doctorId = preGenerateDoctorId();
-    setPreGeneratedDoctorId(doctorId);
-    console.log('🆔 Pre-generated doctor ID for uploads:', doctorId);
+    // Get the next sequential doctor ID for consistent uploads
+    getNextDoctorId();
   }, []);
+
+  // Get next sequential doctor ID from backend
+  const getNextDoctorId = async () => {
+    try {
+      const response = await fetch('/api/doctors/next-id');
+      if (!response.ok) {
+        throw new Error('Failed to get next doctor ID');
+      }
+      const data = await response.json();
+      const doctorId = data.nextId;
+      setPreGeneratedDoctorId(doctorId);
+      console.log('🆔 Got sequential doctor ID for uploads:', doctorId);
+    } catch (error) {
+      console.error('Error getting next doctor ID:', error);
+      // Fallback to timestamp-based ID if sequential fails
+      const fallbackId = preGenerateDoctorId();
+      setPreGeneratedDoctorId(fallbackId);
+      console.log('🆔 Using fallback ID:', fallbackId);
+    }
+  };
 
   // Test function to fill form with sample data
   const fillTestData = () => {
@@ -104,6 +122,15 @@ const AddDoctor: React.FC = () => {
     panFront: null as File | null,
     panBack: null as File | null,
   });
+
+  // Store actual uploaded file paths
+  const [uploadedFilePaths, setUploadedFilePaths] = useState({
+    photo: '',
+    aadharFront: '',
+    aadharBack: '',
+    panFront: '',
+    panBack: '',
+  });
   // File size validation function (matches AddPatient)
   const validateFileSize = (file: File | null): boolean => {
     if (!file) return true;
@@ -128,6 +155,11 @@ const AddDoctor: React.FC = () => {
     
     if (!file) {
       setPhoto(null);
+      // Clear the uploaded photo path when photo is removed
+      setUploadedFilePaths(prev => ({
+        ...prev,
+        photo: ''
+      }));
       return;
     }
 
@@ -148,6 +180,12 @@ const AddDoctor: React.FC = () => {
       const photoPath = await uploadDoctorFile(file, preGeneratedDoctorId, 'photo');
       
       console.log('✅ Photo uploaded successfully:', photoPath);
+      
+      // Store the actual uploaded file path
+      setUploadedFilePaths(prev => ({
+        ...prev,
+        photo: photoPath
+      }));
       
       setPhoto(file);
       
@@ -175,6 +213,11 @@ const AddDoctor: React.FC = () => {
         ...prev,
         [field]: null
       }));
+      // Clear the uploaded file path when file is removed
+      setUploadedFilePaths(prev => ({
+        ...prev,
+        [field]: ''
+      }));
       return;
     }
 
@@ -195,6 +238,12 @@ const AddDoctor: React.FC = () => {
       const filePath = await uploadDoctorFile(file, preGeneratedDoctorId, field);
       
       console.log(`✅ ${field} uploaded successfully:`, filePath);
+      
+      // Store the actual uploaded file path
+      setUploadedFilePaths(prev => ({
+        ...prev,
+        [field]: filePath
+      }));
       
       setDocuments(prev => ({
         ...prev,
@@ -367,21 +416,21 @@ const AddDoctor: React.FC = () => {
       const doctorId = preGeneratedDoctorId;
       console.log('Using pre-generated doctor ID:', doctorId);
       
-      // Build file paths for database (files already uploaded via file upload handlers)
-      const photoPath = photo ? `Photos/Doctor Admission/${doctorId}/photo_${Date.now()}.${photo.name.split('.').pop()}` : '';
+      // Use actual uploaded file paths (files already uploaded via file upload handlers)
+      const photoPath = uploadedFilePaths.photo;
       
       const documentPaths: Record<string, string> = {};
-      if (documents.aadharFront) {
-        documentPaths.aadharFront = `Photos/Doctor Admission/${doctorId}/aadharFront_${Date.now()}.${documents.aadharFront.name.split('.').pop()}`;
+      if (uploadedFilePaths.aadharFront) {
+        documentPaths.aadharFront = uploadedFilePaths.aadharFront;
       }
-      if (documents.aadharBack) {
-        documentPaths.aadharBack = `Photos/Doctor Admission/${doctorId}/aadharBack_${Date.now()}.${documents.aadharBack.name.split('.').pop()}`;
+      if (uploadedFilePaths.aadharBack) {
+        documentPaths.aadharBack = uploadedFilePaths.aadharBack;
       }
-      if (documents.panFront) {
-        documentPaths.panFront = `Photos/Doctor Admission/${doctorId}/panFront_${Date.now()}.${documents.panFront.name.split('.').pop()}`;
+      if (uploadedFilePaths.panFront) {
+        documentPaths.panFront = uploadedFilePaths.panFront;
       }
-      if (documents.panBack) {
-        documentPaths.panBack = `Photos/Doctor Admission/${doctorId}/panBack_${Date.now()}.${documents.panBack.name.split('.').pop()}`;
+      if (uploadedFilePaths.panBack) {
+        documentPaths.panBack = uploadedFilePaths.panBack;
       }
       
       const doctorData = {
