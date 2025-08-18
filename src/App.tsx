@@ -19,9 +19,10 @@ import UserManagement from '@/components/management/UserManagement';
 import AddLeadCategory from '@/components/leads/AddLeadCategory';
 import LeadsList from '@/components/leads/LeadsList';
 
-// Import modern forms CSS globally
+// Import CSS globally
 import './styles/modern-forms.css';
 import './styles/modern-tables.css';
+import './styles/global-crm-design.css';
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';

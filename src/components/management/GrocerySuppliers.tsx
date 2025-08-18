@@ -406,9 +406,9 @@ const handleRefresh = React.useCallback(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="crm-page-bg">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="crm-header-container">
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               <span className="ml-3 text-lg">Loading...</span>
@@ -426,11 +426,11 @@ const handleRefresh = React.useCallback(() => {
         <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Grocery Suppliers Management</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Grocery Suppliers</h1>
                 {/* <p className="text-sm text-gray-600 mt-1">Manage and organize your grocery suppliers</p> */}
               </div>
             </div>
@@ -454,7 +454,7 @@ const handleRefresh = React.useCallback(() => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Reset to current month and refresh data"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -466,7 +466,7 @@ const handleRefresh = React.useCallback(() => {
               <Button 
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -486,7 +486,7 @@ const handleRefresh = React.useCallback(() => {
               {/* Export CSV Button */}
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Export filtered suppliers to CSV"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -506,7 +506,7 @@ const handleRefresh = React.useCallback(() => {
                   });
                   setIsAddingSupplier(true);
                 }}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Supplier</span>
@@ -517,80 +517,88 @@ const handleRefresh = React.useCallback(() => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="crm-stats-grid">
           {/* Total Suppliers Card */}
-          <div className="bg-blue-50 rounded-lg p-4 lg:p-6 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-                  Registered
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-blue-800">{filteredSuppliers.length}</p>
-                <p className="text-base lg:text-lg font-semibold text-blue-700">Total Suppliers</p>
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Suppliers</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredSuppliers.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
-                <Truck className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Active Suppliers Card */}
-          <div className="bg-green-50 rounded-lg p-4 lg:p-6 border border-green-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-green-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-green-500 rounded-full"></span>
-                  In service
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-green-800">
-                  {filteredSuppliers.filter(s => s.status === 'active').length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-green-700">Active Suppliers</p>
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Suppliers</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredSuppliers.filter(s => s.status === 'active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In service</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-green-500 rounded-lg p-3 lg:p-4">
-                <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Inactive Suppliers Card */}
-          <div className="bg-red-50 rounded-lg p-4 lg:p-6 border border-red-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-red-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-red-500 rounded-full"></span>
-                  Inactive
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-red-800">
-                  {filteredSuppliers.filter(s => s.status === 'inactive').length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-red-700">Critical Cases</p>
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Critical Cases</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredSuppliers.filter(s => s.status === 'inactive').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Inactive</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-red-500 rounded-lg p-3 lg:p-4">
-                <AlertCircle className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Complete Info Card */}
-          <div className="bg-orange-50 rounded-lg p-4 lg:p-6 border border-orange-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
-                  Today
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-orange-800">
-                  {filteredSuppliers.filter(s => s.email && s.phone).length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-orange-700">Last Updated</p>
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Last Updated</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredSuppliers.filter(s => s.email && s.phone).length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-orange-500 rounded-lg p-3 lg:p-4">
-                <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Section */}
@@ -776,12 +784,12 @@ const handleRefresh = React.useCallback(() => {
                     </Badge>
                   </TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                    <div className="action-buttons-container">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditSupplier(supplier)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Supplier"
                       >
                         <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -790,7 +798,7 @@ const handleRefresh = React.useCallback(() => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteSupplier(supplier)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Supplier"
                       >
                         <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -982,13 +990,13 @@ const handleRefresh = React.useCallback(() => {
                       status: 'active',
                     });
                   }}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto global-btn"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {editingSupplier ? 'Update Supplier' : 'Add Supplier'}
                 </Button>
@@ -1032,7 +1040,7 @@ const handleRefresh = React.useCallback(() => {
                   setSupplierToDelete(null);
                 }}
                 disabled={submitting}
-                className="modern-btn modern-btn-secondary w-full sm:w-auto"
+                className="global-btn w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1040,7 +1048,7 @@ const handleRefresh = React.useCallback(() => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="modern-btn modern-btn-danger w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="global-btn w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>

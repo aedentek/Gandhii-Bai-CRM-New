@@ -160,68 +160,36 @@ const CategoryManagement: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      toast({ 
-        title: "Validation Error", 
-        description: "Category name is required", 
-        variant: "destructive" 
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
       });
       return;
     }
-
+    
     try {
       setSubmitting(true);
       
       if (editingCategory) {
-        await DatabaseService.updateMedicineCategory(editingCategory.id, {
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          status: formData.status as 'active' | 'inactive',
-          updated_at: new Date().toISOString()
-        });
-        
-        setCategories(categories.map(category => 
-          category.id === editingCategory.id 
-            ? { ...category, ...formData, status: formData.status as 'active' | 'inactive', updated_at: new Date().toISOString() }
-            : category
-        ));
-        
-        toast({ 
-          title: "Success", 
-          description: "Category updated successfully" 
-        });
+        const updatedCategory = await DatabaseService.updateMedicineCategory(editingCategory.id, formData);
+        setCategories(categories.map(cat => (cat.id === editingCategory.id ? updatedCategory : cat)));
+        toast({ title: "Success", description: "Category updated successfully" });
       } else {
-        const newCategory = await DatabaseService.addMedicineCategory({
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          status: formData.status as 'active' | 'inactive',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
+        const newCategory = await DatabaseService.addMedicineCategory(formData);
         setCategories([...categories, newCategory]);
-        
-        toast({ 
-          title: "Success", 
-          description: "Category created successfully" 
-        });
+        toast({ title: "Success", description: "Category added successfully" });
       }
-
+      
+      handleRefresh();
+      
+      setFormData({ name: '', description: '', status: 'active' });
       setIsAddingCategory(false);
       setEditingCategory(null);
-      setFormData({
-        name: '',
-        description: '',
-        status: 'active',
-      });
     } catch (e) {
-      toast({ 
-        title: "Error", 
-        description: editingCategory ? "Failed to update category" : "Failed to create category", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: `Failed to ${editingCategory ? 'update' : 'add'} category`, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +197,7 @@ const CategoryManagement: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!categoryToDelete) return;
-
+    
     try {
       setSubmitting(true);
       await DatabaseService.deleteMedicineCategory(categoryToDelete.id);
@@ -541,6 +509,17 @@ const CategoryManagement: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredCategories.filter(c => c.status === 'inactive').length}
+                </div>
+                <div className="text-xs text-gray-600">Inactive</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Search and Filter Section */}
         <div className="crm-controls-container">
@@ -769,18 +748,24 @@ const CategoryManagement: React.FC = () => {
                   {editingCategory ? <Edit2 className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-blue-600" />}
                 </div>
                 <div>
-                  <DialogTitle className="text-lg font-semibold text-gray-900">
+                  <DialogTitle className="text-xl font-bold text-gray-900">
                     {editingCategory ? 'Edit Category' : 'Add New Category'}
                   </DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 mt-1">
-                    {editingCategory ? 'Update the category information below' : 'Fill in the details to create a new category'}
+                  <DialogDescription className="text-gray-600 mt-1">
+                    {editingCategory ? 'Update category information' : 'Enter the details for the new medicine category'}
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
             
-            <form onSubmit={handleSubmit} className="space-y-4 px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+              className="space-y-4 p-3 sm:p-4 md:p-6"
+            >
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium text-gray-700">Category Name *</Label>
                   <Input
@@ -788,14 +773,23 @@ const CategoryManagement: React.FC = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="Enter category name"
-                    className="mt-1"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status *</Label>
+                  <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Enter category description (optional)"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -804,18 +798,6 @@ const CategoryManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Enter category description (optional)"
-                  className="mt-1 min-h-[100px]"
-                  rows={4}
-                />
               </div>
               
               <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '@/styles/global-crm-design.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Search, Package, AlertTriangle, TrendingUp, TrendingDown, Download, RefreshCw, Calendar, Edit2, Eye, Trash2, Activity, AlertCircle, Pencil, Info, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import LoadingScreen from '@/components/shared/LoadingScreen';
 
 interface GeneralStockItem {
   id: string;
@@ -549,20 +551,23 @@ const GeneralStock: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center"><div className="text-lg">Loading...</div></div>;
+  if (loading) {
+    return <LoadingScreen message="Loading general stock data..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Stock Management</h1>
+                <p className="text-sm text-gray-600 mt-1">Monitor and manage your product inventory levels</p>
               </div>
             </div>
           
@@ -589,16 +594,29 @@ const GeneralStock: React.FC = () => {
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Reset to current month and refresh data"
               >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
                 <span className="hidden sm:inline">Refresh</span>
                 <span className="sm:hidden">↻</span>
               </Button>
               
-              {/* Month & Year Filter Button */}
+              <Button 
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Export filtered stock to CSV"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              
               <Button 
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="action-btn action-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -614,90 +632,108 @@ const GeneralStock: React.FC = () => {
                   }
                 </span>
               </Button>
-              
-              {/* Export CSV Button */}
-              <Button 
-                onClick={handleExportCSV}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                title="Export filtered stock to CSV"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">CSV</span>
-              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Package className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+        <div className="crm-stats-grid">
+          {/* In Stock Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">In Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{inStockCount}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Package className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{inStockCount}</div>
-                <div className="text-xs text-gray-600">In Stock</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <AlertTriangle className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+          {/* Low Stock Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Low Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{lowStockCount}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <AlertTriangle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Warning</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{lowStockCount}</div>
-                <div className="text-xs text-gray-600">Low Stock</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-red">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <TrendingDown className="h-3 w-3 sm:h-5 sm:w-5 text-red-600" />
+          {/* Out of Stock Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Out of Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{outOfStockCount}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <TrendingDown className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Critical</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{outOfStockCount}</div>
-                <div className="text-xs text-gray-600">Out of Stock</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+          {/* Total Value Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Value</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">₹{totalValue.toFixed(2)}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Inventory</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">₹{totalValue.toFixed(2)}</div>
-                <div className="text-xs text-gray-600">Total Value</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col lg:flex-row gap-3">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search products by name, category, or supplier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="w-full sm:w-48">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -705,31 +741,12 @@ const GeneralStock: React.FC = () => {
                     <SelectItem value="in-stock">In Stock</SelectItem>
                     <SelectItem value="low-stock">Low Stock</SelectItem>
                     <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                    <div className="px-2 py-1 border-t border-gray-200">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => {
-                          setStatusFilter('all');
-                          setCategoryFilter('all');
-                          setSearchTerm('');
-                          setFilterMonth(new Date().getMonth());
-                          setFilterYear(new Date().getFullYear());
-                          setSelectedMonth(new Date().getMonth());
-                          setSelectedYear(new Date().getFullYear());
-                        }}
-                      >
-                        <RefreshCw className="h-3 w-3 mr-2" />
-                        Reset All Filters
-                      </Button>
-                    </div>
                   </SelectContent>
                 </Select>
               </div>
               <div className="w-full sm:w-48">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -744,33 +761,16 @@ const GeneralStock: React.FC = () => {
           </div>
         </div>
 
-        {/* Month/Year Picker Dialog */}
-        <MonthYearPickerDialog
-          open={showMonthYearDialog}
-          onOpenChange={setShowMonthYearDialog}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          onMonthChange={setSelectedMonth}
-          onYearChange={setSelectedYear}
-          onApply={() => {
-            setFilterMonth(selectedMonth);
-            setFilterYear(selectedYear);
-            setShowMonthYearDialog(false);
-          }}
-          title="Select Month & Year"
-          description="Filter stock by specific month and year"
-          previewText="stock items"
-        />
-
         {/* Stock Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Stock Inventory ({filteredItems.length})</span>
-              <span className="sm:hidden">Stock ({filteredItems.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Package className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Stock Inventory ({filteredItems.length})</span>
+              <span className="crm-table-title-text-mobile">Stock ({filteredItems.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
         {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
@@ -860,24 +860,24 @@ const GeneralStock: React.FC = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => openViewPopup(item)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                        className="action-btn action-btn-view"
                         title="View Details"
                       >
-                        <Eye className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => openEditPopup(item)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                        className="action-btn action-btn-edit"
                         title="Edit Stock"
                       >
-                        <Pencil className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -951,7 +951,8 @@ const GeneralStock: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+        </CardContent>
+        </Card>
 
       {/* MonthYearPickerDialog */}
       <MonthYearPickerDialog 
@@ -1117,7 +1118,7 @@ const GeneralStock: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                                  className="action-btn action-btn-delete"
                                   title="Delete Stock History Entry"
                                   onClick={async () => {
                                     if (window.confirm(`Are you sure you want to delete this stock history entry?`)) {
@@ -1287,12 +1288,16 @@ const GeneralStock: React.FC = () => {
               
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={closeEditPopup}>
+                <Button 
+                  variant="outline" 
+                  onClick={closeEditPopup}
+                  className="action-btn action-btn-outline"
+                >
                   Cancel
                 </Button>
                 <Button 
                   onClick={saveEdit}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="global-btn"
                 >
                   Save Changes
                 </Button>

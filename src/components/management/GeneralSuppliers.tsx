@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '@/styles/global-crm-design.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import LoadingScreen from '@/components/shared/LoadingScreen';
 interface GeneralSupplier {
   id: string;
   name: string;
@@ -29,6 +31,7 @@ const GeneralSuppliers: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isAddingSupplier, setIsAddingSupplier] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<GeneralSupplier | null>(null);
+  const [viewingSupplier, setViewingSupplier] = useState<GeneralSupplier | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -284,22 +287,25 @@ const GeneralSuppliers: React.FC = () => {
   const handleNextPage = () => setPage((p) => Math.min(totalPages, p + 1));
   React.useEffect(() => { setPage(1); }, [searchTerm, statusFilter, suppliers.length]);
 
-  if (loading) return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center"><div className="text-lg">Loading...</div></div>;
+  if (loading) {
+    return <LoadingScreen message="Loading general suppliers data..." />;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Purchase Suppliers</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Suppliers</h1>
+                <p className="text-sm text-gray-600 mt-1">Manage and organize your supplier relationships</p>
               </div>
-            </div>
-          
+            </div>          
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => {
@@ -322,16 +328,29 @@ const GeneralSuppliers: React.FC = () => {
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
                 title="Reset to current month and refresh data"
               >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
                 <span className="hidden sm:inline">Refresh</span>
                 <span className="sm:hidden">↻</span>
               </Button>
               
-              {/* Month & Year Filter Button */}
+              <Button 
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Export filtered suppliers to CSV"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              
               <Button 
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="action-btn action-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -346,17 +365,6 @@ const GeneralSuppliers: React.FC = () => {
                     : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
                   }
                 </span>
-              </Button>
-              
-              {/* Export CSV Button */}
-              <Button 
-                onClick={handleExportCSV}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                title="Export filtered suppliers to CSV"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">CSV</span>
               </Button>
               
               <Button 
@@ -383,103 +391,115 @@ const GeneralSuppliers: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Truck className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredSuppliers.length}</div>
-                <div className="text-xs text-gray-600">Total Suppliers</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.status === 'active').length}
+        <div className="crm-stats-grid">
+          {/* Total Suppliers Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Suppliers</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredSuppliers.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Mail className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.email && s.email.trim() !== '').length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">With Email</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-purple">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredSuppliers.filter(s => s.status === 'inactive').length}
+          {/* Active Suppliers Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Suppliers</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredSuppliers.filter(s => s.status === 'active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In service</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Inactive</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Email Contacts Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Email Contacts</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredSuppliers.filter(s => s.email && s.email.trim() !== '').length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Mail className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">With email</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Mail className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Inactive Suppliers Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive Suppliers</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredSuppliers.filter(s => s.status === 'inactive').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Disabled</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search suppliers by name, contact person, or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full sm:w-48">
+            
+            <div className="w-full sm:w-auto min-w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                  <div className="px-2 py-1 border-t border-gray-200">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      onClick={() => {
-                        setStatusFilter('all');
-                        setSearchTerm('');
-                        setFilterMonth(new Date().getMonth());
-                        setFilterYear(new Date().getFullYear());
-                        setSelectedMonth(new Date().getMonth());
-                        setSelectedYear(new Date().getFullYear());
-                      }}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-2" />
-                      Reset All Filters
-                    </Button>
-                  </div>
                 </SelectContent>
               </Select>
             </div>
@@ -505,14 +525,15 @@ const GeneralSuppliers: React.FC = () => {
         />
 
         {/* Suppliers Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Truck className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Suppliers List ({filteredSuppliers.length})</span>
-              <span className="sm:hidden">Suppliers ({filteredSuppliers.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Truck className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Suppliers List ({filteredSuppliers.length})</span>
+              <span className="crm-table-title-text-mobile">Suppliers ({filteredSuppliers.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
         {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
@@ -617,24 +638,33 @@ const GeneralSuppliers: React.FC = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setViewingSupplier(supplier)}
+                        className="action-btn action-btn-view"
+                        title="View Supplier"
+                      >
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditSupplier(supplier)}
-                        className="action-btn-lead"
+                        className="action-btn action-btn-edit"
                         title="Edit Supplier"
                       >
-                        <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteSupplier(supplier)}
-                        className="action-btn-lead action-btn-lead-delete"
+                        className="action-btn action-btn-delete"
                         title="Delete Supplier"
                       >
-                        <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -708,7 +738,8 @@ const GeneralSuppliers: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+        </CardContent>
+        </Card>
 
         {/* Add/Edit Supplier Dialog */}
         <Dialog open={isAddingSupplier} onOpenChange={setIsAddingSupplier}>
@@ -825,14 +856,14 @@ const GeneralSuppliers: React.FC = () => {
                       status: 'active',
                     });
                   }}
-                  className="w-full sm:w-auto"
+                  className="action-btn action-btn-outline w-full sm:w-auto"
                   disabled={submitting}
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto global-btn"
+                  className="global-btn w-full sm:w-auto"
                   disabled={submitting}
                 >
                   {submitting ? (
@@ -846,6 +877,102 @@ const GeneralSuppliers: React.FC = () => {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Supplier Dialog */}
+        <Dialog open={!!viewingSupplier} onOpenChange={() => setViewingSupplier(null)}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Eye className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-gray-900">Supplier Details</DialogTitle>
+                  <DialogDescription className="text-gray-600 mt-1">
+                    View supplier information
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            {viewingSupplier && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Company Name</Label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Status</Label>
+                    <div className="mt-1">
+                      <Badge 
+                        variant={viewingSupplier.status === 'active' ? 'default' : 'secondary'}
+                        className={`
+                          ${viewingSupplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                        `}
+                      >
+                        {viewingSupplier.status.charAt(0).toUpperCase() + viewingSupplier.status.slice(1)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.contactPerson || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Phone</Label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.phone || 'Not specified'}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Email</Label>
+                  <p className="mt-1 text-sm text-gray-900">{viewingSupplier.email || 'Not specified'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Address</Label>
+                  <p className="mt-1 text-sm text-gray-900">{viewingSupplier.address || 'Not specified'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Created Date</Label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {viewingSupplier.createdAt ? (() => {
+                      const dateStr = viewingSupplier.createdAt;
+                      let dateObj;
+                      if (dateStr.includes('T')) {
+                        dateObj = new Date(dateStr);
+                      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                        dateObj = new Date(dateStr + 'T00:00:00');
+                      }
+                      if (dateObj && !isNaN(dateObj.getTime())) {
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const year = dateObj.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      }
+                      return dateStr;
+                    })() : 'Unknown'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button 
+                type="button" 
+                onClick={() => setViewingSupplier(null)}
+                className="action-btn action-btn-outline w-full sm:w-auto"
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -884,7 +1011,7 @@ const GeneralSuppliers: React.FC = () => {
                   setSupplierToDelete(null);
                 }}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="action-btn action-btn-outline w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -892,7 +1019,7 @@ const GeneralSuppliers: React.FC = () => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="action-btn action-btn-delete w-full sm:w-auto"
               >
                 {submitting ? (
                   <>

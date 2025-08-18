@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import '@/styles/global-crm-design.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -263,26 +264,26 @@ const DeletedPatients: React.FC = () => {
 
   return (
     <div className="crm-page-bg">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Professional Header */}
         <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-red-700 hover:scale-110">
-                <UserX className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+              <div className="crm-header-icon crm-header-icon-red">
+                <UserX className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-red-600">Deleted Patients</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">Deleted Patients</h1>
                 <p className="text-sm text-gray-600 mt-1">
                   Manage and restore deleted patient records
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="action-buttons-container">
               <button 
                 onClick={exportToExcel}
-                className="action-btn-lead-danger"
+                className="action-btn-lead"
               >
                 <Download className="h-4 w-4" />
                 <span className="font-medium">Export Excel</span>
@@ -292,56 +293,68 @@ const DeletedPatients: React.FC = () => {
         </div>
 
         {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="crm-stat-card-danger">
-            <div className="crm-stat-icon">
-              <Trash2 className="h-6 w-6" />
-            </div>
-            <div className="crm-stat-content">
-              <p className="crm-stat-label">Total Deleted</p>
-              <p className="crm-stat-value">{deletedPatients.length}</p>
-            </div>
-            <div className="crm-stat-bar"></div>
-          </div>
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-600">Total Deleted</p>
+                  <p className="text-2xl font-bold text-gray-900">{deletedPatients.length}</p>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Trash2 className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="crm-stat-card-warning">
-            <div className="crm-stat-icon">
-              <Filter className="h-6 w-6" />
-            </div>
-            <div className="crm-stat-content">
-              <p className="crm-stat-label">Filtered</p>
-              <p className="crm-stat-value">{filteredPatients.length}</p>
-            </div>
-            <div className="crm-stat-bar"></div>
-          </div>
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-600">Filtered</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredPatients.length}</p>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Filter className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="crm-stat-card-info">
-            <div className="crm-stat-icon">
-              <CalendarIcon className="h-6 w-6" />
-            </div>
-            <div className="crm-stat-content">
-              <p className="crm-stat-label">This Month</p>
-              <p className="crm-stat-value">
-                {deletedPatients.filter(p => {
-                  const deletedDate = new Date(p.deletedAt);
-                  const today = new Date();
-                  return deletedDate.getMonth() === today.getMonth() && deletedDate.getFullYear() === today.getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div className="crm-stat-bar"></div>
-          </div>
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">This Month</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {deletedPatients.filter(p => {
+                      const deletedDate = new Date(p.deletedAt);
+                      const today = new Date();
+                      return deletedDate.getMonth() === today.getMonth() && deletedDate.getFullYear() === today.getFullYear();
+                    }).length}
+                  </p>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <CalendarIcon className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="crm-stat-card-purple">
-            <div className="crm-stat-icon">
-              <RotateCcw className="h-6 w-6" />
-            </div>
-            <div className="crm-stat-content">
-              <p className="crm-stat-label">Can Restore</p>
-              <p className="crm-stat-value">{filteredPatients.length}</p>
-            </div>
-            <div className="crm-stat-bar"></div>
-          </div>
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-600">Can Restore</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredPatients.length}</p>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <RotateCcw className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Controls */}
@@ -388,7 +401,7 @@ const DeletedPatients: React.FC = () => {
                   setDateFilter('');
                   setDeletedByFilter('');
                 }}
-                className="global-btn-secondary h-12"
+                className="global-btn global-btn-secondary"
               >
                 Clear Filters
               </button>
@@ -397,142 +410,148 @@ const DeletedPatients: React.FC = () => {
         </div>
 
         {/* Patients Table */}
-        <div className="crm-table-container">
-          <div className="crm-table-title">
-            <h2>Deleted Patient Records</h2>
-            <div className="flex items-center gap-2">
-              <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-                {filteredPatients.length} deleted
-              </Badge>
-              <Badge variant="outline">
-                Page {currentPage} of {totalPages}
-              </Badge>
+        <Card className="crm-table-card">
+          <CardHeader className="crm-table-header">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Deleted Patient Records
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+                  {filteredPatients.length} deleted
+                </Badge>
+                <Badge variant="outline">
+                  Page {currentPage} of {totalPages}
+                </Badge>
+              </div>
             </div>
-          </div>
+          </CardHeader>
           
-          <div className="overflow-x-auto">
-            {currentPatients.length === 0 ? (
-              <div className="text-center py-12">
-                <UserX className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No deleted patients found</h3>
-                <p className="text-gray-500">There are no deleted patients matching your criteria.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-center font-semibold">Sr No.</TableHead>
-                    <TableHead className="text-center font-semibold">Patient ID</TableHead>
-                    <TableHead className="text-center font-semibold">Name</TableHead>
-                    <TableHead className="text-center font-semibold">Age</TableHead>
-                    <TableHead className="text-center font-semibold">Gender</TableHead>
-                    <TableHead className="text-center font-semibold">Phone</TableHead>
-                    <TableHead className="text-center font-semibold">Deleted Date</TableHead>
-                    <TableHead className="text-center font-semibold">Deleted By</TableHead>
-                    <TableHead className="text-center font-semibold">Status</TableHead>
-                    <TableHead className="text-center font-semibold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentPatients.map((patient, idx) => (
-                    <TableRow key={patient.id} className="hover:bg-gray-50">
-                      <TableCell className="text-center font-medium">
-                        {startIndex + idx + 1}
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-blue-600">
-                        {patient.id}
-                      </TableCell>
-                      <TableCell className="text-center font-medium">
-                        {patient.name}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {patient.age}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'}>
-                          {patient.gender}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-mono">
-                        {patient.phone}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {formatDate(patient.deletedAt)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">
-                          {patient.deletedBy}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="destructive">
-                          Deleted
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <button
-                          onClick={() => handleRestore(patient)}
-                          className="action-btn-success-sm"
-                          title="Restore Patient"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                      </TableCell>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              {currentPatients.length === 0 ? (
+                <div className="text-center py-12">
+                  <UserX className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No deleted patients found</h3>
+                  <p className="text-gray-500">There are no deleted patients matching your criteria.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-center font-semibold">Sr No.</TableHead>
+                      <TableHead className="text-center font-semibold">Patient ID</TableHead>
+                      <TableHead className="text-center font-semibold">Name</TableHead>
+                      <TableHead className="text-center font-semibold">Age</TableHead>
+                      <TableHead className="text-center font-semibold">Gender</TableHead>
+                      <TableHead className="text-center font-semibold">Phone</TableHead>
+                      <TableHead className="text-center font-semibold">Deleted Date</TableHead>
+                      <TableHead className="text-center font-semibold">Deleted By</TableHead>
+                      <TableHead className="text-center font-semibold">Status</TableHead>
+                      <TableHead className="text-center font-semibold">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                  </TableHeader>
+                  <TableBody>
+                    {currentPatients.map((patient, idx) => (
+                      <TableRow key={patient.id} className="hover:bg-gray-50">
+                        <TableCell className="text-center font-medium">
+                          {startIndex + idx + 1}
+                        </TableCell>
+                        <TableCell className="text-center font-mono text-blue-600">
+                          {patient.id}
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {patient.name}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {patient.age}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'}>
+                            {patient.gender}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-mono">
+                          {patient.phone}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {formatDate(patient.deletedAt)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">
+                            {patient.deletedBy}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="destructive">
+                            Deleted
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <button
+                            onClick={() => handleRestore(patient)}
+                            className="action-btn-success"
+                            title="Restore Patient"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
 
-            {/* Professional Pagination */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200">
-                <div className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredPatients.length)} of {filteredPatients.length} results
+              {/* Professional Pagination */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200 px-6 pb-6">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredPatients.length)} of {filteredPatients.length} results
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={cn(
+                            "h-8 w-8 p-0",
+                            currentPage === pageNum && "bg-blue-600 text-white"
+                          )}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={cn(
-                          "h-8 w-8 p-0",
-                          currentPage === pageNum && "bg-blue-600 text-white"
-                        )}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Restore Confirmation Dialog */}
         <Dialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
@@ -548,19 +567,19 @@ const DeletedPatients: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button 
-                variant="outline" 
+              <button 
+                className="global-btn global-btn-secondary"
                 onClick={() => setShowRestoreConfirm(false)}
               >
                 Cancel
-              </Button>
-              <Button 
+              </button>
+              <button 
                 onClick={confirmRestore}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="global-btn global-btn-success"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Restore Patient
-              </Button>
+              </button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

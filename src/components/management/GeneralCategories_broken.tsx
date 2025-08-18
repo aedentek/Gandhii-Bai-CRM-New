@@ -3,9 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import '@/styles/global-crm-design.css';
-import '../../styles/modern-forms.css';
-import '../../styles/modern-tables.css';
-import '../../styles/modern-settings.css';
 
 // Simple error boundary for dialog content
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -24,6 +21,7 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
   componentDidCatch(error: Error) { this.props.onError(error); }
   render() { return this.props.children; }
 }
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,68 +29,69 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, Eye, UserCheck, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface GroceryCategory {
+interface GeneralCategory {
   id: string;
   name: string;
   description: string;
   status: 'active' | 'inactive';
+  productCount: number;
   createdAt: string;
-  created_at: string;
 }
 
-const GroceryCategories: React.FC = () => {
-const [categories, setCategories] = useState<GroceryCategory[]>([]);
-const [loading, setLoading] = useState(true);
-const [refreshKey, setRefreshKey] = useState(0);
+const GeneralCategories: React.FC = () => {
+  const [categories, setCategories] = useState<GeneralCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-React.useEffect(() => {
-  (async () => {
-    if (refreshKey > 0) console.log('Refreshing data...');
-    try {
-      const db = (await import('@/services/databaseService')).DatabaseService;
-      const data = await db.getAllGroceryCategories();
-      setCategories(data.map((category: any) => ({
-        ...category,
-        id: category.id.toString(),
-        createdAt: category.created_at || category.createdAt || '',
-      })));
-    } catch (e) {
-      // Optionally show error
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, [refreshKey]);
+  React.useEffect(() => {
+    (async () => {
+      if (refreshKey > 0) console.log('Refreshing data...');
+      try {
+        const db = (await import('@/services/databaseService')).DatabaseService;
+        const data = await db.getAllGeneralCategories();
+        setCategories(data.map((cat: any) => ({
+          ...cat,
+          id: cat.id.toString(),
+          createdAt: cat.created_at || cat.createdAt || '',
+          productCount: cat.productCount || 0
+        })));
+      } catch (e) {
+        // Optionally show error
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [refreshKey]);
 
-// Auto-refresh data periodically to catch external changes
-React.useEffect(() => {
-  const interval = setInterval(() => {
+  // Auto-refresh data periodically to catch external changes
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Global refresh function
+  const handleRefresh = React.useCallback(() => {
+    setLoading(true);
     setRefreshKey(prev => prev + 1);
-  }, 30000); // Refresh every 30 seconds
-
-  return () => clearInterval(interval);
-}, []);
-
-// Global refresh function that can be called from anywhere
-const handleRefresh = React.useCallback(() => {
-  setLoading(true);
-  setRefreshKey(prev => prev + 1);
-}, []);
+  }, []);
 
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<GroceryCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<GeneralCategory | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<GroceryCategory | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<GeneralCategory | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    status: 'active',
+    status: 'active' as 'active' | 'inactive',
   });
 
   // Month and year state for filtering
@@ -106,17 +105,6 @@ const handleRefresh = React.useCallback(() => {
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
   const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
-
-  // Open edit dialog and populate form
-  const handleEditCategory = (category: GroceryCategory) => {
-    setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      description: category.description,
-      status: category.status,
-    });
-    setIsAddingCategory(true);
-  };
 
   const { toast } = useToast();
 
@@ -135,13 +123,14 @@ const handleRefresh = React.useCallback(() => {
       const db = (await import('@/services/databaseService')).DatabaseService;
       
       // Fetch fresh data
-      const freshCategories = await db.getAllGroceryCategories();
+      const freshCategories = await db.getAllGeneralCategories();
       
       // Update categories with proper mapping
-      setCategories(freshCategories.map((category: any) => ({
-        ...category,
-        id: category.id.toString(),
-        createdAt: category.created_at || category.createdAt || '',
+      setCategories(freshCategories.map((cat: any) => ({
+        ...cat,
+        id: cat.id.toString(),
+        createdAt: cat.created_at || cat.createdAt || '',
+        productCount: cat.productCount || 0
       })));
       
       // Restore filter state after refresh
@@ -167,7 +156,7 @@ const handleRefresh = React.useCallback(() => {
     }
   }, [filterMonth, filterYear, searchTerm, statusFilter, toast]);
 
-  const handleSubmit = async () => {
+  const handleAddCategory = async () => {
     if (!formData.name) {
       toast({
         title: "Error",
@@ -176,44 +165,73 @@ const handleRefresh = React.useCallback(() => {
       });
       return;
     }
-    
     try {
       const db = (await import('@/services/databaseService')).DatabaseService;
-      
-      if (editingCategory) {
-        // Update existing category
-        await db.updateGroceryCategory(editingCategory.id, {
-          name: formData.name,
-          description: formData.description,
-          status: formData.status,
-        });
-        toast({ title: "Success", description: "Category updated successfully" });
-      } else {
-        // Add new category
-        await db.addGroceryCategory({
-          name: formData.name,
-          description: formData.description,
-          status: formData.status,
-        });
-        toast({ title: "Success", description: "Category added successfully" });
-      }
+      await db.addGeneralCategory({
+        name: formData.name,
+        description: formData.description,
+        status: formData.status
+      });
       
       // Refresh all data
       handleRefresh();
       
       setFormData({ name: '', description: '', status: 'active' });
       setIsAddingCategory(false);
-      setEditingCategory(null);
+      toast({ title: "Success", description: "Category added successfully" });
     } catch (e) {
-      toast({ title: "Error", description: `Failed to ${editingCategory ? 'update' : 'add'} category`, variant: "destructive" });
+      toast({ title: "Error", description: "Failed to add category", variant: "destructive" });
     }
   };
 
-  const handleAddCategory = async () => {
-    await handleSubmit();
+  const handleEditCategory = (category: GeneralCategory) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      description: category.description,
+      status: category.status,
+    });
+    setIsAddingCategory(true);
   };
 
-  const handleDeleteCategory = async (category: GroceryCategory) => {
+  const handleUpdateCategory = async () => {
+    if (!formData.name) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      await db.updateGeneralCategory(editingCategory!.id, {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status
+      });
+      
+      // Refresh all data
+      handleRefresh();
+      
+      setIsAddingCategory(false);
+      setEditingCategory(null);
+      setFormData({ name: '', description: '', status: 'active' });
+      toast({ title: "Success", description: "Category updated successfully" });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to update category", variant: "destructive" });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (editingCategory) {
+      await handleUpdateCategory();
+    } else {
+      await handleAddCategory();
+    }
+  };
+
+  const handleDeleteCategory = (category: GeneralCategory) => {
     setCategoryToDelete(category);
     setShowDeleteDialog(true);
   };
@@ -224,9 +242,9 @@ const handleRefresh = React.useCallback(() => {
     try {
       setSubmitting(true);
       const db = (await import('@/services/databaseService')).DatabaseService;
-      await db.deleteGroceryCategory(categoryToDelete.id);
+      await db.deleteGeneralCategory(categoryToDelete.id);
       
-      // Refresh all data to ensure table is current
+      // Refresh all data
       handleRefresh();
       
       setShowDeleteDialog(false);
@@ -250,7 +268,7 @@ const handleRefresh = React.useCallback(() => {
   const handleExportCSV = () => {
     try {
       // Prepare CSV headers
-      const headers = ['S No', 'Date', 'Category Name', 'Description', 'Status'];
+      const headers = ['S No', 'Date', 'Name', 'Description', 'Status', 'Product Count'];
       
       // Prepare CSV data
       const csvData = filteredCategories.map((category, index) => {
@@ -281,6 +299,7 @@ const handleRefresh = React.useCallback(() => {
           `"${category.name}"`,
           `"${category.description || ''}"`,
           category.status.charAt(0).toUpperCase() + category.status.slice(1),
+          category.productCount || 0
         ];
       });
       
@@ -300,7 +319,7 @@ const handleRefresh = React.useCallback(() => {
         // Generate filename with current date and filter info
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0];
-        let filename = `grocery-categories-${dateStr}`;
+        let filename = `general-categories-${dateStr}`;
         
         if (filterMonth !== null && filterYear !== null) {
           filename += `-${months[filterMonth]}-${filterYear}`;
@@ -386,9 +405,9 @@ const handleRefresh = React.useCallback(() => {
 
   if (loading) {
     return (
-      <div className="crm-page-bg">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="max-w-7xl mx-auto">
-          <div className="crm-header-container">
+          <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               <span className="ml-3 text-lg">Loading...</span>
@@ -398,7 +417,6 @@ const handleRefresh = React.useCallback(() => {
       </div>
     );
   }
-
   return (
     <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -410,7 +428,8 @@ const handleRefresh = React.useCallback(() => {
                 <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Grocery Categories </h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Categories</h1>
+                <p className="text-sm text-gray-600 mt-1">Manage and organize your general product categories</p>
               </div>
             </div>
           
@@ -441,11 +460,20 @@ const handleRefresh = React.useCallback(() => {
                 <span className="sm:hidden">↻</span>
               </Button>
               
-              {/* Month & Year Filter Button */}
+              <Button 
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Export filtered categories to CSV"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              
               <Button 
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="action-btn action-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -460,17 +488,6 @@ const handleRefresh = React.useCallback(() => {
                     : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
                   }
                 </span>
-              </Button>
-              
-              {/* Export CSV Button */}
-              <Button 
-                onClick={handleExportCSV}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                title="Export filtered categories to CSV"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">CSV</span>
               </Button>
               
               <Button 
@@ -491,95 +508,114 @@ const handleRefresh = React.useCallback(() => {
             </div>
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="crm-stats-grid">
-          {/* Total Categories Card */}
-          <Card className="crm-stat-card crm-stat-card-blue">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Categories</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredCategories.length}</p>
-                  <div className="flex items-center text-xs text-blue-600">
-                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Registered</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-blue">
-                  <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth]} ${filterYear}`
+                      : `${months[selectedMonth]} ${selectedYear}`
+                    }
+                  </span>
+                  <span className="lg:hidden">
+                    {filterMonth !== null && filterYear !== null 
+                      ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
+                      : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                    }
+                  </span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Active Categories Card */}
-          <Card className="crm-stat-card crm-stat-card-green">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Categories</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
-                    {filteredCategories.filter(c => c.status === 'active').length}
-                  </p>
-                  <div className="flex items-center text-xs text-green-600">
-                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">In treatment</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-green">
-                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
+              
+              <div className="flex flex-row gap-2">
+                {/* Export CSV Button */}
+                <Button 
+                  onClick={handleExportCSV}
+                  className="global-btn flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm lg:min-w-[120px]"
+                  title="Export filtered categories to CSV"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">Export CSV</span>
+                  <span className="lg:hidden">CSV</span>
+                </Button>
+                
+                <Button 
+                  onClick={() => {
+                    setFormData({
+                      name: '',
+                      description: '',
+                      status: 'active',
+                    });
+                    setIsAddingCategory(true);
+                  }}
+                  className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm lg:min-w-[120px]"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">Add Category</span>
+                  <span className="lg:hidden">+</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Inactive Categories Card */}
-          <Card className="crm-stat-card crm-stat-card-red">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Critical Cases</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
-                    {filteredCategories.filter(c => c.status === 'inactive').length}
-                  </p>
-                  <div className="flex items-center text-xs text-red-600">
-                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Urgent care</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-red">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* With Description Card */}
-          <Card className="crm-stat-card crm-stat-card-orange">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Last Updated</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
-                    {filteredCategories.filter(c => c.description && c.description.length > 0).length}
-                  </p>
-                  <div className="flex items-center text-xs text-orange-600">
-                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Today</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-orange">
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* Search and Filter Controls */}
-        <div className="crm-controls-container">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="modern-stat-card stat-card-blue">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FolderOpen className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredCategories.length}</div>
+                <div className="text-xs text-gray-600">Total Categories</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="modern-stat-card stat-card-green">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredCategories.filter(c => c.status === 'active').length}
+                </div>
+                <div className="text-xs text-gray-600">Active</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="modern-stat-card stat-card-orange">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredCategories.reduce((total, cat) => total + (cat.productCount || 0), 0)}
+                </div>
+                <div className="text-xs text-gray-600">Total Products</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="modern-stat-card stat-card-purple">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                  {filteredCategories.filter(c => c.status === 'inactive').length}
+                </div>
+                <div className="text-xs text-gray-600">Inactive</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filter Section */}
+        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -670,7 +706,7 @@ const handleRefresh = React.useCallback(() => {
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center">
-                    <span>Category Name</span>
+                    <span>Name</span>
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
@@ -715,7 +751,7 @@ const handleRefresh = React.useCallback(() => {
                     })()
                   }</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">{category.name}</TableCell>
-                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm max-w-[300px] truncate">{category.description || '-'}</TableCell>
+                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap max-w-[200px] truncate">{category.description}</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
                     <Badge 
                       variant={category.status === 'active' ? 'default' : 'secondary'}
@@ -727,7 +763,19 @@ const handleRefresh = React.useCallback(() => {
                     </Badge>
                   </TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                    <div className="action-buttons-container">
+                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          // View category details - you can implement this
+                          console.log('View category:', category);
+                        }}
+                        className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
+                        title="View Category Details"
+                      >
+                        <Eye className="h-4 w-4 sm:h-4 sm:w-4" />
+                      </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -822,7 +870,7 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Add/Edit Category Dialog */}
         <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -833,7 +881,7 @@ const handleRefresh = React.useCallback(() => {
                     {editingCategory ? 'Edit Category' : 'Add New Category'}
                   </DialogTitle>
                   <DialogDescription className="text-gray-600 mt-1">
-                    {editingCategory ? 'Update category information' : 'Enter the details for the new grocery category'}
+                    {editingCategory ? 'Update category information' : 'Enter the details for the new category'}
                   </DialogDescription>
                 </div>
               </div>
@@ -846,7 +894,7 @@ const handleRefresh = React.useCallback(() => {
               }}
               className="space-y-4 p-3 sm:p-4 md:p-6"
             >
-              <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium text-gray-700">Category Name *</Label>
                   <Input
@@ -871,7 +919,7 @@ const handleRefresh = React.useCallback(() => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'active' | 'inactive'})}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
@@ -896,13 +944,13 @@ const handleRefresh = React.useCallback(() => {
                       status: 'active',
                     });
                   }}
-                  className="w-full sm:w-auto global-btn"
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto global-btn"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {editingCategory ? 'Update Category' : 'Add Category'}
                 </Button>
@@ -930,8 +978,8 @@ const handleRefresh = React.useCallback(() => {
               <div className="bg-gray-50 rounded-lg p-4 my-4">
                 <div className="text-sm">
                   <div className="font-medium text-gray-900">{categoryToDelete.name}</div>
-                  <div className="text-gray-600">{categoryToDelete.description || 'No description'}</div>
-                  <div className="text-gray-600 capitalize">{categoryToDelete.status}</div>
+                  <div className="text-gray-600">{categoryToDelete.description}</div>
+                  <div className="text-gray-600">Status: {categoryToDelete.status}</div>
                 </div>
               </div>
             )}
@@ -945,7 +993,7 @@ const handleRefresh = React.useCallback(() => {
                   setCategoryToDelete(null);
                 }}
                 disabled={submitting}
-                className="global-btn w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -953,7 +1001,7 @@ const handleRefresh = React.useCallback(() => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="global-btn w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
@@ -975,4 +1023,4 @@ const handleRefresh = React.useCallback(() => {
   );
 };
 
-export default GroceryCategories;
+export default GeneralCategories;

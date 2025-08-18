@@ -6,6 +6,7 @@ import LoadingScreen from '@/components/shared/LoadingScreen';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
+import '@/styles/global-crm-design.css';
 
 // Simple error boundary for dialog content
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -457,143 +458,185 @@ const GeneralAccounts: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Accounts</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Accounts</h1>
+                {/* <p className="modern-page-subtitle">
+                  Manage and track all financial transactions and account records
+                </p> */}
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => {
-                    const currentMonth = new Date().getMonth();
-                    const currentYear = new Date().getFullYear();
-                    
-                    setStatusFilter('all');
-                    setSearchTerm('');
-                    setFilterMonth(currentMonth);
-                    setFilterYear(currentYear);
-                    setSelectedMonth(currentMonth);
-                    setSelectedYear(currentYear);
-                    setPage(1);
-                    
-                    handleGlobalRefresh();
-                  }}
-                  disabled={loading}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
-                >
-                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
-                  <span className="sm:hidden">↻</span>
-                </Button>
-                
-                <Button 
-                  onClick={() => setShowMonthYearDialog(true)}
-                  variant="outline"
-                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth]} ${filterYear}`
-                      : `${months[selectedMonth]} ${selectedYear}`
-                    }
-                  </span>
-                  <span className="sm:hidden">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                      : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                    }
-                  </span>
-                </Button>
-              </div>
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <Button 
+                onClick={() => {
+                  const currentMonth = new Date().getMonth();
+                  const currentYear = new Date().getFullYear();
+                  
+                  setStatusFilter('all');
+                  setSearchTerm('');
+                  setFilterMonth(currentMonth);
+                  setFilterYear(currentYear);
+                  setSelectedMonth(currentMonth);
+                  setSelectedYear(currentYear);
+                  setPage(1);
+                  
+                  handleGlobalRefresh();
+                }}
+                disabled={loading}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
               
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleExportCSV}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Export CSV</span>
-                  <span className="sm:hidden">CSV</span>
-                </Button>
-              </div>
+              <Button 
+                onClick={() => setShowMonthYearDialog(true)}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth]} ${filterYear}`
+                    : `${months[selectedMonth]} ${selectedYear}`
+                  }
+                </span>
+                <span className="sm:hidden">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                  }
+                </span>
+              </Button>
+              
+              <Button 
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  ₹{totalPurchaseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+        <div className="crm-stats-grid">
+          {/* Total Purchase Amount Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Purchase</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
+                    ₹{totalPurchaseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Purchase Amount</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Purchase Amount</div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-red">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <TrendingDown className="h-3 w-3 sm:h-5 sm:w-5 text-red-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  ₹{totalSettlementAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          {/* Total Settlement Amount Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Settlement</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    ₹{totalSettlementAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <DollarSign className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Settlement Amount</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Settlement Amount</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <FileText className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  ₹{totalBalanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          {/* Total Balance Amount Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Balance Due</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    ₹{totalBalanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <TrendingDown className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Balance Amount</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Balance Amount</div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Total Transactions Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Transactions</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredAccounts.length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <FileText className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Records</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search transactions by name, category, or supplier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full sm:w-40">
+            
+            <div className="w-full sm:w-auto min-w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -625,37 +668,74 @@ const GeneralAccounts: React.FC = () => {
         />
 
         {/* Accounts Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Transaction History ({filteredAccounts.length})</span>
-              <span className="sm:hidden">Transactions ({filteredAccounts.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <CreditCard className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Transaction History ({filteredAccounts.length})</span>
+              <span className="crm-table-title-text-mobile">Transactions ({filteredAccounts.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
         <div className="overflow-x-auto">
           <Table className="w-full min-w-[1600px]">
             <TableHeader>
               <TableRow className="bg-gray-50 border-b">
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">S No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">ID No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Product Name</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>S No</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>ID No</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Product Name</span>
+                  </div>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Category</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Supplier</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Quantity</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Rate</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Purchase Amount</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Settlement Amount</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Balance Amount</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Purchase Amount</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Settlement Amount</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Balance Amount</span>
+                  </div>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Status</span>
                   </div>
                 </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Payment Type</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Payment Type</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <span>Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -686,25 +766,25 @@ const GeneralAccounts: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{item.payment_type || '-'}</TableCell>
-                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1 sm:gap-2">
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
+                      <div className="action-buttons-container">
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(item)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Settlement History"
                         >
-                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(item)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Transaction"
                         >
-                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -779,7 +859,8 @@ const GeneralAccounts: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+          </CardContent>
+        </Card>
 
         {/* View Settlement History Dialog */}
         <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>

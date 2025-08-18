@@ -3,9 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
-import '../../styles/modern-forms.css';
-import '../../styles/modern-tables.css';
-import '../../styles/modern-settings.css';
+import '@/styles/global-crm-design.css';
 
 // Simple error boundary for dialog content
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -31,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GeneralProduct {
@@ -554,191 +552,214 @@ const handleRefresh = React.useCallback(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Add Products</h1>
-                {/* <p className="text-sm text-gray-600 mt-1">Manage and organize your general products inventory</p> */}
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Products</h1>
+                <p className="text-sm text-gray-600 mt-1">Manage and organize your general products inventory</p>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
-              <div className="flex gap-2">
-                <Button 
-                  type="button"
-                  onClick={() => {
-                    // Reset all filters to current month/year and refresh
-                    const currentMonth = new Date().getMonth();
-                    const currentYear = new Date().getFullYear();
-                    
-                    setStatusFilter('all');
-                    setSearchTerm('');
-                    setFilterMonth(currentMonth);
-                    setFilterYear(currentYear);
-                    setSelectedMonth(currentMonth);
-                    setSelectedYear(currentYear);
-                    setPage(1);
-                    
-                    // Refresh the data
-                    handleGlobalRefresh();
-                  }}
-                  disabled={loading}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
-                  title="Reset to current month and refresh data"
-                >
-                  {loading ? (
-                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  )}
-                  <span className="hidden sm:inline">Refresh</span>
-                  <span className="sm:hidden">↻</span>
-                </Button>
-                
-                {/* Month & Year Filter Button */}
-                <Button 
-                  type="button"
-                  onClick={() => setShowMonthYearDialog(true)}
-                  variant="outline"
-                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth]} ${filterYear}`
-                      : `${months[selectedMonth]} ${selectedYear}`
-                    }
-                  </span>
-                  <span className="sm:hidden">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                      : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                    }
-                  </span>
-                </Button>
-              </div>
+          
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <Button 
+                type="button"
+                onClick={() => {
+                  // Reset all filters to current month/year and refresh
+                  const currentMonth = new Date().getMonth();
+                  const currentYear = new Date().getFullYear();
+                  
+                  setStatusFilter('all');
+                  setSearchTerm('');
+                  setFilterMonth(currentMonth);
+                  setFilterYear(currentYear);
+                  setSelectedMonth(currentMonth);
+                  setSelectedYear(currentYear);
+                  setPage(1);
+                  
+                  // Refresh the data
+                  handleGlobalRefresh();
+                }}
+                disabled={loading}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Reset to current month and refresh data"
+              >
+                {loading ? (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
+                <span className="hidden sm:inline">Refresh</span>
+                <span className="sm:hidden">↻</span>
+              </Button>
               
-              <div className="flex gap-2">
-                {/* Export CSV Button */}
-                <Button 
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                  title="Export filtered products to CSV"
-                >
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Export CSV</span>
-                  <span className="sm:hidden">CSV</span>
-                </Button>
-                
-                <Button 
-                  type="button"
-                  onClick={() => {
-                    setFormData({
-                      name: '',
-                      description: '',
-                      category: '',
-                      supplier: '',
-                      price: '',
-                      quantity: '',
-                      purchaseDate: new Date().toISOString().split('T')[0],
-                    });
-                    setIsAddingProduct(true);
-                  }}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Add Product</span>
-                  <span className="sm:hidden">+</span>
-                </Button>
-              </div>
-
+              <Button 
+                type="button"
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Export filtered products to CSV"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              
+              <Button 
+                type="button"
+                onClick={() => setShowMonthYearDialog(true)}
+                variant="outline"
+                className="action-btn action-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth]} ${filterYear}`
+                    : `${months[selectedMonth]} ${selectedYear}`
+                  }
+                </span>
+                <span className="sm:hidden">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                  }
+                </span>
+              </Button>
+              
+              <Button 
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    name: '',
+                    description: '',
+                    category: '',
+                    supplier: '',
+                    price: '',
+                    quantity: '',
+                    purchaseDate: new Date().toISOString().split('T')[0],
+                  });
+                  setIsAddingProduct(true);
+                }}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Product</span>
+                <span className="sm:hidden">+</span>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredProducts.length}</div>
-                <div className="text-xs text-gray-600">Total Products</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredProducts.filter(p => p.status === 'active').length}
+        <div className="crm-stats-grid">
+          {/* Total Products Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Products</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredProducts.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In inventory</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredProducts.filter(p => p.quantity < 10).length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">Low Stock</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-purple">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredProducts.filter(p => p.status === 'inactive').length}
+          {/* Active Products Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Products</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredProducts.filter(p => p.status === 'active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Inactive</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Low Stock Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Low Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredProducts.filter(p => p.quantity < 10).length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Need restock</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Inactive Products Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive Products</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredProducts.filter(p => p.status === 'inactive').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Discontinued</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search leads by name, phone, or category..."
+                <input
+                  type="text"
+                  placeholder="Search products by name, category, or supplier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full sm:w-48">
+            
+            <div className="w-full sm:w-auto min-w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -788,14 +809,15 @@ const handleRefresh = React.useCallback(() => {
         />
 
         {/* Products Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Products List ({filteredProducts.length})</span>
-              <span className="sm:hidden">Products ({filteredProducts.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Package className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Products List ({filteredProducts.length})</span>
+              <span className="crm-table-title-text-mobile">Products ({filteredProducts.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
         {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
@@ -889,7 +911,7 @@ const handleRefresh = React.useCallback(() => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditProduct(product)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                        className="action-btn action-btn-edit"
                         title="Edit Product"
                       >
                         <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -898,7 +920,7 @@ const handleRefresh = React.useCallback(() => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteProduct(product)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                        className="action-btn action-btn-delete"
                         title="Delete Product"
                       >
                         <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
@@ -975,7 +997,8 @@ const handleRefresh = React.useCallback(() => {
             </div>
           </div>
         )}
-      </div>
+      </CardContent>
+    </Card>
 
         {/* Add/Edit Product Dialog */}
         <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
@@ -1124,13 +1147,13 @@ const handleRefresh = React.useCallback(() => {
                       purchaseDate: new Date().toISOString().split('T')[0],
                     });
                   }}
-                  className="w-full sm:w-auto"
+                  className="action-btn action-btn-outline w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto global-btn"
+                  className="global-btn w-full sm:w-auto"
                 >
                   {editingProduct ? 'Update Product' : 'Add Product'}
                 </Button>
@@ -1174,7 +1197,7 @@ const handleRefresh = React.useCallback(() => {
                   setProductToDelete(null);
                 }}
                 disabled={submitting}
-                className="modern-btn modern-btn-secondary w-full sm:w-auto"
+                className="action-btn action-btn-outline w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1182,7 +1205,7 @@ const handleRefresh = React.useCallback(() => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="modern-btn modern-btn-danger w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="action-btn action-btn-delete w-full sm:w-auto"
               >
                 {submitting ? (
                   <>

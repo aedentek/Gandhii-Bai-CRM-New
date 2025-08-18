@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import '@/styles/global-crm-design.css';
 
 // API Base URL
 const API_BASE_URL = 'http://localhost:4000/api';
@@ -376,104 +377,110 @@ const PatientAttendance: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">🏥 Patient Attendance</h1>
-          <p className="text-gray-600">Manage daily patient attendance records</p>
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="crm-header-container">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient Attendance</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage daily patient attendance records</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={refreshData}
+                disabled={refreshing}
+                className="global-btn flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={refreshData}
-            disabled={refreshing}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.totalPatients}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All Patients</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Present</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{stats.todayPresent}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Absent</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{stats.todayAbsent}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <XCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Not Marked</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{stats.todayNotMarked}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Pending</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Patients</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalPatients}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Today Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.todayTotal}</p>
-              </div>
-              <Activity className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Present</p>
-                <p className="text-2xl font-bold text-green-600">{stats.todayPresent}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Absent</p>
-                <p className="text-2xl font-bold text-red-600">{stats.todayAbsent}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Late</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.todayLate}</p>
-              </div>
-              <Clock3 className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Not Marked</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.todayNotMarked}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
+        {/* Filters */}
+        <div className="crm-controls-container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -481,12 +488,12 @@ const PatientAttendance: React.FC = () => {
                 placeholder="Search patients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -504,12 +511,11 @@ const PatientAttendance: React.FC = () => {
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="pl-10"
+                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* Patient List */}
       <Card>
@@ -575,13 +581,14 @@ const PatientAttendance: React.FC = () => {
                         {attendance?.check_in_time || '-'}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="action-buttons-container">
                           {!attendance ? (
                             <>
                               <Button
                                 size="sm"
                                 onClick={() => handleMarkAttendance(patient, 'Present')}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs"
+                                className="action-btn-lead"
+                                title="Mark Present"
                               >
                                 ✓
                               </Button>
@@ -589,7 +596,8 @@ const PatientAttendance: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAttendance(patient, 'Absent')}
-                                className="border-red-200 text-red-600 hover:bg-red-50 px-2 py-1 text-xs"
+                                className="action-btn-delete"
+                                title="Mark Absent"
                               >
                                 ✗
                               </Button>
@@ -597,17 +605,19 @@ const PatientAttendance: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAttendance(patient, 'Late')}
-                                className="border-yellow-200 text-yellow-600 hover:bg-yellow-50 px-2 py-1 text-xs"
+                                className="action-btn-edit"
+                                title="Mark Late"
                               >
                                 ⏰
                               </Button>
                             </>
                           ) : (
-                            <div className="flex gap-1">
+                            <>
                               <Button
                                 size="sm"
                                 onClick={() => handleMarkAttendance(patient, 'Present')}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs"
+                                className="action-btn-lead"
+                                title="Mark Present"
                               >
                                 ✓
                               </Button>
@@ -615,7 +625,8 @@ const PatientAttendance: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAttendance(patient, 'Absent')}
-                                className="border-red-200 text-red-600 hover:bg-red-50 px-2 py-1"
+                                className="action-btn-delete"
+                                title="Mark Absent"
                               >
                                 ✗
                               </Button>
@@ -623,7 +634,8 @@ const PatientAttendance: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAttendance(patient, 'Late')}
-                                className="border-yellow-200 text-yellow-600 hover:bg-yellow-50 px-2 py-1"
+                                className="action-btn-edit"
+                                title="Mark Late"
                               >
                                 ⏰
                               </Button>
@@ -634,11 +646,12 @@ const PatientAttendance: React.FC = () => {
                                   setSelectedRecord(attendance);
                                   setShowDeleteModal(true);
                                 }}
-                                className="text-red-600 border-red-200 hover:bg-red-50 px-2 py-1"
+                                className="action-btn-delete"
+                                title="Delete Record"
                               >
                                 🗑️
                               </Button>
-                            </div>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -668,15 +681,16 @@ const PatientAttendance: React.FC = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)} className="global-btn">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteAttendance}>
+            <Button variant="destructive" onClick={handleDeleteAttendance} className="global-btn bg-red-600 hover:bg-red-700 text-white">
               Delete Record
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

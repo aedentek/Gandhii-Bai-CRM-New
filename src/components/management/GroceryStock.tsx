@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye, BarChart3, History } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import '@/styles/global-crm-design.css';
-import '../../styles/modern-forms.css';
-import '../../styles/modern-tables.css';
-import '../../styles/modern-settings.css';
 
 // Simple error boundary for dialog content
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -24,14 +29,6 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
   componentDidCatch(error: Error) { this.props.onError(error); }
   render() { return this.props.children; }
 }
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye, BarChart3, History } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 // Helper function to format grocery ID
 const formatGroceryId = (num: number): string => {
@@ -477,9 +474,9 @@ const handleRefresh = React.useCallback(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="crm-page-bg">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="crm-header-container">
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               <span className="ml-3 text-lg">Loading...</span>
@@ -497,11 +494,11 @@ const handleRefresh = React.useCallback(() => {
         <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Grocery Stock Management</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Grocery Stock</h1>
               </div>
             </div>
           
@@ -523,7 +520,7 @@ const handleRefresh = React.useCallback(() => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
@@ -533,7 +530,7 @@ const handleRefresh = React.useCallback(() => {
               <Button 
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -552,7 +549,7 @@ const handleRefresh = React.useCallback(() => {
               
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
@@ -572,7 +569,7 @@ const handleRefresh = React.useCallback(() => {
                   });
                   setIsAddingStock(true);
                 }}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Stock</span>
@@ -583,74 +580,82 @@ const handleRefresh = React.useCallback(() => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="crm-stats-grid">
           {/* In Stock Card */}
-          <div className="bg-green-50 rounded-lg p-4 lg:p-6 border border-green-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-green-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-green-500 rounded-full"></span>
-                  Available
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-green-800">{inStockCount}</p>
-                <p className="text-base lg:text-lg font-semibold text-green-700">In Stock</p>
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">In Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{inStockCount}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-green-500 rounded-lg p-3 lg:p-4">
-                <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Low Stock Card */}
-          <div className="bg-orange-50 rounded-lg p-4 lg:p-6 border border-orange-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
-                  Running low
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-orange-800">{lowStockCount}</p>
-                <p className="text-base lg:text-lg font-semibold text-orange-700">Low Stock</p>
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Low Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{lowStockCount}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <TrendingDown className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Running Low</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-orange-500 rounded-lg p-3 lg:p-4">
-                <TrendingDown className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Out of Stock Card */}
-          <div className="bg-red-50 rounded-lg p-4 lg:p-6 border border-red-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-red-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-red-500 rounded-full"></span>
-                  Not available
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-red-800">{outOfStockCount}</p>
-                <p className="text-base lg:text-lg font-semibold text-red-700">Out of Stock</p>
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Out of Stock</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{outOfStockCount}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <AlertTriangle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Not Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-red-500 rounded-lg p-3 lg:p-4">
-                <AlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Total Products Card */}
-          <div className="bg-blue-50 rounded-lg p-4 lg:p-6 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-                  All products
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-blue-800">{totalProducts}</p>
-                <p className="text-base lg:text-lg font-semibold text-blue-700">Total Products</p>
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Products</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{totalProducts}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Package className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All Products</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
-                <Package className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Section */}
@@ -797,12 +802,12 @@ const handleRefresh = React.useCallback(() => {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1 sm:gap-2">
+                      <div className="action-buttons-container">
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewStock(product)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-view"
                           title="View Details"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -811,7 +816,7 @@ const handleRefresh = React.useCallback(() => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditStock(product)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-edit"
                           title="Edit Stock"
                         >
                           <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -820,7 +825,7 @@ const handleRefresh = React.useCallback(() => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteStock(product)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 rounded-lg"
+                          className="action-btn-delete"
                           title="Delete Stock"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1032,13 +1037,13 @@ const handleRefresh = React.useCallback(() => {
                       price: 0,
                     });
                   }}
-                  className="w-full sm:w-auto"
+                  className="global-btn w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="global-btn w-full sm:w-auto"
                 >
                   {editingStock ? 'Update Stock' : 'Add Stock'}
                 </Button>
@@ -1232,7 +1237,7 @@ const handleRefresh = React.useCallback(() => {
               <Button 
                 variant="outline"
                 onClick={() => setShowViewDialog(false)}
-                className="w-full sm:w-auto modern-btn modern-btn-secondary text-sm sm:text-base"
+                className="global-btn w-full sm:w-auto text-sm sm:text-base"
               >
                 Close
               </Button>
@@ -1274,7 +1279,7 @@ const handleRefresh = React.useCallback(() => {
                   setStockToDelete(null);
                 }}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="global-btn w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1282,7 +1287,7 @@ const handleRefresh = React.useCallback(() => {
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="global-btn w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
