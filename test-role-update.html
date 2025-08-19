@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Role Update</title>
+</head>
+<body>
+    <h1>Testing Role Update</h1>
+    <button onclick="updateRole()">Update Administration Role</button>
+    <div id="result"></div>
+
+    <script>
+        async function updateRole() {
+            try {
+                const response = await fetch('http://localhost:4000/api/roles/10', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Administration',
+                        description: 'Limited role with Dashboard and Patient List only',
+                        permissions: ['Dashboard', 'Patient List']
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    '<h3>Update Result:</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                    
+                // Also fetch the updated role to verify
+                const getRoleResponse = await fetch('http://localhost:4000/api/roles/10');
+                const roleData = await getRoleResponse.json();
+                document.getElementById('result').innerHTML += 
+                    '<h3>Updated Role Data:</h3><pre>' + JSON.stringify(roleData, null, 2) + '</pre>';
+                    
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    '<h3>Error:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

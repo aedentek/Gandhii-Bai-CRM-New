@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔗 Database Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .success { background-color: #e8f5e8; color: green; }
+        .error { background-color: #ffe8e8; color: red; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔗 Database Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Create Test Users in Database</h2>
+        <button onclick="createAdminUser()">Create Admin User</button>
+        <button onclick="createTestUser()">Create Test User (Administration)</button>
+        <button onclick="checkUsers()">Check Existing Users</button>
+        <div id="user-creation-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Test Database Login</h2>
+        <div>
+            <h3>Admin User Login Test:</h3>
+            <button onclick="testAdminLogin()">Test Admin Login</button>
+        </div>
+        <div>
+            <h3>Limited User Login Test:</h3>
+            <button onclick="testLimitedLogin()">Test Administration User Login</button>
+        </div>
+        <div id="login-test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Integration Test</h2>
+        <p>After successful database login, test the main application:</p>
+        <a href="http://localhost:8080" target="_blank" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">🚀 Test Main Application</a>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+
+        async function createAdminUser() {
+            try {
+                const response = await fetch(`${API_BASE}/management-users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        role: 'Admin',
+                        password: 'admin123',
+                        status: 'Active'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('user-creation-result').innerHTML = 
+                    `<div class="success">✅ Admin user created: ${JSON.stringify(result, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('user-creation-result').innerHTML = 
+                    `<div class="error">❌ Error creating admin user: ${error.message}</div>`;
+            }
+        }
+
+        async function createTestUser() {
+            try {
+                const response = await fetch(`${API_BASE}/management-users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'testuser',
+                        role: 'Administration',
+                        password: 'test123',
+                        status: 'Active'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('user-creation-result').innerHTML += 
+                    `<div class="success">✅ Test user created: ${JSON.stringify(result, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('user-creation-result').innerHTML += 
+                    `<div class="error">❌ Error creating test user: ${error.message}</div>`;
+            }
+        }
+
+        async function checkUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/management-users`);
+                const users = await response.json();
+                document.getElementById('user-creation-result').innerHTML = 
+                    `<div class="success">✅ Existing users: ${JSON.stringify(users, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('user-creation-result').innerHTML = 
+                    `<div class="error">❌ Error fetching users: ${error.message}</div>`;
+            }
+        }
+
+        async function testAdminLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('login-test-result').innerHTML = 
+                        `<div class="success">✅ Admin login successful! Permissions: ${result.permissions.length} total</div>
+                         <pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    document.getElementById('login-test-result').innerHTML = 
+                        `<div class="error">❌ Admin login failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('login-test-result').innerHTML = 
+                    `<div class="error">❌ Admin login error: ${error.message}</div>`;
+            }
+        }
+
+        async function testLimitedLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'testuser',
+                        password: 'test123'
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('login-test-result').innerHTML += 
+                        `<div class="success">✅ Limited user login successful! Permissions: ${result.permissions.length} total</div>
+                         <pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    document.getElementById('login-test-result').innerHTML += 
+                        `<div class="error">❌ Limited user login failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('login-test-result').innerHTML += 
+                    `<div class="error">❌ Limited user login error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check users on load
+        window.onload = function() {
+            setTimeout(checkUsers, 1000);
+        };
+    </script>
+</body>
+</html>

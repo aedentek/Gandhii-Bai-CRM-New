@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🧪 Live Permission System Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .allowed { color: green; font-weight: bold; }
+        .denied { color: red; font-weight: bold; }
+        .admin { background-color: #e8f5e8; }
+        .limited { background-color: #fff3e0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Live Permission System Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Set Up Test Users</h2>
+        <button onclick="setLimitedUser()">Set Limited User (Administration)</button>
+        <button onclick="setAdminUser()">Set Admin User (Admin)</button>
+        <button onclick="getCurrentUser()">Show Current User</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Test Permission Logic</h2>
+        <button onclick="testPermissions()">Run Permission Tests</button>
+        <div id="permission-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Live Application Test</h2>
+        <p><strong>After setting a user above, open the main application:</strong></p>
+        <a href="http://localhost:8080" target="_blank" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">🚀 Open Main CRM Application</a>
+        <p><em>Check the sidebar - it should show different menu items based on permissions!</em></p>
+    </div>
+
+    <div id="current-user"></div>
+    
+    <script>
+        // Permission logic (copied from utils/permissions.ts)
+        const PAGE_PERMISSIONS_MAP = {
+            '/dashboard': 'Dashboard',
+            '/patients/add': 'Add Patient',
+            '/patients/list': 'Patient List', 
+            '/patients/test-report-amount': 'Test Report Amount',
+            '/patients/attendance': 'Patient Attendance',
+            '/patients/medical-records': 'Medical Record',
+            '/patients/history': 'Patient History',
+            '/patients/call-records': 'Call Records',
+            '/patients/payment-fees': 'Payment Fees',
+            '/patients/deleted': 'Deleted Patients',
+            '/management/add-staff': 'Add Staff',
+            '/management/staff-category': 'Staff Category',
+            '/management/staff': 'Staff List',
+            '/management/attendance': 'Staff Attendance',
+            '/management/salary-payment': 'Salary Payment',
+            '/management/deleted-staff': 'Deleted Staff',
+            '/settings': 'Settings'
+        };
+
+        function hasPagePermission(userPermissions, pageHref, userRole) {
+            // Admin users have access to all pages by default
+            if (userRole === 'admin' || userRole === 'Admin') {
+                return true;
+            }
+            
+            const requiredPermission = PAGE_PERMISSIONS_MAP[pageHref];
+            if (!requiredPermission) {
+                return true;
+            }
+            
+            return userPermissions.includes(requiredPermission);
+        }
+
+        function setLimitedUser() {
+            const limitedUser = {
+                name: 'Administration Test User',
+                role: 'Administration', 
+                email: 'admin-test@healthcare.com',
+                permissions: ['Dashboard', 'Patient List'] // Only these two permissions
+            };
+            
+            localStorage.setItem('healthcare_user', JSON.stringify(limitedUser));
+            getCurrentUser();
+            alert('✅ Limited user set! Now open the main application to see restricted sidebar.');
+        }
+
+        function setAdminUser() {
+            const adminUser = {
+                name: 'Super Admin',
+                role: 'Admin', 
+                email: 'superadmin@healthcare.com',
+                permissions: ['all'] // Admin should bypass permission checks anyway
+            };
+            
+            localStorage.setItem('healthcare_user', JSON.stringify(adminUser));
+            getCurrentUser();
+            alert('✅ Admin user set! Now open the main application to see full sidebar.');
+        }
+
+        function getCurrentUser() {
+            const userData = localStorage.getItem('healthcare_user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                document.getElementById('current-user').innerHTML = 
+                    '<div class="test-section"><h3>Current User:</h3><pre>' + 
+                    JSON.stringify(user, null, 2) + '</pre></div>';
+            } else {
+                document.getElementById('current-user').innerHTML = 
+                    '<div class="test-section"><h3>❌ No user logged in</h3></div>';
+            }
+        }
+
+        function testPermissions() {
+            const userData = localStorage.getItem('healthcare_user');
+            if (!userData) {
+                document.getElementById('permission-results').innerHTML = 
+                    '<p style="color: red;">❌ Please set a user first!</p>';
+                return;
+            }
+
+            const user = JSON.parse(userData);
+            const testPages = [
+                '/dashboard',
+                '/patients/list', 
+                '/patients/add',
+                '/management/staff',
+                '/management/add-staff',
+                '/settings'
+            ];
+
+            let results = `<h3>🧪 Permission Test Results for: ${user.role}</h3>`;
+            results += user.role === 'Admin' ? '<div class="admin">' : '<div class="limited">';
+            
+            testPages.forEach(page => {
+                const hasAccess = hasPagePermission(user.permissions, page, user.role);
+                const status = hasAccess ? '<span class="allowed">✅ ALLOWED</span>' : '<span class="denied">❌ DENIED</span>';
+                results += `<p><strong>${page}</strong>: ${status}</p>`;
+            });
+            
+            results += '</div>';
+            
+            if (user.role === 'Admin') {
+                results += '<p><strong>🎯 Admin Result: ALL pages should be ALLOWED (admin override working!)</strong></p>';
+            } else {
+                results += '<p><strong>🎯 Limited Result: Only Dashboard and Patient List should be ALLOWED</strong></p>';
+            }
+
+            document.getElementById('permission-results').innerHTML = results;
+        }
+
+        // Initialize
+        getCurrentUser();
+    </script>
+</body>
+</html>

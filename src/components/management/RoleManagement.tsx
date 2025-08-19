@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import { getAllPermissions, getPermissionsByCategory } from '@/utils/permissions';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
@@ -60,23 +61,33 @@ interface Role {
   createdAt?: string;
 }
 
-const permissions = [
-  'Dashboard Access',
-  'Patient Management',
-  'Staff Management',
-  'Medicine Management',
-  'Reports Access',
-  'Settings Access',
-  'User Management',
-  'Role Management',
-  'Backup & Restore',
-  'System Configuration'
-];
+// Get permissions from the centralized system
+const allPermissions = getAllPermissions();
+const permissionsByCategory = getPermissionsByCategory();
 
 const RoleManagement: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
+  const [roleTemplates, setRoleTemplates] = useState<{id: string, name: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Fetch role templates for dropdown
+  React.useEffect(() => {
+    const fetchRoleTemplates = async () => {
+      try {
+        const res = await fetch('http://localhost:4000/api/roles');
+        const data = await res.json();
+        const templates = data.map((role: any) => ({
+          id: role.id.toString(),
+          name: role.name
+        }));
+        setRoleTemplates(templates);
+      } catch (e) {
+        console.error('Error fetching role templates:', e);
+      }
+    };
+    fetchRoleTemplates();
+  }, []);
 
   React.useEffect(() => {
     (async () => {
@@ -189,10 +200,10 @@ const RoleManagement: React.FC = () => {
   };
 
   const handleAddRole = async () => {
-    if (!formData.name.trim()) {
+    if (!formData.name) {
       toast({
         title: "Error",
-        description: "Please enter a role name",
+        description: "Please select a role name",
         variant: "destructive",
       });
       return;
@@ -235,10 +246,10 @@ const RoleManagement: React.FC = () => {
   };
 
   const handleUpdateRole = async () => {
-    if (!editingRole || !formData.name.trim()) {
+    if (!editingRole || !formData.name) {
       toast({
         title: "Error",
-        description: "Please enter a role name",
+        description: "Please select a role name",
         variant: "destructive",
       });
       return;
@@ -426,7 +437,7 @@ const RoleManagement: React.FC = () => {
                 <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management page</h1>
                 {/* <p className="text-sm text-gray-600 mt-1">Create and manage user roles with permissions</p> */}
               </div>
             </div>
@@ -500,7 +511,7 @@ const RoleManagement: React.FC = () => {
                 <Lock className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
               </div>
               <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{permissions.length}</div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-900">{allPermissions.length}</div>
                 <div className="text-xs text-gray-600">Available Permissions</div>
               </div>
             </div>
@@ -713,14 +724,18 @@ const RoleManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="roleName" className="text-sm font-medium text-gray-700">Role Name *</Label>
-                  <Input
-                    id="roleName"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Enter role name"
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
+                  <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
+                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Select role name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roleTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.name}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="roleStatus" className="text-sm font-medium text-gray-700">Status</Label>
@@ -749,15 +764,22 @@ const RoleManagement: React.FC = () => {
               
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Permissions</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                  {permissions.map((permission) => (
-                    <div key={permission} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`add-${permission}`}
-                        checked={formData.permissions.includes(permission)}
-                        onCheckedChange={(checked) => handlePermissionChange(permission, checked as boolean)}
-                      />
-                      <Label htmlFor={`add-${permission}`} className="text-sm">{permission}</Label>
+                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4">
+                  {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
+                    <div key={category} className="space-y-2">
+                      <h4 className="font-medium text-gray-800 text-sm border-b pb-1">{category}</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                        {categoryPermissions.map((permission) => (
+                          <div key={permission.name} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`add-${permission.name}`}
+                              checked={formData.permissions.includes(permission.id)}
+                              onCheckedChange={(checked) => handlePermissionChange(permission.id, checked as boolean)}
+                            />
+                            <Label htmlFor={`add-${permission.name}`} className="text-sm">{permission.name}</Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -896,14 +918,18 @@ const RoleManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editRoleName" className="text-sm font-medium text-gray-700">Role Name *</Label>
-                  <Input
-                    id="editRoleName"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Enter role name"
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
+                  <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
+                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Select role name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roleTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.name}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editRoleStatus" className="text-sm font-medium text-gray-700">Status</Label>
@@ -932,15 +958,22 @@ const RoleManagement: React.FC = () => {
               
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Permissions</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                  {permissions.map((permission) => (
-                    <div key={permission} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-${permission}`}
-                        checked={formData.permissions.includes(permission)}
-                        onCheckedChange={(checked) => handlePermissionChange(permission, checked as boolean)}
-                      />
-                      <Label htmlFor={`edit-${permission}`} className="text-sm">{permission}</Label>
+                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4">
+                  {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
+                    <div key={category} className="space-y-2">
+                      <h4 className="font-medium text-gray-800 text-sm border-b pb-1">{category}</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                        {categoryPermissions.map((permission) => (
+                          <div key={permission.name} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${permission.name}`}
+                              checked={formData.permissions.includes(permission.id)}
+                              onCheckedChange={(checked) => handlePermissionChange(permission.id, checked as boolean)}
+                            />
+                            <Label htmlFor={`edit-${permission.name}`} className="text-sm">{permission.name}</Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

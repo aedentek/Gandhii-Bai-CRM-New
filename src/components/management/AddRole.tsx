@@ -9,8 +9,7 @@ import '../../styles/modern-settings.css';
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   if (error) {
-    return <div                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
->Error: {error.message}</div>;
+    return <div className="p-4 text-red-600">Error: {error.message}</div>;
   }
   return (
     <React.Suspense fallback={<div className="p-4">Loading...</div>}>
@@ -69,10 +68,24 @@ const AddRole: React.FC = () => {
       if (refreshKey > 0) console.log('Refreshing data...');
       try {
         const res = await fetch('http://localhost:4000/api/roles');
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         const data = await res.json();
-        setRoles(data);
+        
+        // Ensure all roles have proper structure
+        const sanitizedRoles = (Array.isArray(data) ? data : []).map(role => ({
+          ...role,
+          status: role.status || 'active',
+          name: role.name || '',
+          description: role.description || '',
+          createdAt: role.createdAt || new Date().toISOString()
+        }));
+        
+        setRoles(sanitizedRoles);
       } catch (e) {
-        // Optionally show error
+        console.error('Error fetching roles:', e);
+        setRoles([]); // Set empty array on error
       } finally {
         setLoading(false);
       }
@@ -288,7 +301,7 @@ const AddRole: React.FC = () => {
         index + 1,
         `"${role.name}"`,
         `"${role.description || '-'}"`,
-        role.status.charAt(0).toUpperCase() + role.status.slice(1),
+        role.status ? role.status.charAt(0).toUpperCase() + role.status.slice(1) : 'Unknown',
         formatDateDDMMYYYY(role.createdAt),
       ]);
       
@@ -533,7 +546,7 @@ const AddRole: React.FC = () => {
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm max-w-xs truncate">{role.description || '-'}</TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
                       <Badge variant={getStatusColor(role.status)}>
-                        {role.status.charAt(0).toUpperCase() + role.status.slice(1)}
+                        {role.status ? role.status.charAt(0).toUpperCase() + role.status.slice(1) : 'Unknown'}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{formatDateDDMMYYYY(role.createdAt)}</TableCell>
@@ -768,7 +781,7 @@ const AddRole: React.FC = () => {
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="font-medium text-gray-700">Status:</span>
                     <Badge variant={getStatusColor(viewRole.status)}>
-                      {viewRole.status.charAt(0).toUpperCase() + viewRole.status.slice(1)}
+                      {viewRole.status ? viewRole.status.charAt(0).toUpperCase() + viewRole.status.slice(1) : 'Unknown'}
                     </Badge>
                   </div>
                   

@@ -39,9 +39,10 @@ import {
   TestTube
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getUserPermissions, hasPagePermission, filterMenuItemsByPermissions } from '@/utils/permissions';
 
 interface ModernSidebarProps {
-  user: { name: string; role: string; email?: string };
+  user: { name: string; role: string; email?: string; permissions?: string[] };
   onLogout: () => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
@@ -50,7 +51,15 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const location = useLocation();
+
+  // Get user permissions on component mount
+  useEffect(() => {
+    const permissionData = getUserPermissions();
+    const permissions = user.permissions || permissionData.permissions;
+    setUserPermissions(permissions);
+  }, [user]);
 
   // Function to handle collapse toggle
   const handleCollapseToggle = () => {
@@ -147,9 +156,9 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
       title: 'User Role',
       icon: Shield,
       submenu: [
+  { title: 'Administration', href: '/administration', icon: Users },
         { title: 'Add Role', href: '/management/user-role/add', icon: Plus },
-        { title: 'Role Management', href: '/management/user-role/roles', icon: Shield },
-        { title: 'Role Access', href: '/management/user-role/access', icon: Shield },
+  { title: 'Role Management', href: '/management/user-role/roles', icon: Shield },
       ]
     },
     {
@@ -168,26 +177,32 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
     }
   ];
 
+  // Filter menu items based on user permissions
+  const filteredMenuItems = filterMenuItemsByPermissions(menuItems, userPermissions, user.role);
+
   const isActive = (href: string) => location.pathname === href;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* User Profile Section */}
       <div className="p-6 border-b border-slate-200">
-        <div className="flex items-center space-x-3">
+        <div className={cn(
+          "flex items-center",
+          isCollapsed ? "justify-center" : "space-x-3"
+        )}>
           <Avatar className="h-12 w-12 ring-2 ring-white shadow-lg">
             <AvatarImage src="/api/placeholder/48/48" />
             <AvatarFallback className="bg-blue-600 text-white text-lg font-semibold">
-              {user.name.split(' ').map(n => n[0]).join('')}
+              {user.role.split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <h3 className="text-white font-semibold text-lg truncate">
-                {user.name}
+                {user.role}
               </h3>
               <p className="text-blue-100 text-sm truncate">
-                {user.email || `${user.role} User`}
+                {user.email || user.name}
               </p>
             </div>
           )}
@@ -197,7 +212,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
       {/* Navigation Menu */}
       <nav className="flex-1 px-4 py-6 overflow-y-auto scrollbar-hide">
         <ul className="space-y-2">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const active = item.href ? isActive(item.href) : false;
             const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -210,20 +225,20 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                   <button
                     onClick={() => setOpenMenu(isSubmenuOpen ? null : item.title)}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative w-full text-left",
+                      "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group relative w-full text-left",
                       isSubmenuOpen 
                         ? "bg-white/20 text-white shadow-lg" 
                         : "text-blue-100 hover:bg-white/10 hover:text-white"
                     )}
                   >
                     <Icon className={cn(
-                      "h-5 w-5 transition-colors",
+                      "h-5 w-5 flex-shrink-0 transition-colors mr-3",
                       isSubmenuOpen ? "text-white" : "text-blue-200 group-hover:text-white"
-                    )} />
+                    )} strokeWidth={1.5} />
                     
                     {!isCollapsed && (
                       <>
-                        <span className="font-medium flex-1">{item.title}</span>
+                        <span className="font-medium flex-1 ml-0">{item.title}</span>
                         <ChevronDown className={cn(
                           "h-4 w-4 transition-transform duration-200",
                           isSubmenuOpen ? "rotate-180" : ""
@@ -235,25 +250,27 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
+                      "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
                       active 
                         ? "bg-white/20 text-white shadow-lg" 
                         : "text-blue-100 hover:bg-white/10 hover:text-white"
                     )}
                   >
                     <Icon className={cn(
-                      "h-5 w-5 transition-colors",
+                      "h-5 w-5 flex-shrink-0 transition-colors mr-3",
                       active ? "text-white" : "text-blue-200 group-hover:text-white"
-                    )} />
+                    )} strokeWidth={1.5} />
                     
                     {!isCollapsed && (
                       <>
-                        <span className="font-medium flex-1">{item.title}</span>
+                        <span className="font-medium flex-1 ml-0">{item.title}</span>
                         {item.badge && (
                           <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
                             {item.badge}
                           </span>
                         )}
+                        {/* Invisible placeholder for chevron to match dropdown items */}
+                        <div className="h-4 w-4" />
                       </>
                     )}
                     
@@ -315,7 +332,10 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
           onClick={handleCollapseToggle}
           variant="ghost"
           size="sm"
-          className="w-full text-blue-100 hover:text-white hover:bg-white/10"
+          className={cn(
+            "text-blue-100 hover:text-white hover:bg-white/10",
+            isCollapsed ? "w-12 h-10 p-0 justify-center" : "w-full"
+          )}
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {!isCollapsed && <span className="ml-2">Collapse</span>}
@@ -327,7 +347,10 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         <Button
           onClick={onLogout}
           variant="ghost"
-          className="w-full text-blue-100 hover:text-white hover:bg-red-500/20 justify-start"
+          className={cn(
+            "text-blue-100 hover:text-white hover:bg-red-500/20",
+            isCollapsed ? "w-12 h-10 p-0 justify-center" : "w-full justify-start"
+          )}
         >
           <LogOut className="h-4 w-4" />
           {!isCollapsed && <span className="ml-2">Logout</span>}

@@ -92,5 +92,102 @@ router.delete('/management-users/:id', async (req, res) => {
   }
 });
 
+// Get role permissions for a specific role name
+router.get('/role-permissions/:roleName', async (req, res) => {
+  try {
+    const { roleName } = req.params;
+    const [rows] = await db.query('SELECT permissions FROM roles WHERE name = ? AND status = ?', [roleName, 'active']);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+    
+    const permissions = rows[0].permissions ? JSON.parse(rows[0].permissions) : [];
+    res.json({ role: roleName, permissions });
+  } catch (err) {
+    console.error('Error fetching role permissions:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// User login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    console.log('✅ Login attempt for:', username);
+    
+    // Find user in management_users table
+    const [userRows] = await db.query(
+      'SELECT id, username, user_role, user_status FROM management_users WHERE username = ? AND user_password = ? AND user_status = ?',
+      [username, password, 'Active']
+    );
+    
+    if (userRows.length === 0) {
+      console.log('❌ Login failed: Invalid credentials for', username);
+      return res.status(401).json({ error: 'Invalid credentials or inactive account' });
+    }
+    
+    const user = userRows[0];
+    console.log('✅ User found:', user.username, 'Role:', user.user_role);
+    
+    // Get role permissions
+    const [roleRows] = await db.query(
+      'SELECT permissions FROM roles WHERE name = ? AND status = ?', 
+      [user.user_role, 'active']
+    );
+    
+    let permissions = [];
+    if (roleRows.length > 0 && roleRows[0].permissions) {
+      try {
+        permissions = JSON.parse(roleRows[0].permissions);
+      } catch (parseErr) {
+        console.log('❌ Error parsing permissions:', parseErr);
+        permissions = [];
+      }
+    }
+    
+    // Admin users get all permissions automatically
+    if (user.user_role && (
+      user.user_role.toLowerCase() === 'admin' || 
+      user.user_role.toLowerCase() === 'administrator' ||
+      user.user_role.toLowerCase() === 'super admin'
+    )) {
+      // Get all available page permissions
+      const ALL_PAGE_PERMISSIONS = [
+        'dashboard', 'add-patient', 'patient-list', 'test-report-amount', 'patient-attendance',
+        'medical-records', 'patient-history', 'call-records', 'payment-fees', 'deleted-patients',
+        'add-staff', 'staff-category', 'staff-list', 'staff-attendance', 'salary-payment', 'deleted-staff',
+        'add-doctor', 'doctor-role', 'doctor-list', 'doctor-attendance', 'doctor-salary', 'deleted-doctors',
+        'add-medicine', 'medicine-categories', 'medicine-suppliers', 'medicine-stock', 'medicine-accounts',
+        'add-grocery', 'grocery-categories', 'grocery-suppliers', 'grocery-stock', 'grocery-accounts',
+        'add-products', 'general-categories', 'general-suppliers', 'general-stock', 'general-accounts',
+        'administration', 'add-role', 'role-management', 'add-lead-category', 'leads-list', 'settings'
+      ];
+      permissions = ALL_PAGE_PERMISSIONS;
+      console.log('✅ Admin user - granted all permissions:', permissions.length);
+    }
+    
+    const loginResponse = {
+      id: user.id,
+      name: user.username,
+      role: user.user_role,
+      email: user.username.includes('@') ? user.username : `${user.username}@healthcare.com`,
+      permissions: permissions,
+      status: user.user_status
+    };
+    
+    console.log('✅ User logged in successfully:', user.username, 'Role:', user.user_role, 'Permissions:', permissions.length);
+    res.json(loginResponse);
+    
+  } catch (err) {
+    console.error('❌ Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;

@@ -11,7 +11,7 @@ import logo from '@/assets/healthcare-logo.png';
 import { loadWebsiteSettings, settingsAPI, rolesAPI, usersAPI } from '@/utils/api';
 
 interface LoginPageProps {
-  onLogin: (user: { email: string; role: string; name: string }) => void;
+  onLogin: (user: { email: string; role: string; name: string; permissions: string[] }) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
@@ -97,58 +97,54 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
-      const registeredUsers = await usersAPI.getAll();
-      const userByEmail = registeredUsers.find((user: any) => user.username === email);
-      if (!userByEmail) {
-        toast({
-          title: "Email Not Found",
-          description: `No user found with email: ${email}.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      const userStatus = userByEmail.user_status || userByEmail.status;
-      if (userStatus !== 'Active') {
-        toast({
-          title: "Account Inactive",
-          description: `Your account status is: ${userStatus}. Please contact administrator.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      const userPassword = userByEmail.user_password || userByEmail.password;
-      if (userPassword !== password) {
-        toast({
-          title: "Wrong Password",
-          description: `Password does not match.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      // Extract name from username
-      const username = userByEmail.username.split('@')[0];
-      const formattedName = username
-        .split('.')
-        .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-      onLogin({
-        email: userByEmail.username,
-        role: userByEmail.user_role || userByEmail.role || '',
-        name: formattedName
+      // Use the new login endpoint that connects to the database
+      const loginResponse = await fetch(`http://localhost:4000/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password
+        })
       });
+      
+      const loginData = await loginResponse.json();
+      
+      if (!loginResponse.ok) {
+        toast({
+          title: "Login Failed",
+          description: loginData.error || "Invalid credentials",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Login successful - data includes user info and permissions from database
+      console.log('✅ Database login successful:', loginData);
+      
+      onLogin({
+        email: loginData.email,
+        role: loginData.role,
+        name: loginData.name,
+        permissions: loginData.permissions || []
+      });
+      
       toast({
         title: "Welcome!",
-        description: `Logged in as ${formattedName}`,
+        description: `Logged in as ${loginData.name} (${loginData.role})`,
       });
+      
       navigate('/dashboard', { replace: true });
+      
     } catch (error) {
+      console.error('❌ Login error:', error);
       toast({
         title: "Connection Error",
-        description: `Failed to connect to server: ${error}. Make sure backend is running on port 4000.`,
+        description: `Failed to connect to server. Make sure backend is running on port 4000.`,
         variant: "destructive",
       });
     } finally {

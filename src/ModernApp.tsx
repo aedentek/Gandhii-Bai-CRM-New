@@ -55,7 +55,8 @@ import LeadsList from '@/components/leads/LeadsList';
 // Import User Role Management components
 import AddRole from '@/components/management/AddRole';
 import RoleManagement from '@/components/management/RoleManagement';
-import RoleAccess from '@/components/management/RoleAccess';
+
+import Administration from '@/components/Administration/Administration';
 
 import { cn } from '@/lib/utils';
 import { loadWebsiteSettings } from '@/utils/api';
@@ -185,7 +186,6 @@ function ModernApp() {
                     {/* User Role Management Routes */}
                     <Route path="/management/user-role/add" element={<AddRole />} />
                     <Route path="/management/user-role/roles" element={<RoleManagement />} />
-                    <Route path="/management/user-role/access" element={<RoleAccess />} />
                     
                     {/* Medicine Management Routes */}
                     <Route path="/medicine/add" element={<MedicineManagement />} />
@@ -214,6 +214,9 @@ function ModernApp() {
                     
                     {/* Settings */}
                     <Route path="/settings" element={<Settings />} />
+                    
+                    {/* Administration */}
+                    <Route path="/administration" element={<Administration />} />
                       
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

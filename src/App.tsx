@@ -14,7 +14,6 @@ import DoctorAttendance from '@/components/management/DoctorAttendance';
 import DoctorSalary from '@/components/management/DoctorSalary';
 import AddRole from '@/components/management/AddRole';
 import AddUser from '@/components/management/AddUser';
-import RoleAccess from '@/components/management/RoleAccess';
 import UserManagement from '@/components/management/UserManagement';
 import AddLeadCategory from '@/components/leads/AddLeadCategory';
 import LeadsList from '@/components/leads/LeadsList';
@@ -31,7 +30,7 @@ import { Toaster } from '@/components/ui/toaster';
 import LoginPage from '@/components/auth/LoginPage';
 import ForgotPasswordPage from '@/components/auth/ForgotPasswordPage';
 import Dashboard from '@/components/dashboard/Dashboard';
-import Sidebar from '@/components/layout/ModernSidebar';
+import ModernSidebar from '@/components/layout/ModernSidebar';
 import AddPatient from '@/components/patients/AddPatient';
 import PatientList from '@/components/patients/PatientList';
 import DeletedPatients from '@/components/patients/DeletedPatients';
@@ -67,7 +66,7 @@ import { loadWebsiteSettings } from '@/utils/api';
 const queryClient = new QueryClient();
 
 function App() {
-  const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; email: string; permissions: string[] } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -110,14 +109,15 @@ function App() {
       const devUser = {
         name: 'Dr. Admin',
         role: 'Admin', 
-        email: 'admin@healthcare.com'
+        email: 'admin@healthcare.com',
+        permissions: ['all'] // Admin has all permissions
       };
       setUser(devUser);
       localStorage.setItem('healthcare_user', JSON.stringify(devUser));
     }
   }, []);
 
-  const handleLogin = (userData: { name: string; role: string; email: string }) => {
+  const handleLogin = (userData: { name: string; role: string; email: string; permissions: string[] }) => {
     setUser(userData);
     localStorage.setItem('healthcare_user', JSON.stringify(userData));
   };
@@ -156,7 +156,7 @@ function App() {
             <LoginPage onLogin={handleLogin} />
           ) : (
             <div className="min-h-screen bg-background border-r-4 sm:border-r-6 md:border-r-8 border-gray-300 pr-4 sm:pr-6 md:pr-8">
-              <Sidebar 
+              <ModernSidebar 
                 user={user} 
                 onLogout={handleLogout} 
                 onCollapsedChange={setSidebarCollapsed}
@@ -202,7 +202,6 @@ function App() {
                   <Route path="/management/salary-payment" element={<SalaryPayment />} />
                   <Route path="/management/user-role/add" element={<AddRole />} />
                   <Route path="/management/user-role/roles" element={<UserManagement />} />
-                  <Route path="/management/user-role/access" element={<RoleAccess />} />
                   
                   {/* Medicine Management Routes */}
                   <Route path="/medicine/add" element={<MedicineManagement />} />
