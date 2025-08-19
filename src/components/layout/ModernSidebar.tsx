@@ -28,6 +28,8 @@ import {
   FolderOpen,
   ShoppingBag,
   Trash2,
+  DollarSign,
+  IndianRupee,
   Shield,
   FileText,
   Home,
@@ -104,6 +106,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Staff List', href: '/management/staff', icon: UserCog },
         { title: 'Staff Attendance', href: '/management/attendance', icon: ClipboardCheck },
         { title: 'Salary Payment', href: '/management/salary-payment', icon: CreditCard },
+        { title: 'Staff Advance', href: '/management/staff-advance', icon: IndianRupee },
         { title: 'Deleted Staff', href: '/management/deleted-staff', icon: Trash2 },
       ]
     },
@@ -116,6 +119,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Doctor List', href: '/management/doctors', icon: Stethoscope },
         { title: 'Doctor Attendance', href: '/management/doctor-attendance', icon: Calendar },
         { title: 'Doctor Salary', href: '/management/doctor-salary', icon: CreditCard },
+        { title: 'Doctor Advance', href: '/management/doctor-advance', icon: DollarSign },
         { title: 'Deleted Doctors', href: '/management/deleted-doctors', icon: Trash2 },
       ]
     },

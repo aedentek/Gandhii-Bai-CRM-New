@@ -29,6 +29,8 @@ import AddDoctor from '@/components/management/AddDoctor';
 import DoctorCategory from '@/components/management/DoctorCategory';
 import DoctorAttendance from '@/components/management/DoctorAttendance';
 import DoctorSalary from '@/components/management/DoctorSalary';
+import DoctorAdvance from '@/pages/management/doctor-advance';
+import StaffAdvance from '@/pages/management/staff-advance';
 import DeletedDoctors from '@/components/management/DeletedDoctors';
 import MedicineManagement from '@/components/management/MedicineManagement';
 import SupplierManagement from '@/components/management/SupplierManagement';
@@ -181,6 +183,8 @@ function ModernApp() {
                     <Route path="/management/doctor-category" element={<DoctorCategory />} />
                     <Route path="/management/doctor-attendance" element={<DoctorAttendance />} />
                     <Route path="/management/doctor-salary" element={<DoctorSalary />} />
+                    <Route path="/management/doctor-advance" element={<DoctorAdvance />} />
+                    <Route path="/management/staff-advance" element={<StaffAdvance />} />
                     <Route path="/management/deleted-doctors" element={<DeletedDoctors />} />
                     
                     {/* User Role Management Routes */}

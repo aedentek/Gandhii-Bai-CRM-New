@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Doctor Advance Routing</title>
+</head>
+<body>
+    <h1>Doctor Advance Routing Test</h1>
+    
+    <div>
+        <h2>Testing direct navigation:</h2>
+        <p>
+            <a href="http://localhost:8080/management/doctor-advance" target="_blank">
+                Click here to go to Doctor Advance page
+            </a>
+        </p>
+        
+        <p>
+            <button onclick="testRouting()">Test Routing with JavaScript</button>
+        </p>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        function testRouting() {
+            const testUrl = 'http://localhost:8080/management/doctor-advance';
+            
+            // Test if the URL is accessible
+            fetch(testUrl, { method: 'HEAD' })
+                .then(response => {
+                    document.getElementById('result').innerHTML = `
+                        <h3>Routing Test Results:</h3>
+                        <p>Status: ${response.status}</p>
+                        <p>URL: ${testUrl}</p>
+                        <p>Result: ${response.ok ? 'SUCCESS - Route exists' : 'FAILED - Route issue'}</p>
+                    `;
+                    
+                    if (response.ok) {
+                        window.open(testUrl, '_blank');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('result').innerHTML = `
+                        <h3>Routing Test Results:</h3>
+                        <p>Error: ${error.message}</p>
+                        <p>This might be due to CORS, but route should still work in browser</p>
+                    `;
+                    window.open(testUrl, '_blank');
+                });
+        }
+    </script>
+</body>
+</html>

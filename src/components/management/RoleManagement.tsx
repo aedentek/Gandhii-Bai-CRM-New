@@ -6,6 +6,7 @@ import { getAllPermissions, getPermissionsByCategory } from '@/utils/permissions
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
+import '@/styles/global-crm-design.css';
 
 // Simple error boundary for dialog content
 function DialogErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -32,7 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Shield, Users, Settings, UserCheck, UserCog, Plus, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Lock } from 'lucide-react';
+import { Search, Shield, Users, Settings, UserCheck, UserCog, Plus, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Lock, TrendingUp, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Helper to format any date string as DD/MM/YYYY
@@ -427,18 +428,20 @@ const RoleManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management page</h1>
-                {/* <p className="text-sm text-gray-600 mt-1">Create and manage user roles with permissions</p> */}
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management</h1>
+                <p className="modern-page-subtitle">
+                  Create and manage user roles with permissions
+                </p>
               </div>
             </div>
           
@@ -451,7 +454,7 @@ const RoleManagement: React.FC = () => {
                   handleGlobalRefresh();
                 }}
                 disabled={loading}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
@@ -459,83 +462,127 @@ const RoleManagement: React.FC = () => {
               </Button>
               
               <Button 
-                onClick={() => setAddModalOpen(true)}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Add Role</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
-              
-              <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
                 <span className="sm:hidden">CSV</span>
+              </Button>
+              
+              <Button 
+                onClick={() => setAddModalOpen(true)}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Role</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
+        <div className="crm-stats-grid">
+          {/* Total Roles Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Roles</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{totalRoles}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">System roles</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Shield className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{totalRoles}</div>
-                <div className="text-xs text-gray-600">Total Roles</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+          {/* Active Roles Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Roles</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{activeRoles}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Operational</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{activeRoles}</div>
-                <div className="text-xs text-gray-600">Active Roles</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Lock className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
+          {/* Available Permissions Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Permissions</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{allPermissions.length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Lock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{allPermissions.length}</div>
-                <div className="text-xs text-gray-600">Available Permissions</div>
+            </CardContent>
+          </Card>
+          
+          {/* Last Updated Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Last Updated</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Today</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search roles by name or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full sm:w-40">
+            
+            <div className="w-full sm:w-auto min-w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -548,30 +595,56 @@ const RoleManagement: React.FC = () => {
         </div>
 
         {/* Roles Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Shield className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Role Management ({filteredRoles.length})</span>
-              <span className="sm:hidden">Roles ({filteredRoles.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Shield className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Role Management ({filteredRoles.length})</span>
+              <span className="crm-table-title-text-mobile">Roles ({filteredRoles.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
         
+        {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
-          <Table className="w-full">
+          <Table className="w-full min-w-[800px]">
             <TableHeader>
               <TableRow className="bg-gray-50 border-b">
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">S No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Role Name</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Description</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Permissions</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>S No</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Role Name</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Description</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Permissions</span>
+                  </div>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Status</span>
                   </div>
                 </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Created Date</TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Created Date</span>
+                  </div>
+                </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -596,60 +669,57 @@ const RoleManagement: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(role)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                          className="crm-action-btn crm-action-btn-view"
                           title="View Details"
                         >
-                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Eye className="h-3 w-3" />
+                          <span className="sr-only">View</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(role)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="crm-action-btn crm-action-btn-edit"
                           title="Edit Role"
                         >
-                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Pencil className="h-3 w-3" />
+                          <span className="sr-only">Edit</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteRole(role.id, role.name)}
-                          disabled={submitting}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 rounded-lg"
+                          className="crm-action-btn crm-action-btn-delete"
                           title="Delete Role"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Trash2 className="h-3 w-3" />
+                          <span className="sr-only">Delete</span>
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
-              {paginatedRoles.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No roles found
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>
-        
+          </CardContent>
+        </Card>
+
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-50/50 border-t">
-            <div className="text-sm text-gray-600">
+          <div className="crm-pagination-container">
+            <div className="crm-pagination-info">
               Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredRoles.length)} of {filteredRoles.length} roles
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="crm-pagination-controls">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
                 disabled={page === 1}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Previous
               </Button>
@@ -673,7 +743,7 @@ const RoleManagement: React.FC = () => {
                       variant={page === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setPage(pageNum)}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-number"
                     >
                       {pageNum}
                     </Button>
@@ -686,14 +756,13 @@ const RoleManagement: React.FC = () => {
                 size="sm"
                 onClick={handleNextPage}
                 disabled={page === totalPages}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Next
               </Button>
             </div>
           </div>
         )}
-      </div>
 
         {/* Add Role Dialog */}
         <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>

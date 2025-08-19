@@ -12,6 +12,7 @@ import StaffCategoryManagement from './components/management/StaffCategory';
 import AddStaff from './components/management/AddStaff';
 import DoctorAttendance from '@/components/management/DoctorAttendance';
 import DoctorSalary from '@/components/management/DoctorSalary';
+import DoctorAdvance from '@/pages/management/doctor-advance';
 import AddRole from '@/components/management/AddRole';
 import AddUser from '@/components/management/AddUser';
 import UserManagement from '@/components/management/UserManagement';
@@ -190,6 +191,7 @@ function App() {
                   <Route path="/management/deleted-doctors" element={<DeletedDoctors />} />
                   <Route path="/management/doctor-attendance" element={<DoctorAttendance />} />
                   <Route path="/management/doctor-salary" element={<DoctorSalary />} />
+                  <Route path="/management/doctor-advance" element={<DoctorAdvance />} />
                   <Route path="/management/doctor-category" element={<DoctorCategory />} />
               <Route path="/management/staff-category" element={<StaffCategoryManagement />} />
               <Route path="/management/add-staff" element={<AddStaff />} />

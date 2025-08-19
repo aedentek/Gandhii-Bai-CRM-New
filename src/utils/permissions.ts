@@ -28,6 +28,7 @@ export const PAGE_PERMISSIONS_MAP: {[key: string]: {route: string, name: string,
   'doctor-list': { route: '/management/doctors', name: 'Doctor List', category: 'Doctor Management' },
   'doctor-attendance': { route: '/management/doctor-attendance', name: 'Doctor Attendance', category: 'Doctor Management' },
   'doctor-salary': { route: '/management/doctor-salary', name: 'Doctor Salary', category: 'Doctor Management' },
+  'doctor-advance': { route: '/management/doctor-advance', name: 'Doctor Advance', category: 'Doctor Management' },
   'deleted-doctors': { route: '/management/deleted-doctors', name: 'Deleted Doctors', category: 'Doctor Management' },
   
   // Medicine Management
