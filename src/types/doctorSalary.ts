@@ -7,6 +7,10 @@ export interface DoctorSalary {
   department?: string;
   salary: string | number;
   total_paid: string | number;
+  monthly_paid?: string | number;  // New field for monthly-specific payments
+  balance?: string | number;       // New field calculated on backend
+  advance_amount?: string | number;
+  carry_forward?: string | number;
   payment_mode?: 'Cash' | 'Bank Transfer' | 'UPI' | 'Cheque';
   status: string;
   photo?: string;

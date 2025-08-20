@@ -308,17 +308,9 @@ router.delete('/doctor-categories/:id', async (req, res) => {
 // Get all doctors (excluding deleted)
 router.get('/doctors', async (req, res) => {
   try {
-    console.log('🩺 Fetching all doctors from database...');
     const [rows] = await db.query('SELECT * FROM doctors WHERE deleted_at IS NULL ORDER BY created_at DESC');
-    console.log(`✅ Found ${rows.length} doctors`);
-    console.log('🩺 Sending response as array:', Array.isArray(rows));
-    console.log('🩺 First doctor sample:', rows[0] ? rows[0].name : 'none');
-    
-    // Ensure we always send an array
-    const doctorsArray = Array.isArray(rows) ? rows : [];
-    res.json(doctorsArray);
+    res.json(rows);
   } catch (err) {
-    console.error('❌ Error fetching doctors:', err);
     res.status(500).json({ error: err.message });
   }
 });

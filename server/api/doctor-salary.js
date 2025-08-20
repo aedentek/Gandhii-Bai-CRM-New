@@ -1,5 +1,6 @@
 import express from 'express';
 import db from '../db/config.js';
+// import DoctorSalaryAutoSave from '../services/doctorSalaryAutoSave.js';
 
 const router = express.Router();
 
@@ -10,60 +11,316 @@ router.get('/doctor-salaries', async (req, res) => {
   try {
     console.log('📋 Getting all doctors with salary information...');
     
-    // Get current month and year for advance calculation
+    // Get month and year from query params or use current date
+    const queryMonth = req.query.month ? parseInt(req.query.month) : null;
+    const queryYear = req.query.year ? parseInt(req.query.year) : null;
+    
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
-    const currentYear = currentDate.getFullYear();
+    const targetMonth = queryMonth || (currentDate.getMonth() + 1);
+    const targetYear = queryYear || currentDate.getFullYear();
     
-    // Get doctors with total paid from doctor_salary_settlements and advance data
-    const query = `
-      SELECT 
-        d.id,
-        d.name,
-        d.email,
-        d.phone,
-        d.specialization,
-        d.salary,
-        COALESCE(
-          (SELECT SUM(amount) 
-           FROM doctor_salary_settlements 
-           WHERE doctor_id = d.id
-          ), 0) as total_paid,
-        COALESCE(
-          (SELECT SUM(amount) 
-           FROM doctor_advance 
-           WHERE doctor_id = d.id 
-           AND MONTH(date) = ? 
-           AND YEAR(date) = ?
-          ), 0) as advance_amount,
-        COALESCE(
-          (SELECT carry_forward_from_previous 
-           FROM doctor_monthly_salary 
-           WHERE doctor_id = d.id 
-           AND month = ? 
-           AND year = ?
-           ORDER BY id DESC 
-           LIMIT 1
-          ), 0) as carry_forward,
-        d.payment_mode,
-        d.status,
-        d.photo,
-        d.join_date
-      FROM doctors d
-      WHERE d.status = 'Active'
-      ORDER BY d.name ASC
-    `;
+    // Calculate previous month for carry forward
+    let prevMonth = targetMonth - 1;
+    let prevYear = targetYear;
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear = prevYear - 1;
+    }
     
-    const [rows] = await db.execute(query, [
-      currentMonth, currentYear,  // for current month advance
-      currentMonth, currentYear   // for carry forward from current month's record
-    ]);
+    console.log('📅 Target Month/Year for calculations:', { targetMonth, targetYear, fromQuery: !!queryMonth });
+    console.log('📅 Previous Month/Year for carry forward:', { prevMonth, prevYear });
     
-    console.log(`✅ Found ${rows.length} doctors with salary info`);
-    res.json({
-      success: true,
-      data: rows
-    });
+    // First, check if there's any data for the selected month in doctor_monthly_salary
+    try {
+      const [monthlyData] = await db.execute(
+        'SELECT COUNT(*) as count FROM doctor_monthly_salary WHERE month = ? AND year = ?',
+        [targetMonth, targetYear]
+      );
+      
+      const hasMonthlyData = monthlyData[0].count > 0;
+      console.log(`📅 Monthly data check for ${targetMonth}/${targetYear}: ${hasMonthlyData ? 'Found' : 'Not found'}`);
+      
+      if (hasMonthlyData) {
+        // Use doctor_monthly_salary data for the specific month
+        const monthlyQuery = `
+          SELECT 
+            d.id,
+            d.name,
+            d.email,
+            d.phone,
+            d.specialization,
+            COALESCE(dms.base_salary, d.salary, 0) as salary,
+            COALESCE(dms.paid_amount, 0) as monthly_paid,
+            COALESCE(
+              (SELECT SUM(amount) 
+               FROM doctor_salary_settlements 
+               WHERE doctor_id = d.id 
+               AND MONTH(payment_date) = ? 
+               AND YEAR(payment_date) = ?
+              ), 0) as total_paid,
+            COALESCE(dms.advance_amount, 0) as advance_amount,
+            COALESCE(
+              (SELECT carry_forward_to_next 
+               FROM doctor_monthly_salary 
+               WHERE doctor_id = d.id 
+               AND month = ? AND year = ?
+               LIMIT 1
+              ), 0) as carry_forward,
+            COALESCE(dms.net_balance, 
+              (COALESCE(dms.base_salary, d.salary, 0) + 
+                COALESCE(
+                  (SELECT carry_forward_to_next 
+                   FROM doctor_monthly_salary 
+                   WHERE doctor_id = d.id 
+                   AND month = ? AND year = ?
+                   LIMIT 1
+                  ), 0)
+              ) - 
+              (COALESCE(dms.paid_amount, 0) + COALESCE(dms.advance_amount, 0))
+            ) as balance,
+            d.payment_mode,
+            CASE 
+              WHEN dms.net_balance > 0 THEN 'Pending'
+              WHEN dms.net_balance = 0 THEN 'Paid'
+              ELSE 'Overpaid'
+            END as status,
+            d.photo,
+            d.join_date
+          FROM doctors d
+          LEFT JOIN doctor_monthly_salary dms ON d.id = dms.doctor_id 
+            AND dms.month = ? AND dms.year = ?
+          WHERE d.status = 'Active' AND dms.id IS NOT NULL
+          ORDER BY d.name ASC
+        `;
+        
+        const [monthlyRows] = await db.execute(monthlyQuery, [
+          targetMonth, targetYear,  // for total_paid calculation
+          prevMonth, prevYear,      // for carry_forward calculation
+          prevMonth, prevYear,      // for balance carry_forward calculation  
+          targetMonth, targetYear   // for the main JOIN
+        ]);
+        
+        console.log(`✅ Found ${monthlyRows.length} doctors with monthly salary data`);
+        
+        // Debug carry forward values
+        monthlyRows.forEach(doctor => {
+          if (doctor.carry_forward > 0) {
+            console.log(`💰 ${doctor.name} (${doctor.id}): Carry forward from ${prevMonth}/${prevYear} = ₹${doctor.carry_forward}`);
+          }
+        });
+        
+        res.json({
+          success: true,
+          data: monthlyRows
+        });
+        
+      } else {
+        // Fallback to doctors table when no monthly data exists
+        console.log('⚠️ No monthly salary data found, falling back to doctors table with month-specific advances');
+        
+        // First check if doctor_advance table exists
+        const [advanceTableCheck] = await db.execute('SHOW TABLES LIKE "doctor_advance"');
+        const advanceTableExists = advanceTableCheck.length > 0;
+        
+        let fallbackQuery;
+        let queryParams = [];
+        
+        if (advanceTableExists) {
+          // Include month-specific advances from doctor_advance table and actual payments
+          fallbackQuery = `
+            SELECT 
+              d.id,
+              d.name,
+              d.email,
+              d.phone,
+              d.specialization,
+              COALESCE(d.salary, 0) as salary,
+              0 as monthly_paid,
+              COALESCE(
+                (SELECT SUM(amount) 
+                 FROM doctor_salary_settlements 
+                 WHERE doctor_id = d.id 
+                 AND MONTH(payment_date) = ? 
+                 AND YEAR(payment_date) = ?
+                ), 0) as total_paid,
+              COALESCE(
+                (SELECT SUM(amount) 
+                 FROM doctor_advance 
+                 WHERE doctor_id = d.id 
+                 AND MONTH(date) = ? 
+                 AND YEAR(date) = ?
+                ), 0) as advance_amount,
+              COALESCE(
+                (SELECT carry_forward_to_next 
+                 FROM doctor_monthly_salary 
+                 WHERE doctor_id = d.id 
+                 AND month = ? AND year = ?
+                 LIMIT 1
+                ), 0) as carry_forward,
+              (COALESCE(d.salary, 0) + 
+                COALESCE(
+                  (SELECT carry_forward_to_next 
+                   FROM doctor_monthly_salary 
+                   WHERE doctor_id = d.id 
+                   AND month = ? AND year = ?
+                   LIMIT 1
+                  ), 0) - 
+                COALESCE(
+                  (SELECT SUM(amount) 
+                   FROM doctor_salary_settlements 
+                   WHERE doctor_id = d.id 
+                   AND MONTH(payment_date) = ? 
+                   AND YEAR(payment_date) = ?
+                  ), 0) -
+                COALESCE(
+                  (SELECT SUM(amount) 
+                   FROM doctor_advance 
+                   WHERE doctor_id = d.id 
+                   AND MONTH(date) = ? 
+                   AND YEAR(date) = ?
+                  ), 0)
+              ) as balance,
+              d.payment_mode,
+              d.status,
+              d.photo,
+              d.join_date
+            FROM doctors d
+            WHERE d.status = 'Active'
+            AND (
+              d.join_date IS NULL 
+              OR d.join_date <= LAST_DAY(CONCAT(?, '-', LPAD(?, 2, '0'), '-01'))
+            )
+            ORDER BY d.name ASC
+          `;
+          queryParams = [
+            targetMonth, targetYear,  // for this month's payments
+            targetMonth, targetYear,  // for this month's advances
+            prevMonth, prevYear,      // for carry_forward calculation
+            prevMonth, prevYear,      // for balance carry_forward calculation
+            targetMonth, targetYear,  // for balance payments calculation
+            targetMonth, targetYear,  // for balance advances calculation
+            targetYear, targetMonth   // for join date filtering
+          ];
+        } else {
+          // No advance table, use basic query with actual payments
+          fallbackQuery = `
+            SELECT 
+              d.id,
+              d.name,
+              d.email,
+              d.phone,
+              d.specialization,
+              COALESCE(d.salary, 0) as salary,
+              0 as monthly_paid,
+              COALESCE(
+                (SELECT SUM(amount) 
+                 FROM doctor_salary_settlements 
+                 WHERE doctor_id = d.id 
+                 AND MONTH(payment_date) = ? 
+                 AND YEAR(payment_date) = ?
+                ), 0) as total_paid,
+              0 as advance_amount,
+              COALESCE(
+                (SELECT carry_forward_to_next 
+                 FROM doctor_monthly_salary 
+                 WHERE doctor_id = d.id 
+                 AND month = ? AND year = ?
+                 LIMIT 1
+                ), 0) as carry_forward,
+              (COALESCE(d.salary, 0) + 
+                COALESCE(
+                  (SELECT carry_forward_to_next 
+                   FROM doctor_monthly_salary 
+                   WHERE doctor_id = d.id 
+                   AND month = ? AND year = ?
+                   LIMIT 1
+                  ), 0) - 
+                COALESCE(
+                  (SELECT SUM(amount) 
+                   FROM doctor_salary_settlements 
+                   WHERE doctor_id = d.id 
+                   AND MONTH(payment_date) = ? 
+                   AND YEAR(payment_date) = ?
+                  ), 0)
+              ) as balance,
+              d.payment_mode,
+              d.status,
+              d.photo,
+              d.join_date
+            FROM doctors d
+            WHERE d.status = 'Active'
+            AND (
+              d.join_date IS NULL 
+              OR d.join_date <= LAST_DAY(CONCAT(?, '-', LPAD(?, 2, '0'), '-01'))
+            )
+            ORDER BY d.name ASC
+          `;
+          queryParams = [
+            targetMonth, targetYear,  // for this month's payments
+            prevMonth, prevYear,      // for carry_forward calculation
+            prevMonth, prevYear,      // for balance carry_forward calculation
+            targetMonth, targetYear,  // for balance payments calculation
+            targetYear, targetMonth   // for join date filtering
+          ];
+        }
+        
+        const [doctorRows] = await db.execute(fallbackQuery, queryParams);
+        console.log(`✅ Fallback successful: Found ${doctorRows.length} doctors from doctors table with ${advanceTableExists ? 'month-specific' : 'no'} advances`);
+        
+        // Debug carry forward values for fallback
+        doctorRows.forEach(doctor => {
+          if (doctor.carry_forward > 0) {
+            console.log(`💰 ${doctor.name} (${doctor.id}): Carry forward from ${prevMonth}/${prevYear} = ₹${doctor.carry_forward} (FALLBACK)`);
+          }
+        });
+        
+        res.json({
+          success: true,
+          data: doctorRows,
+          fallback: true,
+          message: `No salary data found for ${targetMonth}/${targetYear}. Showing basic doctor information with month-specific advances.`
+        });
+      }
+      
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError);
+      // Ultimate fallback - try to get just basic doctor data if there are any DB issues
+      try {
+        const fallbackQuery = `
+          SELECT 
+            id,
+            name,
+            email,
+            phone,
+            specialization,
+            COALESCE(salary, 0) as salary,
+            0 as monthly_paid,
+            0 as total_paid,
+            0 as advance_amount,
+            0 as carry_forward,
+            COALESCE(salary, 0) as balance,
+            payment_mode,
+            status,
+            photo,
+            join_date
+          FROM doctors
+          WHERE status = 'Active'
+          ORDER BY name ASC
+        `;
+        
+        const [rows] = await db.execute(fallbackQuery);
+        
+        console.log(`✅ Ultimate fallback successful: Found ${rows.length} doctors`);
+        res.json({
+          success: true,
+          data: rows,
+          fallback: true,
+          message: 'Database error occurred. Showing basic doctor information.'
+        });
+      } catch (fallbackError) {
+        throw fallbackError;
+      }
+    }
     
   } catch (error) {
     console.error('❌ Error fetching doctor salaries:', error);
@@ -390,6 +647,7 @@ router.post('/save-monthly-records', async (req, res) => {
     }
     
     console.log(`💾 Saving monthly records for ${month}/${year} with automatic carry forward...`);
+    console.log(`🗓️ Applying join date filter: only doctors who joined before or during ${month}/${year}`);
     
     await connection.beginTransaction();
 
@@ -402,11 +660,13 @@ router.post('/save-monthly-records', async (req, res) => {
     }
     
     // Get all active doctors with their current salary data
+    // Apply same filtering logic as the display: only doctors who joined before or during selected month
     const doctorsQuery = `
       SELECT 
         d.id,
         d.name,
         d.salary,
+        d.join_date,
         COALESCE(
           (SELECT SUM(amount) 
            FROM doctor_salary_settlements 
@@ -432,16 +692,24 @@ router.post('/save-monthly-records', async (req, res) => {
         d.join_date
       FROM doctors d
       WHERE d.status = 'Active'
+      AND (
+        d.join_date IS NULL 
+        OR d.join_date <= LAST_DAY(CONCAT(?, '-', LPAD(?, 2, '0'), '-01'))
+      )
       ORDER BY d.id ASC
     `;
-    
+
     const [doctors] = await connection.execute(doctorsQuery, [
       month, year,  // for this month's payments
       month, year,  // for this month's advance
-      prevMonth, prevYear  // for carry forward from previous month
+      prevMonth, prevYear,  // for carry forward from previous month
+      year, month   // for join date filtering
     ]);
 
-    let recordsProcessed = 0;
+    console.log(`👨‍⚕️ Found ${doctors.length} eligible doctors for ${month}/${year} (after join date filtering):`);
+    doctors.forEach(doctor => {
+      console.log(`  - ${doctor.name} (${doctor.id}): joined ${doctor.join_date || 'N/A'}`);
+    });    let recordsProcessed = 0;
     let carryForwardUpdates = 0;
     
     for (const doctor of doctors) {
@@ -514,6 +782,170 @@ router.post('/save-monthly-records', async (req, res) => {
     
     console.log(`✅ Successfully processed ${recordsProcessed} monthly records for ${month}/${year}`);
     console.log(`💰 ${carryForwardUpdates} doctors have balances carrying forward to next month`);
+    
+    res.json({
+      success: true,
+      message: `Monthly records saved successfully for ${month}/${year}`,
+      recordsProcessed,
+      carryForwardUpdates,
+      month,
+      year
+    });
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('❌ Error saving monthly records:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save monthly records',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// Alias route for frontend compatibility - same as save-monthly-records above
+router.post('/doctor-salaries/save-monthly-records', async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    const { month, year } = req.body;
+    
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: 'Month and year are required'
+      });
+    }
+    
+    console.log(`💾 Saving monthly records for ${month}/${year} with automatic carry forward...`);
+    console.log(`🗓️ Applying join date filter: only doctors who joined before or during ${month}/${year}`);
+    
+    await connection.beginTransaction();
+
+    // First, let's get the previous month and year for carry forward
+    let prevMonth = parseInt(month) - 1;
+    let prevYear = parseInt(year);
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear = prevYear - 1;
+    }
+    
+    // Get all active doctors with their current salary data
+    // Apply same filtering logic as the display: only doctors who joined before or during selected month
+    const doctorsQuery = `
+      SELECT 
+        d.id,
+        d.name,
+        d.salary,
+        COALESCE(
+          (SELECT SUM(amount) 
+           FROM doctor_salary_settlements 
+           WHERE doctor_id = d.id 
+           AND MONTH(created_at) = ? 
+           AND YEAR(created_at) = ?
+          ), 0) as total_paid_this_month,
+        COALESCE(
+          (SELECT SUM(amount) 
+           FROM doctor_advance 
+           WHERE doctor_id = d.id 
+           AND MONTH(date) = ? 
+           AND YEAR(date) = ?
+          ), 0) as advance_amount,
+        COALESCE(
+          (SELECT carry_forward_to_next 
+           FROM doctor_monthly_salary 
+           WHERE doctor_id = d.id 
+           AND month = ? 
+           AND year = ?
+           LIMIT 1
+          ), 0) as carry_forward_from_previous,
+        d.join_date
+      FROM doctors d
+      WHERE d.status = 'Active'
+      AND (
+        d.join_date IS NULL 
+        OR d.join_date <= LAST_DAY(CONCAT(?, '-', LPAD(?, 2, '0'), '-01'))
+      )
+      ORDER BY d.id ASC
+    `;
+    
+    const [doctors] = await connection.execute(doctorsQuery, [
+      month, year,  // for this month's payments
+      month, year,  // for this month's advance
+      prevMonth, prevYear,  // for carry forward from previous month
+      year, month   // for join date filtering
+    ]);
+
+    let recordsProcessed = 0;
+    let carryForwardUpdates = 0;
+    
+    for (const doctor of doctors) {
+      // Calculate balance for this month
+      const salary = parseFloat(doctor.salary) || 0;
+      const totalPaid = parseFloat(doctor.total_paid_this_month) || 0;
+      const advanceAmount = parseFloat(doctor.advance_amount) || 0;
+      const carryForwardFromPrevious = parseFloat(doctor.carry_forward_from_previous) || 0;
+      
+      // Net Balance = Salary + Carry Forward From Previous - Total Paid - Advance
+      const netBalance = salary + carryForwardFromPrevious - totalPaid - advanceAmount;
+      
+      // Carry forward to next month (only positive balances)
+      const carryForwardToNext = netBalance > 0 ? netBalance : 0;
+      
+      // Check if record already exists for this doctor, month, year
+      const [existingRecord] = await connection.execute(`
+        SELECT id FROM doctor_monthly_salary 
+        WHERE doctor_id = ? AND month = ? AND year = ?
+      `, [doctor.id, month, year]);
+      
+      const recordData = [
+        salary,  // base_salary
+        totalPaid,  // paid_amount
+        advanceAmount,  // advance_amount
+        carryForwardFromPrevious,  // carry_forward_from_previous
+        carryForwardToNext,  // carry_forward_to_next
+        netBalance,  // net_balance
+        netBalance <= 0 ? 'Paid' : 'Pending',  // status
+        doctor.id,
+        month,
+        year
+      ];
+      
+      if (existingRecord.length > 0) {
+        // Update existing record
+        await connection.execute(`
+          UPDATE doctor_monthly_salary 
+          SET base_salary = ?, paid_amount = ?, advance_amount = ?, 
+              carry_forward_from_previous = ?, carry_forward_to_next = ?, 
+              net_balance = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE doctor_id = ? AND month = ? AND year = ?
+        `, recordData);
+        
+        console.log(`📝 Updated record for ${doctor.name}: Balance = ₹${netBalance}`);
+      } else {
+        // Insert new record
+        await connection.execute(`
+          INSERT INTO doctor_monthly_salary 
+          (doctor_id, month, year, base_salary, paid_amount, advance_amount, 
+           carry_forward_from_previous, carry_forward_to_next, net_balance, 
+           status, auto_created, created_at, updated_at) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `, [doctor.id, month, year, ...recordData.slice(0, 7)]);
+        
+        console.log(`✅ Created record for ${doctor.name}: Balance = ₹${netBalance}`);
+      }
+      
+      if (carryForwardToNext > 0) {
+        carryForwardUpdates++;
+      }
+      
+      recordsProcessed++;
+    }
+    
+    await connection.commit();
+    console.log(`✅ Monthly records saved successfully for ${month}/${year}`);
     
     res.json({
       success: true,
@@ -672,6 +1104,217 @@ router.post('/process-carry-forward', async (req, res) => {
     });
   } finally {
     connection.release();
+  }
+});
+
+// Manual Save Monthly Salaries endpoint
+router.post('/doctor-salaries/save-monthly', async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: 'Month and year are required'
+      });
+    }
+
+    console.log(`📅 Manual save request for ${month}/${year}`);
+    
+    // Get all active doctors with their current data
+    const [doctors] = await db.execute(`
+      SELECT 
+        d.id as doctor_id,
+        d.name,
+        d.salary as base_salary,
+        COALESCE(
+          (SELECT SUM(amount) 
+           FROM doctor_advance 
+           WHERE doctor_id = d.id 
+           AND MONTH(date) = ? 
+           AND YEAR(date) = ?
+          ), 0) as advance_amount,
+        COALESCE(
+          (SELECT SUM(amount) 
+           FROM doctor_salary_settlements 
+           WHERE doctor_id = d.id
+           AND MONTH(payment_date) = ?
+           AND YEAR(payment_date) = ?
+          ), 0) as paid_amount,
+        -- Carry forward from previous month (if exists)
+        COALESCE(
+          (SELECT net_balance 
+           FROM doctor_monthly_salary 
+           WHERE doctor_id = d.id 
+           AND ((month = ? - 1 AND year = ?) OR (month = 12 AND year = ? - 1 AND ? = 1))
+           ORDER BY id DESC 
+           LIMIT 1
+          ), 0) as carry_forward_from_previous
+      FROM doctors d
+      WHERE d.status = 'Active'
+      ORDER BY d.id ASC
+    `, [month, year, month, year, month, year, year, month]);
+    
+    console.log(`📋 Found ${doctors.length} active doctors to save for ${month}/${year}`);
+    
+    if (doctors.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active doctors found'
+      });
+    }
+    
+    let savedCount = 0;
+    
+    for (const doctor of doctors) {
+      // Check if record already exists
+      const [existing] = await db.execute(`
+        SELECT id FROM doctor_monthly_salary 
+        WHERE doctor_id = ? AND month = ? AND year = ?
+      `, [doctor.doctor_id, month, year]);
+      
+      const totalOwed = parseFloat(doctor.base_salary) + parseFloat(doctor.carry_forward_from_previous);
+      const totalPaid = parseFloat(doctor.paid_amount) + parseFloat(doctor.advance_amount);
+      const netBalance = totalOwed - totalPaid;
+      const carryForwardToNext = netBalance > 0 ? netBalance : 0;
+      
+      if (existing.length > 0) {
+        // Update existing record
+        await db.execute(`
+          UPDATE doctor_monthly_salary 
+          SET 
+            base_salary = ?,
+            advance_amount = ?,
+            paid_amount = ?,
+            carry_forward_from_previous = ?,
+            carry_forward_to_next = ?,
+            net_balance = ?,
+            status = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE doctor_id = ? AND month = ? AND year = ?
+        `, [
+          doctor.base_salary,
+          doctor.advance_amount,
+          doctor.paid_amount,
+          doctor.carry_forward_from_previous,
+          carryForwardToNext,
+          netBalance,
+          netBalance === 0 ? 'Paid' : 'Pending',
+          doctor.doctor_id,
+          month,
+          year
+        ]);
+        
+        console.log(`📝 Updated monthly record for ${doctor.name} (${doctor.doctor_id})`);
+      } else {
+        // Insert new record
+        await db.execute(`
+          INSERT INTO doctor_monthly_salary (
+            doctor_id, month, year, base_salary, advance_amount, paid_amount,
+            carry_forward_from_previous, carry_forward_to_next, net_balance, status,
+            auto_created, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `, [
+          doctor.doctor_id,
+          month,
+          year,
+          doctor.base_salary,
+          doctor.advance_amount,
+          doctor.paid_amount,
+          doctor.carry_forward_from_previous,
+          carryForwardToNext,
+          netBalance,
+          netBalance === 0 ? 'Paid' : 'Pending'
+        ]);
+        
+        console.log(`✅ Created monthly record for ${doctor.name} (${doctor.doctor_id}): Balance = ₹${netBalance}`);
+      }
+      
+      savedCount++;
+    }
+    
+    const result = {
+      success: true,
+      message: `Successfully saved monthly records for ${savedCount} doctors for ${month}/${year}`,
+      data: {
+        month,
+        year,
+        doctorCount: savedCount
+      }
+    };
+    
+    console.log(`✅ Manual save completed: ${result.message}`);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ Error in manual save:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save monthly doctor salaries',
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint to create sample data for DOC001
+router.post('/doctor-salaries/create-test-data', async (req, res) => {
+  try {
+    console.log('🧪 Creating test salary data for DOC001...');
+    
+    // Get DOC001 doctor ID
+    const [doctors] = await db.execute('SELECT id FROM doctors WHERE doctor_id = "DOC001"');
+    
+    if (doctors.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'DOC001 doctor not found'
+      });
+    }
+    
+    const doctorId = doctors[0].id;
+    
+    // Clear existing records
+    await db.execute('DELETE FROM doctor_monthly_salary WHERE doctor_id = ?', [doctorId]);
+    
+    // Create test records
+    const records = [
+      [doctorId, 1, 2025, 13000.00, 0.00, 2000.00, 1],
+      [doctorId, 2, 2025, 16500.00, 2000.00, 1500.00, 1],
+      [doctorId, 3, 2025, 15500.00, 1500.00, 1000.00, 1],
+      [doctorId, 4, 2025, 16000.00, 1000.00, 0.00, 1],
+      [doctorId, 5, 2025, 15000.00, 0.00, 500.00, 1],
+      [doctorId, 6, 2025, 15500.00, 500.00, 0.00, 1],
+      [doctorId, 7, 2025, 15000.00, 0.00, 800.00, 1],
+      [doctorId, 8, 2025, 14200.00, 800.00, 0.00, 1]
+    ];
+    
+    const insertQuery = `
+      INSERT INTO doctor_monthly_salary 
+      (doctor_id, month, year, total_paid, carry_forward_from_previous, carry_forward_to_next, auto_created, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+    
+    let createdCount = 0;
+    for (const record of records) {
+      const result = await db.execute(insertQuery, record);
+      createdCount++;
+    }
+    
+    console.log(`✅ Created ${createdCount} test salary records for DOC001`);
+    
+    res.json({
+      success: true,
+      message: `Created ${createdCount} monthly salary records for DOC001`,
+      records: createdCount
+    });
+    
+  } catch (error) {
+    console.error('❌ Error creating test data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create test data',
+      error: error.message
+    });
   }
 });
 

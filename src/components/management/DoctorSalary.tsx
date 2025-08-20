@@ -22,7 +22,10 @@ import {
   Eye,
   Edit,
   Save,
-  X
+  X,
+  Trash2,
+  Stethoscope,
+  CalendarDays
 } from 'lucide-react';
 import { DatabaseService } from '@/services/databaseService';
 import { DoctorSalaryAPI } from '@/services/doctorSalaryAPI';
@@ -64,9 +67,19 @@ const DoctorSalary: React.FC = () => {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Payment modal month/year filter states (similar to Doctor Advance)
-  const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(new Date().getFullYear());
+  // Delete confirmation dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
+  const [deletingPayment, setDeletingPayment] = useState(false);
+
+  // Payment modal month/year filter states (initialized with current filter values)
+  const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(() => {
+    const currentFilterMonth = new Date().getMonth(); // 0-based
+    return currentFilterMonth + 1; // Convert to 1-based
+  });
+  const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(() => {
+    return new Date().getFullYear();
+  });
   const [filteredPaymentHistory, setFilteredPaymentHistory] = useState<any[]>([]);
   const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0);
 
@@ -136,6 +149,21 @@ const DoctorSalary: React.FC = () => {
     fetchDoctors();
   }, []);
 
+  // Refetch doctors when filter month/year changes
+  useEffect(() => {
+    if (filterMonth !== null && filterYear !== null) {
+      fetchDoctors();
+    }
+  }, [filterMonth, filterYear]);
+
+  // Sync payment modal month/year with header filter month/year
+  useEffect(() => {
+    const selectedMonth = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1; // filterMonth is 0-based, convert to 1-based
+    const selectedYear = filterYear !== null ? filterYear : new Date().getFullYear();
+    setPaymentModalSelectedMonth(selectedMonth);
+    setPaymentModalSelectedYear(selectedYear);
+  }, [filterMonth, filterYear]);
+
   // Filter payment history by selected month/year (similar to Doctor Advance)
   useEffect(() => {
     if (paymentHistory.length > 0) {
@@ -178,7 +206,14 @@ const DoctorSalary: React.FC = () => {
       setLoading(true);
       console.log('🩺 Fetching doctors with salary information...');
       console.log('📅 Filter Month/Year:', filterMonth, filterYear);
-      const response = await DoctorSalaryAPI.getAllDoctorsWithSalary();
+      
+      // Pass the selected month and year to the API
+      // filterMonth is 0-based (0-11), but API expects 1-based (1-12)
+      const apiMonth = filterMonth !== null ? filterMonth + 1 : null;
+      const apiYear = filterYear;
+      
+      console.log('📅 API Month/Year:', apiMonth, apiYear);
+      const response = await DoctorSalaryAPI.getAllDoctorsWithSalary(apiMonth, apiYear);
       console.log('🩺 Doctors fetched:', response);
       
       // Debug join_date values
@@ -188,7 +223,8 @@ const DoctorSalary: React.FC = () => {
             id: doctor.id,
             join_date: doctor.join_date,
             join_date_type: typeof doctor.join_date,
-            formatted_date: formatDate(doctor.join_date)
+            formatted_date: formatDate(doctor.join_date),
+            advance_amount: doctor.advance_amount || 0
           });
         });
       }
@@ -346,11 +382,11 @@ const DoctorSalary: React.FC = () => {
       type: 'salary'
     });
     
-    // Set modal month/year to current month/year
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
-    setPaymentModalSelectedMonth(currentMonth);
-    setPaymentModalSelectedYear(currentYear);
+    // Set modal month/year to the selected filter month/year from header
+    const selectedMonth = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1; // filterMonth is 0-based, convert to 1-based
+    const selectedYear = filterYear !== null ? filterYear : new Date().getFullYear();
+    setPaymentModalSelectedMonth(selectedMonth);
+    setPaymentModalSelectedYear(selectedYear);
     
     fetchPaymentHistory(doctor.id);
   };
@@ -419,13 +455,17 @@ const DoctorSalary: React.FC = () => {
     }
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this payment record?')) {
-      return;
-    }
+  const handleDeletePayment = (payment: any) => {
+    setPaymentToDelete(payment);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    if (!paymentToDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:4000/api/doctor-salaries/payment/${paymentId}`, {
+      setDeletingPayment(true);
+      const response = await fetch(`http://localhost:4000/api/doctor-salaries/payment/${paymentToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -441,12 +481,16 @@ const DoctorSalary: React.FC = () => {
           fetchPaymentHistory(selectedDoctor.id);
         }
         fetchDoctors(); // Refresh main doctor data
+        setShowDeleteDialog(false);
+        setPaymentToDelete(null);
       } else {
         toast.error(data.message || 'Failed to delete payment record');
       }
     } catch (error) {
       console.error('Error deleting payment:', error);
       toast.error('Failed to delete payment record');
+    } finally {
+      setDeletingPayment(false);
     }
   };
 
@@ -519,7 +563,8 @@ const DoctorSalary: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* CRM Header */}
         <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+            {/* Title Section */}
             <div className="flex items-center gap-3">
               <div className="crm-header-icon">
                 <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
@@ -530,28 +575,12 @@ const DoctorSalary: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button
-                onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setFilterSelectedMonth(currentMonth);
-                  setFilterSelectedYear(currentYear);
-                  fetchDoctors();
-                }}
-                disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
-              
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <Button
                 onClick={handleSaveMonthlyRecords}
                 disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
               >
                 <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Save Monthly</span>
@@ -561,7 +590,7 @@ const DoctorSalary: React.FC = () => {
               <Button
                 onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 min-w-[120px] sm:min-w-[140px]"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">
@@ -580,11 +609,27 @@ const DoctorSalary: React.FC = () => {
               
               <Button
                 onClick={exportToCSV}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">CSV</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  const currentMonth = new Date().getMonth();
+                  setFilterMonth(currentMonth);
+                  setFilterYear(currentYear);
+                  setFilterSelectedMonth(currentMonth);
+                  setFilterSelectedYear(currentYear);
+                  fetchDoctors();
+                }}
+                disabled={loading}
+                variant="outline"
+                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-2"
+              >
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
@@ -950,7 +995,7 @@ const DoctorSalary: React.FC = () => {
           <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
             <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
               
-              {/* Doctor Information Section - Beautiful Cards */}
+              {/* Doctor Information Section - Beautiful Card Layout */}
               <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
                 <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
                   <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -958,78 +1003,98 @@ const DoctorSalary: React.FC = () => {
                   </div>
                   Doctor Information
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6">
                   
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Users className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                  {/* Full Name Card */}
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <Users className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Full Name</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedDoctor.name}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-blue-700 uppercase tracking-wide">Full Name</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-blue-900 ml-0">{selectedDoctor.name}</p>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-green-600 font-bold text-xs sm:text-sm">ID</span>
+
+                  {/* Doctor ID Card */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-4 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <span className="text-white font-bold text-base sm:text-sm">ID</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Doctor ID</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.id}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-green-700 uppercase tracking-wide">Doctor ID</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-green-900 ml-0">{selectedDoctor.id}</p>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-purple-600 font-bold text-xs sm:text-sm">₹</span>
+
+                  {/* Specialization Card */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-4 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <Stethoscope className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Advance Available</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.advance_amount || 0).toLocaleString('en-IN')}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-purple-700 uppercase tracking-wide">Specialization</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-purple-900 ml-0">{selectedDoctor.specialization || 'Neurology'}</p>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+
+                  {/* Monthly Salary Card */}
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 sm:p-4 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Monthly Salary</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.salary).toLocaleString('en-IN')}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-orange-700 uppercase tracking-wide">Salary</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-orange-900 ml-0">₹{parseNumeric(selectedDoctor.salary).toLocaleString('en-IN')}</p>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+
+                  {/* Advance Available Card */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-4 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <span className="text-white font-bold text-base sm:text-sm">₹</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Paid</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.total_paid).toLocaleString('en-IN')}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-purple-700 uppercase tracking-wide">Advance Available</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-purple-900 ml-0">₹{parseNumeric(selectedDoctor.advance_amount || 0).toLocaleString('en-IN')}</p>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+
+                  {/* Total Paid Card */}
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Balance Due</div>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{(parseNumeric(selectedDoctor.salary) - parseNumeric(selectedDoctor.total_paid)).toLocaleString('en-IN')}</p>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-blue-700 uppercase tracking-wide">Total Paid</p>
                       </div>
                     </div>
+                    <p className="text-xl sm:text-lg font-bold text-blue-900 ml-0">₹{parseNumeric(selectedDoctor.total_paid).toLocaleString('en-IN')}</p>
+                  </div>
+
+                  {/* Balance Due Card */}
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 sm:p-4 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <AlertCircle className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm sm:text-xs font-semibold text-red-700 uppercase tracking-wide">Balance Due</p>
+                      </div>
+                    </div>
+                    <p className="text-xl sm:text-lg font-bold text-red-900 ml-0">₹{(parseNumeric(selectedDoctor.salary) - parseNumeric(selectedDoctor.total_paid)).toLocaleString('en-IN')}</p>
                   </div>
                   
                 </div>
@@ -1174,41 +1239,63 @@ const DoctorSalary: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Calculation Display Section */}
-                    <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-xl border border-green-100 mb-4">
-                      <h4 className="font-bold text-gray-900 mb-3 text-center">
+                    {/* Calculation Display Section - Mobile Optimized */}
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 sm:p-4 rounded-xl border border-green-100 mb-4">
+                      <h4 className="font-bold text-gray-900 mb-4 text-center text-sm sm:text-base">
                         Payment Calculation for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                       </h4>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
                         {/* Monthly Payment Total */}
-                        <div className="bg-white p-3 rounded-lg border border-blue-200 text-center">
-                          <p className="text-sm text-gray-600 mb-1">Monthly Payment</p>
-                          <p className="text-lg font-bold text-blue-600">
+                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-blue-200 text-center">
+                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Monthly Payment</p>
+                          <p className="text-xl sm:text-lg font-bold text-blue-600">
                             ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
                           </p>
                         </div>
                         
                         {/* Advance Amount */}
-                        <div className="bg-white p-3 rounded-lg border border-orange-200 text-center">
-                          <p className="text-sm text-gray-600 mb-1">Advance Amount</p>
-                          <p className="text-lg font-bold text-orange-600">
+                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-orange-200 text-center">
+                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Advance Amount</p>
+                          <p className="text-xl sm:text-lg font-bold text-orange-600">
                             ₹{getAdvanceAmount().toLocaleString('en-IN')}
                           </p>
                         </div>
                         
                         {/* Total Paid */}
-                        <div className="bg-white p-3 rounded-lg border border-green-200 text-center">
-                          <p className="text-sm text-gray-600 mb-1">Total Paid</p>
-                          <p className="text-lg font-bold text-green-600">
+                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-green-200 text-center">
+                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Total Paid</p>
+                          <p className="text-xl sm:text-lg font-bold text-green-600">
                             ₹{calculateTotalPaid().toLocaleString('en-IN')}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Calculation Formula */}
+                      {/* Calculation Formula - Mobile Responsive */}
                       <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                        <div className="flex items-center justify-center gap-2 text-sm">
+                        {/* Mobile Vertical Layout */}
+                        <div className="flex flex-col sm:hidden gap-3 items-center text-base">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">Monthly Payment:</span>
+                            <span className="font-semibold text-blue-600">
+                              ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="text-2xl text-gray-400">+</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">Advance Amount:</span>
+                            <span className="font-semibold text-orange-600">
+                              ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="text-2xl text-gray-400">=</div>
+                          <Badge className="bg-green-100 text-green-800 text-lg px-4 py-2 font-bold">
+                            ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                          </Badge>
+                        </div>
+                        
+                        {/* Desktop Horizontal Layout */}
+                        <div className="hidden sm:flex items-center justify-center gap-2 text-sm">
                           <span className="font-semibold text-blue-600">
                             ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
                           </span>
@@ -1221,7 +1308,8 @@ const DoctorSalary: React.FC = () => {
                             ₹{calculateTotalPaid().toLocaleString('en-IN')}
                           </Badge>
                         </div>
-                        <p className="text-center text-xs text-gray-500 mt-2">
+                        
+                        <p className="text-center text-xs text-gray-500 mt-3 sm:mt-2">
                           Monthly Payment + Advance = Total Paid
                         </p>
                       </div>
@@ -1229,30 +1317,30 @@ const DoctorSalary: React.FC = () => {
                     
                     {/* Payment History Table */}
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
+                      <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
                         <thead>
-                          <tr className="bg-slate-50 border-b">
-                            <th className="text-left p-3 font-medium text-slate-700">S.No</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Date</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Amount (₹)</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Type</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Payment Mode</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Notes</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Created At</th>
-                            <th className="text-left p-3 font-medium text-slate-700">Actions</th>
+                          <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
+                            <th className="px-4 py-3 text-center text-sm font-semibold">S.No</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Date</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Amount (₹)</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Type</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Payment Mode</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Notes</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Created At</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-200">
                           {filteredPaymentHistory.map((payment, index) => (
-                            <tr key={payment.id} className="border-b hover:bg-slate-50">
-                            <td className="p-3 text-slate-700">{index + 1}</td>
-                            <td className="p-3 text-slate-700">
+                            <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-900 text-center">{index + 1}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
                               {new Date(payment.payment_date).toLocaleDateString('en-IN')}
                             </td>
-                            <td className="p-3 text-slate-700 font-medium">
+                            <td className="px-4 py-3 text-sm text-gray-900 font-medium text-center">
                               ₹{parseFloat(payment.payment_amount || 0).toLocaleString('en-IN')}
                             </td>
-                            <td className="p-3">
+                            <td className="px-4 py-3 text-center">
                               <Badge 
                                 variant="outline" 
                                 className={`
@@ -1265,20 +1353,20 @@ const DoctorSalary: React.FC = () => {
                                 {payment.type || 'salary'}
                               </Badge>
                             </td>
-                            <td className="p-3 text-slate-700">{payment.payment_mode || 'Bank Transfer'}</td>
-                            <td className="p-3 text-slate-700">{payment.notes || '-'}</td>
-                            <td className="p-3 text-slate-600 text-sm">
+                            <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.payment_mode || 'Bank Transfer'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.notes || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600 text-center">
                               {new Date(payment.created_at).toLocaleDateString('en-IN')} {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td className="p-3">
+                            <td className="px-4 py-3 text-center">
                               <Button
-                                variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeletePayment(payment.id)}
-                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                variant="outline"
+                                onClick={() => handleDeletePayment(payment)}
+                                className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Delete payment record"
                               >
-                                <X className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
                               </Button>
                             </td>
                           </tr>
@@ -1290,6 +1378,83 @@ const DoctorSalary: React.FC = () => {
                 )}
               </div>
 
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Delete Confirmation Dialog */}
+    {showDeleteDialog && createPortal(
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+        style={{ 
+          zIndex: 10000,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
+      >
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" style={{ zIndex: 10001 }}>
+          <div className="p-6">
+            <div className="text-center pb-4">
+              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Delete Payment Record
+              </h3>
+              <p className="text-sm text-gray-600 mt-2">
+                Are you sure you want to delete this payment record? This action cannot be undone.
+              </p>
+            </div>
+            
+            {paymentToDelete && (
+              <div className="bg-gray-50 rounded-lg p-4 my-4">
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">Payment Details</div>
+                  <div className="text-gray-600">Date: {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</div>
+                  <div className="text-gray-600">Amount: ₹{parseFloat(paymentToDelete.payment_amount || 0).toLocaleString('en-IN')}</div>
+                  <div className="text-gray-600">Type: {paymentToDelete.type || 'salary'}</div>
+                  <div className="text-gray-600">Mode: {paymentToDelete.payment_mode || 'Bank Transfer'}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setPaymentToDelete(null);
+                }}
+                disabled={deletingPayment}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={confirmDeletePayment}
+                disabled={deletingPayment}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deletingPayment ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Payment
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

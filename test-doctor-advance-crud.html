@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Advance API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; }
+        input, textarea { margin: 5px; padding: 8px; width: 200px; border: 1px solid #ddd; border-radius: 3px; }
+        label { display: inline-block; width: 120px; }
+    </style>
+</head>
+<body>
+    <h1>🩺 Doctor Advance API Test</h1>
+    <p><strong>Server:</strong> http://localhost:4000</p>
+
+    <!-- Server Connection Test -->
+    <div class="section">
+        <h2>🔌 Server Connection Test</h2>
+        <button class="btn" onclick="testServerConnection()">Test Server Connection</button>
+        <div id="connection-result" class="result"></div>
+    </div>
+
+    <!-- Get All Doctor Advances -->
+    <div class="section">
+        <h2>📋 Get All Doctor Advances</h2>
+        <button class="btn" onclick="getAllAdvances()">Get All Advances</button>
+        <div id="get-all-result" class="result"></div>
+    </div>
+
+    <!-- Create Doctor Advance -->
+    <div class="section">
+        <h2>➕ Create Doctor Advance</h2>
+        <div>
+            <label>Doctor ID:</label>
+            <input type="text" id="doctor-id" placeholder="DOC001" value="DOC001">
+        </div>
+        <div>
+            <label>Doctor Name:</label>
+            <input type="text" id="doctor-name" placeholder="Dr. John Smith" value="Dr. Sabarish T">
+        </div>
+        <div>
+            <label>Date:</label>
+            <input type="date" id="date" value="">
+        </div>
+        <div>
+            <label>Amount:</label>
+            <input type="number" id="amount" placeholder="5000" value="1500">
+        </div>
+        <div>
+            <label>Reason:</label>
+            <textarea id="reason" placeholder="Reason for advance (optional)">Medical conference expenses</textarea>
+        </div>
+        <button class="btn" onclick="createAdvance()">Create Advance</button>
+        <div id="create-result" class="result"></div>
+    </div>
+
+    <!-- Get Doctor Advances by Doctor ID -->
+    <div class="section">
+        <h2>👨‍⚕️ Get Advances by Doctor ID</h2>
+        <div>
+            <label>Doctor ID:</label>
+            <input type="text" id="search-doctor-id" placeholder="DOC001" value="DOC001">
+        </div>
+        <button class="btn" onclick="getAdvancesByDoctorId()">Get Doctor Advances</button>
+        <div id="doctor-advances-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+
+        // Set current date
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${isSuccess ? 'success' : 'error'}`;
+            element.textContent = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        }
+
+        async function testServerConnection() {
+            try {
+                showResult('connection-result', 'Testing server connection...', true);
+                const response = await fetch(`${API_BASE}/patients`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('connection-result', `✅ Server connected! Status: ${response.status}\nPatients found: ${data.length}`, true);
+                } else {
+                    showResult('connection-result', `❌ Server error: ${response.status} ${response.statusText}`, false);
+                }
+            } catch (error) {
+                showResult('connection-result', `❌ Connection failed: ${error.message}`, false);
+            }
+        }
+
+        async function getAllAdvances() {
+            try {
+                showResult('get-all-result', 'Fetching all doctor advances...', true);
+                const response = await fetch(`${API_BASE}/doctor-advances`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('get-all-result', `✅ Found ${data.data.length} doctor advances:\n${JSON.stringify(data.data, null, 2)}`, true);
+                } else {
+                    showResult('get-all-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('get-all-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        async function createAdvance() {
+            try {
+                const advanceData = {
+                    doctor_id: document.getElementById('doctor-id').value,
+                    doctor_name: document.getElementById('doctor-name').value,
+                    date: document.getElementById('date').value,
+                    amount: parseFloat(document.getElementById('amount').value),
+                    reason: document.getElementById('reason').value
+                };
+
+                if (!advanceData.doctor_id || !advanceData.doctor_name || !advanceData.date || !advanceData.amount) {
+                    showResult('create-result', '❌ Please fill in all required fields', false);
+                    return;
+                }
+
+                showResult('create-result', 'Creating doctor advance...', true);
+                const response = await fetch(`${API_BASE}/doctor-advances`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(advanceData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('create-result', `✅ Advance created successfully!\n${JSON.stringify(data.data, null, 2)}`, true);
+                    // Clear form
+                    document.getElementById('amount').value = '';
+                    document.getElementById('reason').value = '';
+                } else {
+                    showResult('create-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('create-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        async function getAdvancesByDoctorId() {
+            try {
+                const doctorId = document.getElementById('search-doctor-id').value;
+                if (!doctorId) {
+                    showResult('doctor-advances-result', '❌ Please enter a doctor ID', false);
+                    return;
+                }
+
+                showResult('doctor-advances-result', `Fetching advances for doctor ${doctorId}...`, true);
+                const response = await fetch(`${API_BASE}/doctor-advances/doctor/${doctorId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('doctor-advances-result', `✅ Found ${data.data.length} advances for ${doctorId}:\n${JSON.stringify(data.data, null, 2)}`, true);
+                } else {
+                    showResult('doctor-advances-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('doctor-advances-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

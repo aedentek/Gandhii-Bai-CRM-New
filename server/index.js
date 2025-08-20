@@ -22,8 +22,8 @@ import fees from './routes/Fees.js';
 import medicalRecords from './routes/medical-records.js';
 import testReports from './routes/test-reports.js';
 import doctorAdvance from './api/doctor-advance.js';
-import doctorSalary from './api/doctor-salary.js';
 import staffAdvance from './api/staff-advance.js';
+import doctorSalary from './api/doctor-salary.js';
 // import uploads from './routes/uploads.js';
 import dotenv from 'dotenv';
 
@@ -89,11 +89,11 @@ app.use('/api', medicalRecords);
 app.use('/api', fees);
 app.use('/api', testReports);
 app.use('/api', doctorAdvance);
-app.use('/api', doctorSalary);
 app.use('/api', staffAdvance);
+app.use('/api', doctorSalary);
 console.log('🧪 Test Reports middleware registered at /api');
-console.log('💰 Doctor Salary middleware registered at /api');
 console.log('👨‍⚕️ Staff Advance middleware registered at /api');
+console.log('💰 Doctor Salary middleware registered at /api');
 // app.use('/api', uploads);
 
 // Fallback to index.html for SPA (must be after all routes)

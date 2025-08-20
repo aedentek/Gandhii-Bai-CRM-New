@@ -1200,15 +1200,7 @@ export class DatabaseService {
   static async getAllDoctors() {
     const res = await fetch(`${this.apiBaseUrl}/doctors`);
     if (!res.ok) throw new Error('Failed to fetch doctors');
-    const response = await res.json();
-    
-    console.log('🩺 Raw API response:', response);
-    
-    // Handle different response formats - sometimes API returns {value: [], Count: number}
-    const doctors = Array.isArray(response) ? response : (response.value || response.data || []);
-    
-    console.log('🩺 Parsed doctors array:', doctors);
-    console.log('🩺 Number of doctors:', doctors.length);
+    const doctors = await res.json();
     
     // Parse documents and map field names for each doctor
     return doctors.map((doctor: any) => {

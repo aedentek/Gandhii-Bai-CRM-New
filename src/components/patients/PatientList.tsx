@@ -19,22 +19,75 @@ import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '@/styles/global-crm-design.css';
+import '@/styles/global-crm-design.css';
 
-// Import centralized date utilities
-import {
-  parseDate,
-  formatDateForInput,
-  formatDateForBackend,
-  formatDateForDisplay,
-  parseDateFromInput,
-  toSafeBackendDate,
-  toSafeDisplayDate,
-  DATE_CSS_CLASSES
-} from '@/utils/dateUtils';
+// Utility function to create timezone-safe dates
+const createLocalDate = (year: number, month: number, day: number): Date => {
+  return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+};
 
-// Utility function to parse DD-MM-YYYY format strings from backend
-const parseDateFromDDMMYYYY = (dateStr: string): Date | null => {
-  return parseDate(dateStr);
+// Utility function to format date for backend (DD-MM-YYYY)
+const formatDateForBackend = (date: Date | null): string => {
+  if (!date) return '';
+  
+  // Handle Date objects directly
+  if (date instanceof Date && !isNaN(date.getTime())) {
+    const year = date.getFullYear();
+    if (year < 1900 || year > 2100) return '';
+    
+    return format(date, 'dd-MM-yyyy');
+  }
+  
+  return '';
+};
+
+// Utility function to format date for HTML input (YYYY-MM-DD)
+const formatDateForInput = (date: Date | null): string => {
+  if (!date) return '';
+  
+  // Handle both Date objects and date strings
+  let dateObj: Date;
+  if (date instanceof Date) {
+    dateObj = date;
+  } else {
+    dateObj = new Date(date);
+  }
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) return '';
+  
+  // Check if year is reasonable
+  const year = dateObj.getFullYear();
+  if (year < 1900 || year > 2100) return '';
+  
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Utility function to parse HTML input date (YYYY-MM-DD) to local Date
+const parseDateFromInput = (dateString: string): Date | null => {
+  if (!dateString || dateString.trim() === '') return null;
+  
+  try {
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    // Validate the numbers
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    if (year < 1900 || year > 2100) return null;
+    if (month < 1 || month > 12) return null;
+    if (day < 1 || day > 31) return null;
+    
+    const date = createLocalDate(year, month, day);
+    
+    // Double-check the created date is valid
+    if (isNaN(date.getTime())) return null;
+    
+    return date;
+  } catch (error) {
+    console.warn('Error parsing date from input:', dateString, error);
+    return null;
+  }
 };
 
 interface Patient {
@@ -258,6 +311,72 @@ const PatientList: React.FC = () => {
           });
         }
         
+        // Function to parse DD-MM-YYYY format from backend to Date object
+        const parseDateFromDDMMYYYY = (dateStr: any): Date | null => {
+          if (!dateStr) return null; // Return null for empty dates
+          
+          // If it's already a Date object, validate it first
+          if (dateStr instanceof Date) {
+            // Check if the date is valid and has a reasonable year
+            if (isNaN(dateStr.getTime())) return null;
+            const year = dateStr.getFullYear();
+            if (year < 1900 || year > 2100) {
+              // This handles the 1899 default dates from database
+              return null;
+            }
+            return dateStr;
+          }
+          
+          // If it's in DD-MM-YYYY format
+          if (typeof dateStr === 'string' && dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+            const [day, month, year] = dateStr.split('-');
+            const parsedYear = parseInt(year);
+            
+          // Reject clearly invalid years
+          if (parsedYear < 1900 || parsedYear > 2100) {
+            return null;
+          }            
+            return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+          }
+          
+          // If it's in YYYY-MM-DD format, parse safely in local timezone
+          if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const [year, month, day] = dateStr.split('-');
+            const parsedYear = parseInt(year);
+            
+            // Reject clearly invalid years
+            if (parsedYear < 1900 || parsedYear > 2100) {
+              console.warn(`⚠️ Invalid year detected: ${parsedYear}, setting to null`);
+              return null; // Return null instead of fallback date
+            }
+            
+            return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
+          }
+          
+          // Try to parse as regular date but ensure local timezone
+          try {
+            const parsed = new Date(dateStr);
+            if (isNaN(parsed.getTime())) return null;
+            
+            // Check if the parsed year is reasonable
+            const year = parsed.getFullYear();
+            if (year < 1900 || year > 2100) {
+              console.warn(`⚠️ Invalid year detected in parsed date: ${year}, using current date instead`);
+              return new Date(); // Use current date as fallback
+            }
+            
+            // If it seems to be a UTC date, convert to local timezone
+            if (typeof dateStr === 'string' && dateStr.includes('T')) {
+              const localDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+              return localDate;
+            }
+            
+            return parsed;
+          } catch {
+            return null;
+          }
+        };
+        
         // Use the ID directly from backend (already in P0001 format)
         const patientId = p.id && String(p.id).startsWith('P') 
           ? p.id 
@@ -295,7 +414,7 @@ const PatientList: React.FC = () => {
           address: p.address,
           emergencyContact: p.emergencyContact || '',
           medicalHistory: p.medicalHistory || '',
-          admissionDate: parseDate(p.admissionDate), // Parse DD-MM-YYYY format
+          admissionDate: parseDateFromDDMMYYYY(p.admissionDate), // Parse DD-MM-YYYY format
           status: p.status || 'Active',
           attenderName: p.attenderName || '',
           attenderPhone: p.attenderPhone || '',
@@ -310,7 +429,7 @@ const PatientList: React.FC = () => {
           fatherName: p.fatherName || '',
           motherName: p.motherName || '',
           attenderRelationship: p.attenderRelationship || '',
-          dateOfBirth: parseDate(p.dateOfBirth), // Parse DD-MM-YYYY format
+          dateOfBirth: parseDateFromDDMMYYYY(p.dateOfBirth), // Parse DD-MM-YYYY format
           marriageStatus: p.marriageStatus || '',
           employeeStatus: p.employeeStatus || '',
           // Document fields with debugging
@@ -514,17 +633,17 @@ const PatientList: React.FC = () => {
         paymentType: editPatient.paymentType || '',
         fatherName: editPatient.fatherName || '',
         motherName: editPatient.motherName || '',
-        dateOfBirth: toSafeBackendDate(editPatient.dateOfBirth),
+        dateOfBirth: formatDateForBackend(editPatient.dateOfBirth),
         marriageStatus: editPatient.marriageStatus || '',
         employeeStatus: editPatient.employeeStatus || '',
-        admissionDate: toSafeBackendDate(editPatient.admissionDate)
+        admissionDate: formatDateForBackend(editPatient.admissionDate)
       };
       
       console.log('📅 Date values being saved:');
       console.log('  - Raw admissionDate:', editPatient.admissionDate);
       console.log('  - Raw dateOfBirth:', editPatient.dateOfBirth);
-      console.log('  - Formatted admissionDate for backend:', toSafeBackendDate(editPatient.admissionDate));
-      console.log('  - Formatted dateOfBirth for backend:', toSafeBackendDate(editPatient.dateOfBirth));
+      console.log('  - Formatted admissionDate for backend:', formatDateForBackend(editPatient.admissionDate));
+      console.log('  - Formatted dateOfBirth for backend:', formatDateForBackend(editPatient.dateOfBirth));
       
       // Additional debugging for admission date
       if (editPatient.admissionDate) {
@@ -755,7 +874,7 @@ const PatientList: React.FC = () => {
         p.emergencyContact,
         p.medicalHistory,
         p.admissionDate && p.admissionDate.getFullYear() > 1900 && !isNaN(p.admissionDate.getTime()) 
-          ? toSafeDisplayDate(p.admissionDate) : 'Not Set',
+          ? format(p.admissionDate, 'dd/MM/yyyy') : 'Not Set',
         p.status,
         p.attenderName,
         p.attenderPhone,
@@ -770,7 +889,7 @@ const PatientList: React.FC = () => {
         p.fatherName,
         p.motherName,
         p.attenderRelationship,
-        toSafeDisplayDate(p.dateOfBirth),
+        p.dateOfBirth && !isNaN(new Date(p.dateOfBirth).getTime()) ? format(new Date(p.dateOfBirth), 'dd/MM/yyyy') : '',
         p.marriageStatus,
         p.employeeStatus
       ].map(val => typeof val === 'string' ? '"' + val.replace(/"/g, '""') + '"' : val).join(','))
@@ -1078,7 +1197,7 @@ const PatientList: React.FC = () => {
                        !isNaN(patient.admissionDate.getTime()) && 
                        patient.admissionDate.getFullYear() >= 1900 && 
                        patient.admissionDate.getFullYear() <= 2100
-                        ? toSafeDisplayDate(patient.admissionDate) 
+                        ? format(patient.admissionDate, 'dd/MM/yyyy') 
                         : <span className="text-gray-400 text-xs">Not Set</span>}
                     </TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
@@ -1285,7 +1404,7 @@ const PatientList: React.FC = () => {
                           <Label className="text-xs font-medium text-purple-600 uppercase tracking-wide">Date of Birth</Label>
                           <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
                             {viewPatient.dateOfBirth && !isNaN(new Date(viewPatient.dateOfBirth).getTime()) 
-                              ? toSafeDisplayDate(viewPatient.dateOfBirth) 
+                              ? format(new Date(viewPatient.dateOfBirth), 'dd-MM-yyyy') 
                               : 'Not provided'}
                           </p>
                         </div>
@@ -1371,7 +1490,7 @@ const PatientList: React.FC = () => {
                           <Label className="text-xs font-medium text-red-600 uppercase tracking-wide">Admission Date</Label>
                           <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
                             {viewPatient.admissionDate && !isNaN(viewPatient.admissionDate.getTime()) 
-                              ? toSafeDisplayDate(viewPatient.admissionDate) 
+                              ? format(viewPatient.admissionDate, 'dd-MM-yyyy') 
                               : 'Invalid Date'}
                           </p>
                         </div>
@@ -1942,7 +2061,6 @@ const PatientList: React.FC = () => {
                   id="edit-admission-date"
                   type="date"
                   required
-                  className={DATE_CSS_CLASSES.input}
                   value={editPatient ? (formatDateForInput(editPatient.admissionDate) || '') : ''}
                   onChange={(e) => {
                     if (editPatient) {
@@ -1957,7 +2075,6 @@ const PatientList: React.FC = () => {
                 <Input
                   id="edit-dob"
                   type="date"
-                  className={DATE_CSS_CLASSES.input}
                   value={editPatient ? (formatDateForInput(editPatient.dateOfBirth) || '') : ''}
                   onChange={(e) => {
                     if (editPatient) {

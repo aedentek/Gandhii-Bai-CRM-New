@@ -4,9 +4,18 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 export class DoctorSalaryAPI {
   // Get all doctors with salary information
-  static async getAllDoctorsWithSalary(): Promise<DoctorSalary[]> {
+  static async getAllDoctorsWithSalary(month?: number | null, year?: number | null): Promise<DoctorSalary[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/doctor-salaries`);
+      let url = `${API_BASE_URL}/doctor-salaries`;
+      
+      // Add month/year query parameters if provided
+      if (month !== null && year !== null && month !== undefined && year !== undefined) {
+        url += `?month=${month}&year=${year}`;
+      }
+      
+      console.log('🔍 Fetching doctors with salary for:', { month, year, url });
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch doctors with salary: ${response.statusText}`);
       }
