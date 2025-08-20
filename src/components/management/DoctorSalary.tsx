@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,39 +7,42 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { 
-  Package, 
   RefreshCw, 
   Calendar, 
   Download, 
   Plus, 
   Search, 
-  TrendingUp, 
-  TrendingDown, 
   Users, 
   DollarSign,
-  Edit2, 
-  Trash2, 
-  Eye,
   CheckCircle,
   AlertCircle,
-  Clock,
   CreditCard,
-  Activity
+  Eye,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { DatabaseService } from '@/services/databaseService';
+import { DoctorSalaryAPI } from '@/services/doctorSalaryAPI';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import '@/styles/global-crm-design.css';
 
 interface Doctor {
   id: string;
   name: string;
   photo?: string;
-  salary: string;
-  total_paid: string;
+  salary: string | number;
+  total_paid: string | number;
   payment_mode?: string;
   status?: string;
   specialization?: string;
   join_date?: string;
+  advance_amount?: string | number;
+  carry_forward?: string | number;
 }
 
 const DoctorSalary: React.FC = () => {
@@ -48,57 +52,188 @@ const DoctorSalary: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  
+  // Payment modal states
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    type: 'salary'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Payment modal month/year filter states (similar to Doctor Advance)
+  const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(new Date().getFullYear());
+  const [filteredPaymentHistory, setFilteredPaymentHistory] = useState<any[]>([]);
+  const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0);
+
+  // Month and year state for filtering - same as GroceryStock
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const currentYear = new Date().getFullYear();
+  const [filterSelectedMonth, setFilterSelectedMonth] = useState(new Date().getMonth());
+  const [filterSelectedYear, setFilterSelectedYear] = useState(currentYear);
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const rowsPerPage = 10;
   const monthNames = ['all', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
-  // Form states for add/edit
-  const [formData, setFormData] = useState({
-    name: '',
-    salary: '',
-    specialization: '',
-    payment_mode: 'bank_transfer'
-  });
+  // Helper function to get doctor photo URL
+  const getDoctorPhotoUrl = (photoPath: string) => {
+    if (!photoPath) return '/api/placeholder/40/40';
+    
+    // Handle both old and new path formats
+    if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
+      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
+    }
+    
+    return `http://localhost:4000/${photoPath}`;
+  };
 
-  const [paymentData, setPaymentData] = useState({
-    amount: '',
-    payment_date: new Date().toISOString().split('T')[0],
-    payment_mode: 'bank_transfer',
-    notes: ''
-  });
+  // Helper function to format date - matching DoctorManagement format
+  const formatDate = (dateValue: string | Date | null | undefined) => {
+    if (!dateValue) return 'N/A';
+    
+    try {
+      let date: Date;
+      
+      // Handle different input types
+      if (dateValue instanceof Date) {
+        date = dateValue;
+      } else if (typeof dateValue === 'string') {
+        date = new Date(dateValue);
+      } else {
+        return 'N/A';
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'N/A';
+      }
+      
+      // Use the same format as DoctorManagement: MM/dd/yyyy
+      return format(date, 'MM/dd/yyyy');
+    } catch (error) {
+      console.warn('Error formatting date:', dateValue, error);
+      return 'N/A';
+    }
+  };
+
+  // Helper function to safely parse numeric values
+  const parseNumeric = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    return parseFloat(String(value)) || 0;
+  };
 
   useEffect(() => {
     fetchDoctors();
   }, []);
 
+  // Filter payment history by selected month/year (similar to Doctor Advance)
+  useEffect(() => {
+    if (paymentHistory.length > 0) {
+      const filtered = paymentHistory.filter(payment => {
+        const paymentDate = new Date(payment.payment_date);
+        const paymentMonth = paymentDate.getMonth() + 1; // 1-12
+        const paymentYear = paymentDate.getFullYear();
+        
+        return paymentMonth === paymentModalSelectedMonth && paymentYear === paymentModalSelectedYear;
+      });
+      
+      setFilteredPaymentHistory(filtered);
+    } else {
+      setFilteredPaymentHistory([]);
+    }
+  }, [paymentHistory, paymentModalSelectedMonth, paymentModalSelectedYear]);
+
+  // Debug logging for filter changes
+  useEffect(() => {
+    console.log('📅 Filter changed:', {
+      filterMonth,
+      filterYear,
+      monthName: filterMonth !== null ? months[filterMonth] : 'All',
+      totalDoctors: doctors.length,
+      filteredCount: doctors.filter(doctor => {
+        let matchesJoinDate = true;
+        if (filterMonth !== null && filterYear !== null && doctor.join_date) {
+          const joinDate = new Date(doctor.join_date);
+          const selectedDate = new Date(filterYear, filterMonth, 31);
+          matchesJoinDate = joinDate <= selectedDate;
+          console.log(`Doctor ${doctor.name}: join_date=${doctor.join_date}, joinDate=${joinDate.toDateString()}, selectedDate=${selectedDate.toDateString()}, matches=${matchesJoinDate}`);
+        }
+        return matchesJoinDate;
+      }).length
+    });
+  }, [filterMonth, filterYear, doctors]);
+
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const response = await DatabaseService.getAllDoctors();
+      console.log('🩺 Fetching doctors with salary information...');
+      console.log('📅 Filter Month/Year:', filterMonth, filterYear);
+      const response = await DoctorSalaryAPI.getAllDoctorsWithSalary();
+      console.log('🩺 Doctors fetched:', response);
+      
+      // Debug join_date values
+      if (response && response.length > 0) {
+        response.forEach(doctor => {
+          console.log(`👨‍⚕️ Doctor ${doctor.name}:`, {
+            id: doctor.id,
+            join_date: doctor.join_date,
+            join_date_type: typeof doctor.join_date,
+            formatted_date: formatDate(doctor.join_date)
+          });
+        });
+      }
+      
       setDoctors(response || []);
+      setLoading(false); // Set loading to false immediately after setting doctors
     } catch (error) {
       console.error('Error fetching doctors:', error);
-    } finally {
+      toast.error('Failed to fetch doctor data');
+      setDoctors([]);
       setLoading(false);
     }
   };
 
-  // Filter doctors based on search and month
+  // Filter doctors based on search and join date relative to selected month/year
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doctor.id.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    
+    // Join date filtering - only show doctors who joined before or during the selected month/year
+    let matchesJoinDate = true;
+    if (filterMonth !== null && filterYear !== null && doctor.join_date) {
+      const joinDate = new Date(doctor.join_date);
+      const selectedDate = new Date(filterYear, filterMonth, 31); // Last day of selected month
+      matchesJoinDate = joinDate <= selectedDate;
+    }
+    
+    return matchesSearch && matchesJoinDate;
+  }).sort((a, b) => {
+    // Sort by Doctor ID in ascending order (DOC001, DOC002, etc.)
+    const extractNumber = (id: string) => {
+      const match = id.match(/DOC(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    
+    const numA = extractNumber(a.id);
+    const numB = extractNumber(b.id);
+    
+    return numA - numB;
   });
 
   // Calculate statistics
   const totalDoctors = filteredDoctors.length;
-  const totalSalary = filteredDoctors.reduce((sum, d) => sum + (parseFloat(d.salary) || 0), 0);
-  const totalPaid = filteredDoctors.reduce((sum, d) => sum + (parseFloat(d.total_paid) || 0), 0);
+  const totalSalary = filteredDoctors.reduce((sum, d) => sum + parseNumeric(d.salary) + parseNumeric(d.carry_forward || 0), 0);
+  const totalPaid = filteredDoctors.reduce((sum, d) => sum + parseNumeric(d.total_paid) + parseNumeric(d.advance_amount || 0), 0);
   const totalPending = totalSalary - totalPaid;
   const activeDoctors = filteredDoctors.filter(d => d.status === 'Active').length;
 
@@ -108,108 +243,278 @@ const DoctorSalary: React.FC = () => {
   const currentDoctors = filteredDoctors.slice(startIndex, endIndex);
   const totalPages = Math.ceil(filteredDoctors.length / rowsPerPage);
 
-  const handleAddDoctor = async () => {
-    try {
-      const newDoctor = {
-        ...formData,
-        id: `DOC${Date.now()}`,
-        total_paid: '0',
-        status: 'Active',
-        join_date: new Date().toISOString().split('T')[0]
-      };
-      
-      await DatabaseService.addDoctor(newDoctor);
-      setDoctors(prev => [...prev, newDoctor]);
-      setAddModalOpen(false);
-      setFormData({ name: '', salary: '', specialization: '', payment_mode: 'bank_transfer' });
-    } catch (error) {
-      console.error('Error adding doctor:', error);
-    }
-  };
-
-  const handleUpdateDoctor = async () => {
-    if (!selectedDoctor) return;
-    
-    try {
-      const updateData = {
-        name: formData.name,
-        salary: parseFloat(formData.salary) || 0,
-        specialization: formData.specialization,
-        payment_mode: formData.payment_mode as "Cash" | "Bank" | "UPI" | "Cheque",
-        status: "Active" as const
-      };
-      
-      await DatabaseService.updateDoctor(selectedDoctor.id, updateData);
-      
-      const updatedDoctor = { ...selectedDoctor, ...formData };
-      setDoctors(prev => prev.map(d => d.id === updatedDoctor.id ? updatedDoctor : d));
-      setEditModalOpen(false);
-      setSelectedDoctor(null);
-    } catch (error) {
-      console.error('Error updating doctor:', error);
-    }
-  };
-
-  const handleDeleteDoctor = async () => {
-    if (!selectedDoctor) return;
-    
-    try {
-      await DatabaseService.deleteDoctor(selectedDoctor.id);
-      setDoctors(prev => prev.filter(d => d.id !== selectedDoctor.id));
-      setDeleteModalOpen(false);
-      setSelectedDoctor(null);
-    } catch (error) {
-      console.error('Error deleting doctor:', error);
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!selectedDoctor) return;
-    
-    try {
-      const currentPaid = parseFloat(selectedDoctor.total_paid || '0');
-      const newAmount = parseFloat(paymentData.amount);
-      const updateData = {
-        total_paid: parseFloat(selectedDoctor.total_paid || '0') + newAmount,
-        salary: parseFloat(selectedDoctor.salary || '0'),
-        status: "Active" as const
-      };
-      
-      await DatabaseService.updateDoctor(selectedDoctor.id, updateData);
-      setDoctors(prev => prev.map(d => d.id === selectedDoctor.id ? {...d, total_paid: (currentPaid + newAmount).toString()} : d));
-      setPaymentModalOpen(false);
-      setSelectedDoctor(null);
-      setPaymentData({ amount: '', payment_date: new Date().toISOString().split('T')[0], payment_mode: 'bank_transfer', notes: '' });
-    } catch (error) {
-      console.error('Error processing payment:', error);
-    }
-  };
-
   const exportToCSV = () => {
-    const headers = ['S.No', 'Doctor Name', 'Specialization', 'Salary', 'Total Paid', 'Balance', 'Status'];
+    const headers = ['S.No', 'Doctor ID', 'Doctor Name', 'Joining Date', 'Salary', 'Advance', 'Carry Forward', 'Total Paid', 'Balance', 'Status'];
     const csvData = [
       headers.join(','),
-      ...filteredDoctors.map((doctor, index) => [
-        index + 1,
-        doctor.name,
-        doctor.specialization || '',
-        doctor.salary || '0',
-        doctor.total_paid || '0',
-        (parseFloat(doctor.salary || '0') - parseFloat(doctor.total_paid || '0')).toString(),
-        doctor.status || 'Active'
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+      ...filteredDoctors.map((doctor, index) => {
+        const totalPaidWithAdvance = parseNumeric(doctor.total_paid) + parseNumeric(doctor.advance_amount || 0);
+        const balance = parseNumeric(doctor.salary) + parseNumeric(doctor.carry_forward || 0) - totalPaidWithAdvance;
+        return [
+          index + 1,
+          doctor.id,
+          doctor.name,
+          formatDate(doctor.join_date),
+          doctor.salary || '0',
+          parseNumeric(doctor.advance_amount || 0).toString(),
+          parseNumeric(doctor.carry_forward || 0).toString(),
+          totalPaidWithAdvance.toString(),
+          balance.toString(),
+          balance > 0 ? 'Pending' : 'Paid'
+        ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+      })
     ].join('\n');
     
     const blob = new Blob([csvData], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `doctor-salary-${new Date().toISOString().split('T')[0]}.csv`;
+    
+    // Generate filename with month/year filter if applied
+    let filename = 'doctor-salary';
+    if (filterMonth !== null && filterYear !== null) {
+      filename += `-${months[filterMonth]}-${filterYear}`;
+    }
+    filename += `-${new Date().toISOString().split('T')[0]}.csv`;
+    
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
+  // Save monthly records handler
+  const handleSaveMonthlyRecords = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current month and year from the filter or use current date
+      const month = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1;
+      const year = filterYear !== null ? filterYear : new Date().getFullYear();
+      
+      const response = await fetch('http://localhost:4000/api/doctor-salaries/save-monthly-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          month,
+          year
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`Monthly records saved successfully for ${months[month-1]} ${year}!`, {
+          description: `${data.recordsProcessed || 0} doctor records processed${data.carryForwardUpdates ? `, ${data.carryForwardUpdates} with carry-forward` : ''}`
+        });
+        
+        // Check if there are carry forward amounts and ask user about automatic processing
+        if (data.carryForwardUpdates > 0) {
+          setTimeout(() => {
+            toast.info(`${data.carryForwardUpdates} doctors have balance amounts`, {
+              description: 'These will automatically carry forward to the next month when you save records',
+              duration: 5000
+            });
+          }, 1000);
+        }
+        
+        // Refresh the data to show updated information
+        fetchDoctors();
+      } else {
+        toast.error('Failed to save monthly records', {
+          description: data.message || 'Please try again'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving monthly records:', error);
+      toast.error('Failed to save monthly records', {
+        description: 'Please check your connection and try again'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Action handlers
+  const handleRecordPayment = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setPaymentModalOpen(true);
+    setPaymentFormData({
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
+      type: 'salary'
+    });
+    
+    // Set modal month/year to current month/year
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    setPaymentModalSelectedMonth(currentMonth);
+    setPaymentModalSelectedYear(currentYear);
+    
+    fetchPaymentHistory(doctor.id);
+  };
+
+  // Fetch monthly advance amount for selected doctor and month/year
+  const fetchMonthlyAdvanceAmount = async (doctorId: string, month: number, year: number) => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/doctor-advance/monthly-total?doctorId=${doctorId}&month=${month}&year=${year}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setMonthlyAdvanceAmount(parseFloat(data.totalAmount || 0));
+      } else {
+        setMonthlyAdvanceAmount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching monthly advance amount:', error);
+      setMonthlyAdvanceAmount(0);
+    }
+  };
+
+  // Calculate monthly total for selected month/year
+  const calculateMonthlyTotal = () => {
+    const total = filteredPaymentHistory.reduce((sum, payment) => {
+      return sum + (parseFloat(payment.payment_amount) || 0);
+    }, 0);
+    console.log('Monthly total calculation:', { filteredPayments: filteredPaymentHistory.length, total });
+    return total;
+  };
+
+  // Get advance amount for selected doctor and month/year
+  const getAdvanceAmount = () => {
+    if (!selectedDoctor) return 0;
+    
+    // For now, use the advance amount from the doctor's data (already calculated for current month in backend)
+    // This is the advance amount displayed in the table
+    const advanceAmount = parseNumeric(selectedDoctor.advance_amount || 0);
+    console.log('Advance amount calculation:', { doctorId: selectedDoctor.id, advanceAmount, rawValue: selectedDoctor.advance_amount });
+    return advanceAmount;
+  };
+
+  // Calculate total paid (Monthly Total + Advance)
+  const calculateTotalPaid = () => {
+    const monthlyTotal = calculateMonthlyTotal();
+    const advanceAmount = getAdvanceAmount();
+    const totalPaid = monthlyTotal + advanceAmount;
+    console.log('Total paid calculation:', { monthlyTotal, advanceAmount, totalPaid });
+    return totalPaid;
+  };
+
+  const fetchPaymentHistory = async (doctorId: string) => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`http://localhost:4000/api/doctor-salaries/${doctorId}/history`);
+      const data = await response.json();
+      if (data.success) {
+        setPaymentHistory(data.data || []);
+      } else {
+        setPaymentHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+      setPaymentHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this payment record?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/doctor-salaries/payment/${paymentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Payment record deleted successfully');
+        // Refresh payment history
+        if (selectedDoctor) {
+          fetchPaymentHistory(selectedDoctor.id);
+        }
+        fetchDoctors(); // Refresh main doctor data
+      } else {
+        toast.error(data.message || 'Failed to delete payment record');
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      toast.error('Failed to delete payment record');
+    }
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedDoctor || !paymentFormData.amount) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Call API to record payment
+      await DoctorSalaryAPI.recordPayment({
+        doctorId: selectedDoctor.id,
+        amount: parseFloat(paymentFormData.amount),
+        date: paymentFormData.date,
+        type: paymentFormData.type,
+        payment_mode: 'Bank Transfer'
+      });
+
+      toast.success('Payment recorded successfully');
+      setPaymentFormData({
+        date: new Date().toISOString().split('T')[0],
+        amount: '',
+        type: 'salary'
+      });
+      fetchDoctors(); // Refresh data
+      if (selectedDoctor) {
+        fetchPaymentHistory(selectedDoctor.id); // Refresh payment history
+      }
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Check carry forward amounts for current month
+  const checkCarryForward = async () => {
+    try {
+      const month = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1;
+      const year = filterYear !== null ? filterYear : new Date().getFullYear();
+      
+      const response = await fetch(`http://localhost:4000/api/doctor-salaries/carry-forward/${month}/${year}`);
+      const data = await response.json();
+      
+      if (data.success && data.data.length > 0) {
+        const totalCarryForward = data.totalCarryForward.toFixed(2);
+        toast.info(`Carry Forward Available for ${months[month-1]} ${year}`, {
+          description: `${data.data.length} doctors have ₹${parseFloat(totalCarryForward).toLocaleString()} total carry forward amount`,
+          duration: 4000
+        });
+      }
+    } catch (error) {
+      console.error('Error checking carry forward:', error);
+    }
+  };
+
+  // Effect to check carry forward when month/year changes
+  useEffect(() => {
+    if (doctors.length > 0) {
+      checkCarryForward();
+    }
+  }, [filterMonth, filterYear]);
+
   return (
+    <>
     <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* CRM Header */}
@@ -227,7 +532,14 @@ const DoctorSalary: React.FC = () => {
 
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <Button
-                onClick={fetchDoctors}
+                onClick={() => {
+                  const currentMonth = new Date().getMonth();
+                  setFilterMonth(currentMonth);
+                  setFilterYear(currentYear);
+                  setFilterSelectedMonth(currentMonth);
+                  setFilterSelectedYear(currentYear);
+                  fetchDoctors();
+                }}
                 disabled={loading}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
@@ -237,12 +549,33 @@ const DoctorSalary: React.FC = () => {
               </Button>
               
               <Button
+                onClick={handleSaveMonthlyRecords}
+                disabled={loading}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              >
+                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Save Monthly</span>
+                <span className="sm:hidden">Save</span>
+              </Button>
+              
+              <Button
+                onClick={() => setShowMonthYearDialog(true)}
                 variant="outline"
-                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">August 2025</span>
-                <span className="sm:hidden">Aug 2025</span>
+                <span className="hidden sm:inline">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth]} ${filterYear}`
+                    : `${months[filterSelectedMonth]} ${filterSelectedYear}`
+                  }
+                </span>
+                <span className="sm:hidden">
+                  {filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                    : `${months[filterSelectedMonth].slice(0, 3)} ${filterSelectedYear}`
+                  }
+                </span>
               </Button>
               
               <Button
@@ -252,15 +585,6 @@ const DoctorSalary: React.FC = () => {
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
                 <span className="sm:hidden">CSV</span>
-              </Button>
-              
-              <Button
-                onClick={() => setAddModalOpen(true)}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Add Doctor</span>
-                <span className="sm:hidden">+</span>
               </Button>
             </div>
           </div>
@@ -390,8 +714,12 @@ const DoctorSalary: React.FC = () => {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">S.No</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Profile</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Joining Date</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Doctor ID</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Doctor Name</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Salary</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Advance</th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Carry Forward</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Total Paid</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Balance</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-900">Status</th>
@@ -401,7 +729,7 @@ const DoctorSalary: React.FC = () => {
               <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center p-8">
+                  <td colSpan={12} className="text-center p-8">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                       <span className="ml-2 text-gray-600">Loading...</span>
@@ -410,43 +738,54 @@ const DoctorSalary: React.FC = () => {
                 </tr>
               ) : currentDoctors.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center p-8 text-gray-500">
+                  <td colSpan={12} className="text-center p-8 text-gray-500">
                     No doctors found
                   </td>
                 </tr>
               ) : (
                 currentDoctors.map((doctor, index) => {
-                  const balance = parseFloat(doctor.salary || '0') - parseFloat(doctor.total_paid || '0');
+                  const totalPaidWithAdvance = parseNumeric(doctor.total_paid) + parseNumeric(doctor.advance_amount || 0);
+                  const balance = parseNumeric(doctor.salary) + parseNumeric(doctor.carry_forward || 0) - totalPaidWithAdvance;
                   const serialNumber = startIndex + index + 1;
                   
                   return (
                     <tr key={doctor.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
                       <td className="py-4 px-6 text-sm font-medium text-gray-900">{serialNumber}</td>
                       <td className="py-4 px-6">
-                        {doctor.photo ? (
-                          <img
-                            src={doctor.photo}
-                            alt={doctor.name}
-                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <div className={`h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center border border-gray-200 ${doctor.photo ? 'hidden' : 'flex'}`}>
-                          <Users className="h-4 w-4 text-blue-600" />
+                        <div className="flex justify-center">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 ring-2 ring-blue-100">
+                            <img
+                              src={getDoctorPhotoUrl(doctor.photo)}
+                              alt={doctor.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = '/api/placeholder/40/40';
+                              }}
+                            />
+                          </div>
                         </div>
+                      </td>
+                      <td className="py-4 px-6 text-sm font-medium text-gray-600">
+                        {formatDate(doctor.join_date)}
+                      </td>
+                      <td className="py-4 px-6 text-sm font-medium text-blue-600">
+                        {doctor.id}
                       </td>
                       <td className="py-4 px-6">
                         <div className="text-sm font-medium text-gray-900">{doctor.name}</div>
-                        <div className="text-sm text-gray-500">{doctor.specialization || 'General'}</div>
                       </td>
                       <td className="py-4 px-6 text-sm font-medium text-green-600">
-                        ₹{parseFloat(doctor.salary || '0').toLocaleString()}
+                        ₹{parseNumeric(doctor.salary).toLocaleString()}
+                      </td>
+                      <td className="py-4 px-6 text-sm font-medium text-orange-600">
+                        ₹{parseNumeric(doctor.advance_amount || 0).toLocaleString()}
+                      </td>
+                      <td className="py-4 px-6 text-sm font-medium text-purple-600">
+                        ₹{parseNumeric(doctor.carry_forward || 0).toLocaleString()}
                       </td>
                       <td className="py-4 px-6 text-sm font-medium text-blue-600">
-                        ₹{parseFloat(doctor.total_paid || '0').toLocaleString()}
+                        ₹{(parseNumeric(doctor.total_paid) + parseNumeric(doctor.advance_amount || 0)).toLocaleString()}
                       </td>
                       <td className="py-4 px-6">
                         <span className={`text-sm font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -461,53 +800,16 @@ const DoctorSalary: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center justify-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedDoctor(doctor);
-                              setViewModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-400 rounded-lg transition-all duration-300"
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedDoctor(doctor);
-                              setFormData({
-                                name: doctor.name,
-                                salary: doctor.salary,
-                                specialization: doctor.specialization || '',
-                                payment_mode: doctor.payment_mode || 'bank_transfer'
-                              });
-                              setEditModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-400 rounded-lg transition-all duration-300"
-                            title="Edit Doctor"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedDoctor(doctor);
-                              setPaymentModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border border-green-200 hover:border-green-400 rounded-lg transition-all duration-300"
+                        <div className="flex items-center justify-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleRecordPayment(doctor)}
+                            className="crm-action-btn crm-action-btn-edit"
                             title="Record Payment"
                           >
-                            <DollarSign className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedDoctor(doctor);
-                              setDeleteModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-400 rounded-lg transition-all duration-300"
-                            title="Delete Doctor"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                            <CreditCard className="h-3 w-3" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -550,356 +852,451 @@ const DoctorSalary: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Add Doctor Modal */}
-        <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-          <DialogContent className="modern-dialog">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold text-gray-900">Add New Doctor</DialogTitle>
-            </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700">Doctor Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter doctor name"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="specialization" className="text-sm font-medium text-gray-700">Specialization</Label>
-              <Input
-                id="specialization"
-                value={formData.specialization}
-                onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                placeholder="Enter specialization"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="salary" className="text-sm font-medium text-gray-700">Monthly Salary</Label>
-              <Input
-                id="salary"
-                type="number"
-                value={formData.salary}
-                onChange={(e) => setFormData({...formData, salary: e.target.value})}
-                placeholder="Enter salary amount"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="payment_mode" className="text-sm font-medium text-gray-700">Payment Mode</Label>
-              <Select value={formData.payment_mode} onValueChange={(value) => setFormData({...formData, payment_mode: value})}>
-                <SelectTrigger className="modern-select">
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={() => {
-                  setAddModalOpen(false);
-                  setFormData({ name: '', salary: '', specialization: '', payment_mode: 'bank_transfer' });
-                }}
-                variant="outline"
-                className="flex-1 modern-btn modern-btn-outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddDoctor}
-                className="flex-1 modern-btn bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Add Doctor
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Doctor Modal */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="modern-dialog">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">Edit Doctor</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700">Doctor Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter doctor name"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-specialization" className="text-sm font-medium text-gray-700">Specialization</Label>
-              <Input
-                id="edit-specialization"
-                value={formData.specialization}
-                onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                placeholder="Enter specialization"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-salary" className="text-sm font-medium text-gray-700">Monthly Salary</Label>
-              <Input
-                id="edit-salary"
-                type="number"
-                value={formData.salary}
-                onChange={(e) => setFormData({...formData, salary: e.target.value})}
-                placeholder="Enter salary amount"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-payment_mode" className="text-sm font-medium text-gray-700">Payment Mode</Label>
-              <Select value={formData.payment_mode} onValueChange={(value) => setFormData({...formData, payment_mode: value})}>
-                <SelectTrigger className="modern-select">
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={() => {
-                  setEditModalOpen(false);
-                  setSelectedDoctor(null);
-                }}
-                variant="outline"
-                className="flex-1 modern-btn modern-btn-outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateDoctor}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                Update Doctor
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Modal */}
-      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="modern-dialog">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
-              Record Payment - {selectedDoctor?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">Current Balance</div>
-              <div className="text-xl font-bold text-red-600">
-                ₹{selectedDoctor ? (parseFloat(selectedDoctor.salary || '0') - parseFloat(selectedDoctor.total_paid || '0')).toLocaleString() : 0}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="payment-amount" className="text-sm font-medium text-gray-700">Payment Amount</Label>
-              <Input
-                id="payment-amount"
-                type="number"
-                value={paymentData.amount}
-                onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
-                placeholder="Enter payment amount"
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="payment-date" className="text-sm font-medium text-gray-700">Payment Date</Label>
-              <Input
-                id="payment-date"
-                type="date"
-                value={paymentData.payment_date}
-                onChange={(e) => setPaymentData({...paymentData, payment_date: e.target.value})}
-                className="modern-input"
-              />
-            </div>
-            <div>
-              <Label htmlFor="payment-mode" className="text-sm font-medium text-gray-700">Payment Mode</Label>
-              <Select value={paymentData.payment_mode} onValueChange={(value) => setPaymentData({...paymentData, payment_mode: value})}>
-                <SelectTrigger className="modern-select">
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="payment-notes" className="text-sm font-medium text-gray-700">Notes (Optional)</Label>
-              <Input
-                id="payment-notes"
-                value={paymentData.notes}
-                onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})}
-                placeholder="Enter any notes"
-                className="modern-input"
-              />
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={() => {
-                  setPaymentModalOpen(false);
-                  setSelectedDoctor(null);
-                  setPaymentData({ amount: '', payment_date: new Date().toISOString().split('T')[0], payment_mode: 'bank_transfer', notes: '' });
-                }}
-                variant="outline"
-                className="flex-1 modern-btn modern-btn-outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handlePayment}
-                className="flex-1 modern-btn bg-green-600 hover:bg-green-700 text-white"
-              >
-                Process Payment
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Doctor Modal */}
-      <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="modern-dialog">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">Doctor Details</DialogTitle>
-          </DialogHeader>
-          {selectedDoctor && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                {selectedDoctor.photo ? (
-                  <img
-                    src={selectedDoctor.photo}
-                    alt={selectedDoctor.name}
-                    className="h-16 w-16 rounded-full object-cover border border-gray-200"
-                  />
-                ) : (
-                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="h-8 w-8 text-blue-600" />
-                  </div>
-                )}
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{selectedDoctor.name}</h3>
-                  <p className="text-gray-600">{selectedDoctor.specialization || 'General'}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-600">Doctor ID</div>
-                  <div className="font-medium">{selectedDoctor.id}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Join Date</div>
-                  <div className="font-medium">{selectedDoctor.join_date || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Monthly Salary</div>
-                  <div className="font-medium text-green-600">₹{parseFloat(selectedDoctor.salary || '0').toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Total Paid</div>
-                  <div className="font-medium text-blue-600">₹{parseFloat(selectedDoctor.total_paid || '0').toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Balance</div>
-                  <div className={`font-medium ${(parseFloat(selectedDoctor.salary || '0') - parseFloat(selectedDoctor.total_paid || '0')) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    ₹{(parseFloat(selectedDoctor.salary || '0') - parseFloat(selectedDoctor.total_paid || '0')).toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">Payment Mode</div>
-                  <div className="font-medium">{selectedDoctor.payment_mode || 'N/A'}</div>
-                </div>
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => setViewModalOpen(false)}
-                  variant="outline"
-                  className="flex-1 modern-btn modern-btn-outline"
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={() => {
-                    setViewModalOpen(false);
-                    setFormData({
-                      name: selectedDoctor.name,
-                      salary: selectedDoctor.salary,
-                      specialization: selectedDoctor.specialization || '',
-                      payment_mode: selectedDoctor.payment_mode || 'bank_transfer'
-                    });
-                    setEditModalOpen(true);
-                  }}
-                  className="flex-1 modern-btn bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Edit Doctor
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="modern-dialog">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Are you sure you want to delete <strong>{selectedDoctor?.name}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setSelectedDoctor(null);
-                }}
-                variant="outline"
-                className="flex-1 modern-btn modern-btn-outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteDoctor}
-                className="flex-1 modern-btn bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
         </div>
       </div>
     </div>
+    
+    {/* Month/Year Picker Dialog */}
+    <MonthYearPickerDialog
+      open={showMonthYearDialog}
+      onOpenChange={setShowMonthYearDialog}
+      selectedMonth={filterSelectedMonth}
+      selectedYear={filterSelectedYear}
+      onMonthChange={setFilterSelectedMonth}
+      onYearChange={setFilterSelectedYear}
+      onApply={() => {
+        setFilterMonth(filterSelectedMonth);
+        setFilterYear(filterSelectedYear);
+        setShowMonthYearDialog(false);
+        fetchDoctors(); // Refresh data with new filter
+      }}
+      title="Select Month & Year"
+      description="Filter doctor salary by specific month and year"
+      previewText="doctors"
+    />
+    
+    {/* Portal for Modal - Rendered outside component tree */}
+    {paymentModalOpen && selectedDoctor && createPortal(
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+        style={{ 
+          zIndex: 9999,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
+        onClick={() => setPaymentModalOpen(false)}
+      >
+        <div 
+          className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl" 
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header - Beautiful Design */}
+          <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+              <div className="relative flex-shrink-0">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden">
+                  {selectedDoctor.photo ? (
+                    <img
+                      src={getDoctorPhotoUrl(selectedDoctor.photo)}
+                      alt={selectedDoctor.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/api/placeholder/40/40';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                      <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1">
+                  <Badge className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs">
+                    Active
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                  <span className="truncate">Dr. {selectedDoctor.name}</span>
+                </h2>
+                <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                  <span className="text-gray-600">
+                    Record Payment Session
+                  </span>
+                  <span className="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200">
+                    New Transaction
+                  </span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentModalOpen(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Modal Body - Beautiful Design */}
+          <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+            <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+              
+              {/* Doctor Information Section - Beautiful Cards */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                  </div>
+                  Doctor Information
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                  
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Full Name</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedDoctor.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-green-600 font-bold text-xs sm:text-sm">ID</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Doctor ID</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.id}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-purple-600 font-bold text-xs sm:text-sm">₹</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Advance Available</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.advance_amount || 0).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Monthly Salary</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.salary).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Paid</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{parseNumeric(selectedDoctor.total_paid).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Balance Due</div>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{(parseNumeric(selectedDoctor.salary) - parseNumeric(selectedDoctor.total_paid)).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+
+              {/* Payment Form Section - Beautiful Design */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Plus className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                  </div>
+                  Record New Payment
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100">
+                    <Label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+                      Payment Date *
+                    </Label>
+                    <Input
+                      type="date"
+                      value={paymentFormData.date}
+                      onChange={(e) => setPaymentFormData(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                    />
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border border-green-100">
+                    <Label className="block text-sm font-medium text-green-600 mb-2 uppercase tracking-wide">
+                      Amount (₹) *
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter payment amount"
+                      value={paymentFormData.amount}
+                      onChange={(e) => setPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                      className="w-full border-green-200 focus:border-green-400 focus:ring-green-400"
+                    />
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-purple-50 to-white p-4 rounded-xl border border-purple-100">
+                    <Label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
+                      Payment Type *
+                    </Label>
+                    <Select
+                      value={paymentFormData.type}
+                      onValueChange={(value) => setPaymentFormData(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger className="w-full border-purple-200 focus:border-purple-400">
+                        <SelectValue placeholder="Select payment type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="salary">Salary</SelectItem>
+                        <SelectItem value="advance">Advance</SelectItem>
+                        <SelectItem value="bonus">Bonus</SelectItem>
+                        <SelectItem value="incentive">Incentive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button 
+                    onClick={handleSubmitPayment}
+                    disabled={isSubmitting || !paymentFormData.amount || !paymentFormData.date}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold shadow-lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Recording Payment...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-5 w-5 mr-2" />
+                        Record Payment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Payment History Section - Beautiful Design */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4 md:mb-6">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <CreditCard className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                    </div>
+                    Payment History ({filteredPaymentHistory.length})
+                  </h3>
+                  
+                  {/* Month/Year Selector */}
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={paymentModalSelectedMonth}
+                      onChange={(e) => setPaymentModalSelectedMonth(parseInt(e.target.value))}
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value={1}>January</option>
+                      <option value={2}>February</option>
+                      <option value={3}>March</option>
+                      <option value={4}>April</option>
+                      <option value={5}>May</option>
+                      <option value={6}>June</option>
+                      <option value={7}>July</option>
+                      <option value={8}>August</option>
+                      <option value={9}>September</option>
+                      <option value={10}>October</option>
+                      <option value={11}>November</option>
+                      <option value={12}>December</option>
+                    </select>
+                    
+                    <select
+                      value={paymentModalSelectedYear}
+                      onChange={(e) => setPaymentModalSelectedYear(parseInt(e.target.value))}
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const year = new Date().getFullYear() - 2 + i;
+                        return (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+                
+                {historyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2">Loading payment history...</span>
+                  </div>
+                ) : filteredPaymentHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-center py-8 text-slate-500">
+                      <CreditCard className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                      <p>No payment records found for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Calculation Display Section */}
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-xl border border-green-100 mb-4">
+                      <h4 className="font-bold text-gray-900 mb-3 text-center">
+                        Payment Calculation for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {/* Monthly Payment Total */}
+                        <div className="bg-white p-3 rounded-lg border border-blue-200 text-center">
+                          <p className="text-sm text-gray-600 mb-1">Monthly Payment</p>
+                          <p className="text-lg font-bold text-blue-600">
+                            ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        
+                        {/* Advance Amount */}
+                        <div className="bg-white p-3 rounded-lg border border-orange-200 text-center">
+                          <p className="text-sm text-gray-600 mb-1">Advance Amount</p>
+                          <p className="text-lg font-bold text-orange-600">
+                            ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        
+                        {/* Total Paid */}
+                        <div className="bg-white p-3 rounded-lg border border-green-200 text-center">
+                          <p className="text-sm text-gray-600 mb-1">Total Paid</p>
+                          <p className="text-lg font-bold text-green-600">
+                            ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Calculation Formula */}
+                      <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="font-semibold text-blue-600">
+                            ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-gray-500">+</span>
+                          <span className="font-semibold text-orange-600">
+                            ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-gray-500">=</span>
+                          <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
+                            ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                          </Badge>
+                        </div>
+                        <p className="text-center text-xs text-gray-500 mt-2">
+                          Monthly Payment + Advance = Total Paid
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Payment History Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b">
+                            <th className="text-left p-3 font-medium text-slate-700">S.No</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Date</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Amount (₹)</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Type</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Payment Mode</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Notes</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Created At</th>
+                            <th className="text-left p-3 font-medium text-slate-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredPaymentHistory.map((payment, index) => (
+                            <tr key={payment.id} className="border-b hover:bg-slate-50">
+                            <td className="p-3 text-slate-700">{index + 1}</td>
+                            <td className="p-3 text-slate-700">
+                              {new Date(payment.payment_date).toLocaleDateString('en-IN')}
+                            </td>
+                            <td className="p-3 text-slate-700 font-medium">
+                              ₹{parseFloat(payment.payment_amount || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="p-3">
+                              <Badge 
+                                variant="outline" 
+                                className={`
+                                  ${payment.type === 'salary' ? 'border-blue-200 text-blue-700 bg-blue-50' : ''}
+                                  ${payment.type === 'advance' ? 'border-orange-200 text-orange-700 bg-orange-50' : ''}
+                                  ${payment.type === 'bonus' ? 'border-green-200 text-green-700 bg-green-50' : ''}
+                                  ${payment.type === 'incentive' ? 'border-purple-200 text-purple-700 bg-purple-50' : ''}
+                                `}
+                              >
+                                {payment.type || 'salary'}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-slate-700">{payment.payment_mode || 'Bank Transfer'}</td>
+                            <td className="p-3 text-slate-700">{payment.notes || '-'}</td>
+                            <td className="p-3 text-slate-600 text-sm">
+                              {new Date(payment.created_at).toLocaleDateString('en-IN')} {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="p-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePayment(payment.id)}
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                title="Delete payment record"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    </div>
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
 

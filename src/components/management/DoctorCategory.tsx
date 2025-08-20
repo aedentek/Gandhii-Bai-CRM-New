@@ -358,76 +358,7 @@ const DoctorCategory: React.FC = () => {
           </div>
         </div>
 
-        {/* Categories Table */}
-        <div className="crm-table-container">
-          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Categories ({filteredCategories.length})
-              </h2>
-            </div>
-          </div>
-          <div className="p-4 sm:p-6">
-            {filteredCategories.length === 0 ? (
-              <div className="text-center py-12">
-                <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No categories found</h3>
-                <p className="text-gray-600">
-                  {searchTerm || statusFilter !== 'all' 
-                    ? 'Try adjusting your search criteria'
-                    : 'Start by adding your first category'
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Description</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCategories.map((category) => (
-                      <tr key={category.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{category.name}</td>
-                        <td className="py-3 px-4 text-gray-600">{category.description}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            category.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {category.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEdit(category)}
-                              className="action-btn-lead px-3 py-1 text-sm rounded"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(category)}
-                              className="action-btn-danger px-3 py-1 text-sm rounded"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+
 
       {/* Add Category Dialog */}
       <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
@@ -477,24 +408,6 @@ const DoctorCategory: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-
-        {/* Search Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search categories by name or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Categories Table */}
         <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">

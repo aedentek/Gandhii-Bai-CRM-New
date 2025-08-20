@@ -118,8 +118,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Doctor Role', href: '/management/doctor-category', icon: FolderOpen },
         { title: 'Doctor List', href: '/management/doctors', icon: Stethoscope },
         { title: 'Doctor Attendance', href: '/management/doctor-attendance', icon: Calendar },
-        { title: 'Doctor Salary', href: '/management/doctor-salary', icon: CreditCard },
         { title: 'Doctor Advance', href: '/management/doctor-advance', icon: DollarSign },
+        { title: 'Doctor Salary', href: '/management/doctor-salary', icon: CreditCard },
         { title: 'Deleted Doctors', href: '/management/deleted-doctors', icon: Trash2 },
       ]
     },

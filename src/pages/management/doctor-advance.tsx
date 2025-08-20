@@ -112,38 +112,123 @@ const DoctorAdvancePage: React.FC = () => {
 
   // Filter advances by selected month/year (for modals)
   useEffect(() => {
+    console.log('=== FILTERING ADVANCES ===');
+    console.log('Doctor advances count:', doctorAdvances.length);
+    console.log('Selected month:', selectedMonth);
+    console.log('Selected year:', selectedYear);
+    
     if (doctorAdvances.length > 0) {
       const filtered = doctorAdvances.filter(advance => {
-        const advanceDate = new Date(advance.date);
-        return advanceDate.getMonth() + 1 === selectedMonth && 
-               advanceDate.getFullYear() === selectedYear;
+        console.log('Processing advance:', advance);
+        
+        // Handle different date formats
+        let advanceDate;
+        if (advance.date.includes('/')) {
+          // Handle DD/MM/YYYY format - assume DD/MM/YYYY since showing March data
+          const [day, month, year] = advance.date.split('/').map(num => parseInt(num));
+          advanceDate = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+          console.log(`Parsed DD/MM/YYYY: ${day}/${month}/${year} -> ${advanceDate}`);
+        } else {
+          // Handle ISO format
+          advanceDate = new Date(advance.date);
+          console.log(`Parsed ISO: ${advance.date} -> ${advanceDate}`);
+        }
+        
+        const advanceMonth = advanceDate.getMonth() + 1; // 1-12
+        const advanceYear = advanceDate.getFullYear();
+        
+        console.log(`Advance date: ${advance.date} -> Month: ${advanceMonth}, Year: ${advanceYear}`);
+        console.log(`Comparing with selected: Month: ${selectedMonth}, Year: ${selectedYear}`);
+        
+        const matches = advanceMonth === selectedMonth && advanceYear === selectedYear;
+        console.log(`Matches: ${matches}`);
+        
+        return matches;
       });
+      
+      console.log('=== FILTER RESULTS ===');
+      console.log(`Found ${filtered.length} matching advances:`, filtered);
+      const total = filtered.reduce((sum, adv) => sum + adv.amount, 0);
+      console.log(`Total amount: ₹${total}`);
+      
       setFilteredAdvances(filtered);
     } else {
+      console.log('No doctor advances to filter');
       setFilteredAdvances([]);
     }
   }, [doctorAdvances, selectedMonth, selectedYear]);
 
   // Filter all advances by page-level month/year filter (for dashboard stats)
   useEffect(() => {
-    if (allAdvances.length > 0 && filterMonth !== null && filterYear !== null) {
+    console.log('=== FILTERING ALL ADVANCES FOR STATS ===');
+    console.log('All advances count:', allAdvances.length);
+    console.log('All advances data:', allAdvances);
+    console.log('Filter month (0-11):', filterMonth, 'Filter year:', filterYear);
+    console.log('Current month (0-11):', currentMonth, 'Current year:', currentYear);
+    
+    if (allAdvances.length > 0) {
+      // Use current month/year by default, or selected filter month/year
+      const targetMonth = filterMonth !== null ? filterMonth : currentMonth; // 0-11
+      const targetYear = filterYear !== null ? filterYear : currentYear;
+      
+      console.log('Target month (0-11):', targetMonth, 'Target year:', targetYear);
+      
       const filtered = allAdvances.filter(advance => {
-        const advanceDate = new Date(advance.date);
-        return advanceDate.getMonth() === filterMonth && 
-               advanceDate.getFullYear() === filterYear;
+        console.log('Processing advance for stats:', advance);
+        
+        // Handle different date formats
+        let advanceDate;
+        if (advance.date && advance.date.includes('/')) {
+          // Handle DD/MM/YYYY format
+          const [day, month, year] = advance.date.split('/').map(num => parseInt(num));
+          advanceDate = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+          console.log(`Stats - Parsed DD/MM/YYYY: ${day}/${month}/${year} -> ${advanceDate}`);
+        } else if (advance.date) {
+          // Handle ISO format or other formats
+          advanceDate = new Date(advance.date);
+          console.log(`Stats - Parsed ISO: ${advance.date} -> ${advanceDate}`);
+        } else {
+          console.log('Stats - No date found for advance:', advance);
+          return false;
+        }
+        
+        const advanceMonth = advanceDate.getMonth(); // 0-11
+        const advanceYear = advanceDate.getFullYear();
+        
+        console.log(`Stats - Advance date: ${advance.date} -> Month: ${advanceMonth}, Year: ${advanceYear}`);
+        console.log(`Stats - Comparing with target: Month: ${targetMonth}, Year: ${targetYear}`);
+        
+        const matches = advanceMonth === targetMonth && advanceYear === targetYear;
+        console.log(`Stats - Matches: ${matches}`);
+        
+        return matches;
       });
+      
+      console.log('=== STATS FILTER RESULTS ===');
+      console.log(`Found ${filtered.length} matching advances for ${months[targetMonth]} ${targetYear}:`, filtered);
+      const total = filtered.reduce((sum, adv) => {
+        const amount = parseFloat(String(adv.amount)) || 0;
+        console.log(`Adding amount: ${adv.amount} -> ${amount}`);
+        return sum + amount;
+      }, 0);
+      console.log(`Total amount for stats: ₹${total}`);
+      
       setFilteredAllAdvances(filtered);
     } else {
-      setFilteredAllAdvances(allAdvances);
+      console.log('Stats - No advances to filter');
+      setFilteredAllAdvances([]);
     }
-  }, [allAdvances, filterMonth, filterYear]);
+  }, [allAdvances, filterMonth, filterYear, currentMonth, currentYear]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
+      console.log('🔄 Starting to load data...');
       
       // Load active doctors
+      console.log('📋 Fetching doctors from API...');
       const doctorsData = await DatabaseService.getAllDoctors();
+      console.log('📋 Raw doctors data received:', doctorsData);
       
       // Filter only active doctors
       const activeDoctors = doctorsData.filter((doctor: any) => 
@@ -164,11 +249,14 @@ const DoctorAdvancePage: React.FC = () => {
         })()
       }));
       
+      console.log('📋 Filtered active doctors:', activeDoctors);
       setDoctors(activeDoctors);
       
       // Load all advances for dashboard statistics
       try {
+        console.log('💰 Fetching advances from API...');
         const advancesData = await DoctorAdvanceAPI.getAll();
+        console.log('💰 Advances data received:', advancesData);
         setAllAdvances(advancesData || []);
       } catch (advanceError) {
         console.error('Error loading advances:', advanceError);
@@ -187,6 +275,15 @@ const DoctorAdvancePage: React.FC = () => {
   const handleViewDoctor = async (doctor: Doctor) => {
     console.log('Opening view modal for doctor:', doctor);
     setSelectedDoctor(doctor);
+    
+    // Always set to current month/year when opening modal
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // 1-12 (August = 8)
+    const currentYear = currentDate.getFullYear(); // 2025
+    
+    console.log('Setting modal to current month:', currentMonth, 'year:', currentYear);
+    setSelectedMonth(currentMonth);
+    setSelectedYear(currentYear);
     setIsViewModalOpen(true);
     
     // Load existing advances for this doctor
@@ -195,9 +292,36 @@ const DoctorAdvancePage: React.FC = () => {
       const advances = await DoctorAdvanceAPI.getByDoctorId(doctor.id);
       console.log(`Found ${advances.length} advances for doctor ${doctor.id}:`, advances);
       setDoctorAdvances(advances);
+      
+      // Filter advances for current month/year only
+      const filtered = advances.filter(advance => {
+        let advanceDate;
+        if (advance.date.includes('/')) {
+          // Handle DD/MM/YYYY format
+          const [day, month, year] = advance.date.split('/').map(num => parseInt(num));
+          advanceDate = new Date(year, month - 1, day);
+        } else {
+          // Handle ISO format
+          advanceDate = new Date(advance.date);
+        }
+        
+        const advanceMonth = advanceDate.getMonth() + 1;
+        const advanceYear = advanceDate.getFullYear();
+        
+        console.log('Advance:', advance.date, 'Month:', advanceMonth, 'Year:', advanceYear);
+        const matches = advanceMonth === currentMonth && advanceYear === currentYear;
+        console.log('Matches current month/year:', matches);
+        
+        return matches;
+      });
+      
+      console.log(`Filtered ${filtered.length} advances for current month ${currentMonth}/${currentYear}:`, filtered);
+      setFilteredAdvances(filtered);
+      
     } catch (error) {
       console.error('Error loading doctor advances:', error);
       setDoctorAdvances([]);
+      setFilteredAdvances([]);
       toast.error('Failed to load doctor advances');
     }
   };
@@ -341,7 +465,7 @@ const DoctorAdvancePage: React.FC = () => {
                 <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Advance Management</h1>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Advance Management</h1>
               </div>
             </div>
           
@@ -756,7 +880,17 @@ const DoctorAdvancePage: React.FC = () => {
                         {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Total:
                       </span>
                       <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
-                        {formatCurrency(filteredAdvances.reduce((sum, adv) => sum + adv.amount, 0))}
+                        {(() => {
+                          const total = filteredAdvances.reduce((sum, adv) => {
+                            const amount = typeof adv.amount === 'string' ? parseFloat(adv.amount) : adv.amount;
+                            console.log('Adding to total:', sum, '+', amount, '=', sum + amount);
+                            return sum + amount;
+                          }, 0);
+                          console.log('=== HEADER TOTAL CALCULATION ===');
+                          console.log('Filtered advances:', filteredAdvances);
+                          console.log('Total calculated:', total);
+                          return formatCurrency(total);
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -939,7 +1073,7 @@ const DoctorAdvancePage: React.FC = () => {
                                     {index + 1}
                                   </td>
                                   <td className="px-4 py-3 text-sm font-medium text-blue-600">
-                                    {advance.id}
+                                    {advance.doctor_id}
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-900">
                                     {new Date(advance.date).toLocaleDateString('en-IN')}
@@ -977,7 +1111,10 @@ const DoctorAdvancePage: React.FC = () => {
                                 Total for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}:
                               </span>
                               <Badge className="bg-blue-100 text-blue-800 text-lg px-4 py-2 font-bold">
-                                {formatCurrency(filteredAdvances.reduce((sum, adv) => sum + adv.amount, 0))}
+                                {formatCurrency(filteredAdvances.reduce((sum, adv) => {
+                                  const amount = typeof adv.amount === 'string' ? parseFloat(adv.amount) : adv.amount;
+                                  return sum + amount;
+                                }, 0))}
                               </Badge>
                             </div>
                           </div>

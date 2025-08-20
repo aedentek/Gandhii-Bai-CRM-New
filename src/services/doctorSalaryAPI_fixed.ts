@@ -164,44 +164,4 @@ export class DoctorSalaryAPI {
       throw error;
     }
   }
-
-  // Record a new payment (simplified version for doctor_salary_settlements table)
-  static async recordPayment(paymentData: {
-    doctorId: string;
-    amount: number;
-    date: string;
-    type: string;
-    payment_mode: string;
-  }): Promise<any> {
-    try {
-      console.log('🏦 Recording salary payment:', paymentData);
-
-      const formattedPayment = {
-        doctorId: paymentData.doctorId,
-        paymentAmount: paymentData.amount,
-        paymentDate: paymentData.date,
-        paymentMode: paymentData.payment_mode,
-        notes: `Payment for ${paymentData.type}`
-      };
-
-      const response = await fetch(`${API_BASE_URL}/doctor-salaries/payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formattedPayment),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to record payment: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Error recording payment:', error);
-      throw error;
-    }
-  }
 }

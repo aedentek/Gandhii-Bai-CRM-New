@@ -295,4 +295,49 @@ router.get('/doctors-list', async (req, res) => {
   }
 });
 
+// Get monthly advance total for a specific doctor
+router.get('/monthly-total', async (req, res) => {
+  try {
+    const { doctorId, month, year } = req.query;
+    
+    if (!doctorId || !month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: 'Doctor ID, month, and year are required'
+      });
+    }
+    
+    console.log(`📊 Getting monthly advance total for doctor ${doctorId} for ${month}/${year}`);
+    
+    const query = `
+      SELECT COALESCE(SUM(amount), 0) as totalAmount
+      FROM doctor_advance 
+      WHERE doctor_id = ? 
+      AND MONTH(date) = ? 
+      AND YEAR(date) = ?
+    `;
+    
+    const [rows] = await db.execute(query, [doctorId, month, year]);
+    
+    const totalAmount = parseFloat(rows[0]?.totalAmount || 0);
+    
+    console.log(`✅ Monthly advance total for ${doctorId}: ₹${totalAmount}`);
+    res.json({
+      success: true,
+      totalAmount,
+      doctorId,
+      month,
+      year
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching monthly advance total:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch monthly advance total',
+      error: error.message
+    });
+  }
+});
+
 export default router;
