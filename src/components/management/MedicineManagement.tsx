@@ -27,11 +27,12 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertTriangle, Calendar, Download, Eye, Package, BarChart3, History } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertTriangle, Calendar, Download, Eye, Package, BarChart3, History, X, Tag, DollarSign, Clock, Building, Warehouse, Package2, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Medicine {
@@ -1303,196 +1304,265 @@ const handleRefresh = React.useCallback(() => {
           </DialogContent>
         </Dialog>
 
-        {/* View Medicine Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
-        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="px-2 sm:px-6">
-              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                <span className="truncate">Medicine Information History</span>
-              </DialogTitle>
-            </DialogHeader>
-            
-            {viewingMedicine && (
-              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
-                {/* Product Details Card */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                      Product Details
-                    </h3>
-                  </div>
-                  
-                  <div className="p-3 sm:p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Medicine ID</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
-                          {viewingMedicine.id}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Medicine Name</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {viewingMedicine.name}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {getDisplayCategoryName(viewingMedicine.category)}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Supplier</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {getDisplaySupplierName(viewingMedicine.supplier)}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Manufacturer</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {viewingMedicine.manufacturer || 'Not specified'}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Price per Unit</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          ₹{viewingMedicine.price}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Expiry Date</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          {viewingMedicine.expiry_date ? (() => {
-                            try {
-                              const date = new Date(viewingMedicine.expiry_date);
-                              if (!isNaN(date.getTime())) {
-                                return date.toLocaleDateString('en-GB');
-                              }
-                              return viewingMedicine.expiry_date;
-                            } catch {
-                              return viewingMedicine.expiry_date || 'Not specified';
-                            }
-                          })() : 'Not specified'}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Batch Number</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
-                          {viewingMedicine.batch_number || 'Not specified'}
-                        </p>
-                      </div>
-                      {viewingMedicine.description && (
-                        <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                          <label className="text-xs sm:text-sm font-medium text-gray-600">Description</label>
-                          <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                            {viewingMedicine.description}
-                          </p>
-                        </div>
-                      )}
+        {/* View Medicine Dialog - Medicine Stock Modal Style */}
+        {viewingMedicine && showViewDialog && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowViewDialog(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                      <Pill className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
                     </div>
-                  </div>
-                </div>
-                
-                {/* Stock Summary Card */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                      Stock Summary
-                    </h3>
-                  </div>
-                  
-                  <div className="p-3 sm:p-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="text-center">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">{viewingMedicine.quantity || 0}</div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Stock</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">0</div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Used Stock</div>
-                      </div>
-                      <div className="text-center lg:col-start-3">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">{viewingMedicine.quantity || 0}</div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Available</div>
-                      </div>
-                      <div className="text-center lg:col-start-4">
-                        <div className="mb-2">
-                          <Badge 
-                            variant={
-                              viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'default' : 
-                              (viewingMedicine.quantity || 0) <= 10 ? 'secondary' : 'destructive'
-                            }
-                            className={`text-xs sm:text-sm font-medium px-2 py-1 ${
-                              viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
-                              (viewingMedicine.quantity || 0) <= 10 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'In Stock' :
-                             (viewingMedicine.quantity || 0) <= 10 ? 'Low Stock' :
-                             'Out of Stock'}
-                          </Badge>
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600">Status</div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${
+                        viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
+                        (viewingMedicine.quantity || 0) <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'In Stock' :
+                         (viewingMedicine.quantity || 0) <= 10 ? 'Low Stock' :
+                         'Out of Stock'}
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Stock Movement History */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
-                      Stock Movement History
-                    </h3>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">{viewingMedicine.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">Medicine ID:</span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        {typeof viewingMedicine.id === 'number' ? `MD${String(viewingMedicine.id).padStart(4, '0')}` : 
+                         (typeof viewingMedicine.id === 'string' && /^\d+$/.test(viewingMedicine.id) ? `MD${viewingMedicine.id.padStart(4, '0')}` : 
+                          viewingMedicine.id)}
+                      </span>
+                    </div>
                   </div>
-                  
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50/50">
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[50px]">S NO</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Date</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Stock Change</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Type</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Stock After</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Description</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-6 sm:py-8 text-muted-foreground">
-                            <div className="flex flex-col items-center gap-2">
-                              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
-                              <span className="text-sm sm:text-base">No stock history recorded yet</span>
-                              <span className="text-xs text-gray-500 hidden sm:block">Stock movement tracking will appear here</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowViewDialog(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-            )}
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-100 px-3 sm:px-6 pb-3 sm:pb-4 md:pb-6">
-              <Button 
-                variant="outline"
-                onClick={() => setShowViewDialog(false)}
-                className="w-full sm:w-auto modern-btn modern-btn-secondary text-sm sm:text-base"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Medicine Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Pill className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Medicine Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Pill className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Medicine Name</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewingMedicine.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{getDisplayCategoryName(viewingMedicine.category)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Building className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{getDisplaySupplierName(viewingMedicine.supplier)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Price</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewingMedicine.price || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Purchase Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewingMedicine.purchase_date || 'Not specified'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Expiry Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                              {viewingMedicine.expiry_date ? (() => {
+                                try {
+                                  const date = new Date(viewingMedicine.expiry_date);
+                                  if (!isNaN(date.getTime())) {
+                                    return date.toLocaleDateString('en-GB');
+                                  }
+                                  return viewingMedicine.expiry_date;
+                                } catch {
+                                  return viewingMedicine.expiry_date || 'Not specified';
+                                }
+                              })() : 'Not specified'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {viewingMedicine.manufacturer && (
+                        <div className="bg-gradient-to-br from-teal-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-teal-100">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Building className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-teal-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium text-teal-600 uppercase tracking-wide">Manufacturer</div>
+                              <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewingMedicine.manufacturer}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {viewingMedicine.batch_number && (
+                        <div className="bg-gradient-to-br from-pink-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-pink-100">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-pink-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium text-pink-600 uppercase tracking-wide">Batch Number</div>
+                              <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewingMedicine.batch_number}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                    </div>
+                    
+                    {viewingMedicine.description && (
+                      <div className="mt-4 p-3 sm:p-4 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
+                        <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">Description</div>
+                        <p className="text-sm sm:text-base text-gray-900">{viewingMedicine.description}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stock Summary Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Stock Summary
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{viewingMedicine.quantity || 0}</div>
+                        <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Stock</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-red-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-red-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">0</div>
+                        <div className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Used Stock</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Package2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">{viewingMedicine.quantity || 0}</div>
+                        <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Available</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
+                        </div>
+                        <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'bg-green-100 text-green-800' :
+                          (viewingMedicine.quantity || 0) <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {viewingMedicine.status === 'active' && (viewingMedicine.quantity || 0) > 10 ? 'In Stock' :
+                           (viewingMedicine.quantity || 0) <= 10 ? 'Low Stock' :
+                           'Out of Stock'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-2">Status</div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Stock Movement History - Empty State */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <History className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Stock History</h3>
+                    <p className="text-gray-500">No stock movement history recorded yet for this medicine</p>
+                    <p className="text-gray-400 text-sm mt-2">Stock movement tracking will appear here</p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

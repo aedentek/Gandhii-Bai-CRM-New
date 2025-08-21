@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -308,7 +309,7 @@ const LeadsList: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
               <div className="flex gap-2">
-                <Button
+                <ActionButtons.Refresh 
                   onClick={() => {
                     setStatusFilter('all');
                     setSearchTerm('');
@@ -319,35 +320,16 @@ const LeadsList: React.FC = () => {
                     setCurrentPage(1);
                     loadLeads();
                   }}
-                  disabled={loading}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
-                >
-                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
-                  <span className="sm:hidden">↻</span>
-                </Button>
+                  loading={loading}
+                />
                 
-                {/* Month & Year Filter Button */}
-                <Button 
-                  type="button"
+                <ActionButtons.MonthYear 
                   onClick={() => setShowMonthYearDialog(true)}
-                  variant="outline"
-                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden lg:inline">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth]} ${filterYear}`
-                      : `${months[selectedMonth]} ${selectedYear}`
-                    }
-                  </span>
-                  <span className="lg:hidden">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                      : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
-                    }
-                  </span>
-                </Button>
+                  text={filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
+                    : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                  }
+                />
 
                 {/* Clear Filter Button */}
                 {(filterMonth !== currentMonth || filterYear !== currentYear) && (

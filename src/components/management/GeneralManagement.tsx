@@ -25,6 +25,7 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -563,13 +564,11 @@ const handleRefresh = React.useCallback(() => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">General Products</h1>
-                <p className="text-sm text-gray-600 mt-1">Manage and organize your general products inventory</p>
               </div>
             </div>
           
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
-                type="button"
+              <ActionButtons.Refresh
                 onClick={() => {
                   // Reset all filters to current month/year and refresh
                   const currentMonth = new Date().getMonth();
@@ -586,18 +585,8 @@ const handleRefresh = React.useCallback(() => {
                   // Refresh the data
                   handleGlobalRefresh();
                 }}
-                disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                title="Reset to current month and refresh data"
-              >
-                {loading ? (
-                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                )}
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+                loading={loading}
+              />
               
               <Button 
                 type="button"
@@ -610,26 +599,13 @@ const handleRefresh = React.useCallback(() => {
                 <span className="sm:hidden">CSV</span>
               </Button>
               
-              <Button 
-                type="button"
+              <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="action-btn action-btn-outline flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
+                text={filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
+                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                }
+              />
               
               <Button 
                 type="button"

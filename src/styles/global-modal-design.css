@@ -1436,3 +1436,157 @@
 .crm-edit-form-group:last-child {
   margin-bottom: 0;
 }
+
+/* ================================================================= */
+/* 12. MEDICAL RECORD VIEW DIALOG STYLES */
+/* ================================================================= */
+
+/* Media File Cards */
+.crm-modal-media-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.crm-modal-media-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.crm-modal-media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.crm-modal-media-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.crm-modal-media-icon-blue {
+  background-color: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.crm-modal-media-icon-green {
+  background-color: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.crm-modal-media-icon-gray {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.crm-modal-media-filename {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.crm-modal-media-preview {
+  margin-bottom: 0.75rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.crm-modal-media-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.crm-modal-media-btn {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.crm-modal-media-btn-view {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.crm-modal-media-btn-view:hover {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.crm-modal-media-btn-download {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.crm-modal-media-btn-download:hover {
+  background-color: #dcfce7;
+  border-color: #86efac;
+}
+
+/* Filter Button */
+.crm-modal-filter-btn {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.crm-modal-filter-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Table Styles */
+.crm-modal-table-container {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.crm-modal-table-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.crm-modal-table-cell {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #374151;
+  border-right: 1px solid #f3f4f6;
+}
+
+.crm-modal-table-cell:last-child {
+  border-right: none;
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Edit, Trash2, Users, TrendingUp, DollarSign, Calendar, IndianRupee, RefreshCw, UserCheck, Activity, Clock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -259,23 +260,15 @@ export default function StaffAdvance() {
             </div>
             
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
+              <ActionButtons.Refresh 
                 onClick={loadData}
+                loading={loading}
                 disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 gap-2"
-              >
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{headerMonthFilter.month}/{headerMonthFilter.year}</span>
-                <span className="sm:hidden">{headerMonthFilter.month}/{headerMonthFilter.year}</span>
-              </Button>
+              />
+              <ActionButtons.MonthYear 
+                onClick={() => {/* Add month/year picker functionality if needed */}}
+                text={`${headerMonthFilter.month}/${headerMonthFilter.year}`}
+              />
             </div>
           </div>
         </div>

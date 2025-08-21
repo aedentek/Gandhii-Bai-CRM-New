@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from '../../hooks/use-toast';
-import { FileText, Search, Download, Edit2, Loader2, Play, Pause, RefreshCw, Trash2, Eye, Pencil, Mic, Square, File as FileIcon, User } from 'lucide-react';
+import { FileText, Search, Download, Edit2, Loader2, Play, Pause, RefreshCw, Trash2, Eye, Pencil, Mic, Square, File as FileIcon, User, Phone, Calendar, X } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -980,30 +981,20 @@ const PatientCallRecord: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patients Call Record</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Manage patient call records and audio recordings
-                </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <Button 
+              <ActionButtons.Refresh 
                 onClick={async () => {
                   setIsUpdatingRecords(true);
                   await Promise.all([loadPatients(), loadCallRecords()]);
                   setIsUpdatingRecords(false);
                   setRefreshCounter(prev => prev + 1);
                 }}
+                loading={isUpdatingRecords}
                 disabled={isUpdatingRecords}
-                className="global-btn global-btn-secondary"
-              >
-                {isUpdatingRecords ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                <span className="font-medium">Refresh</span>
-              </Button>
+              />
               
               <Button 
                 onClick={() => setShowAddDialog(true)}
@@ -1511,260 +1502,331 @@ const PatientCallRecord: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Record Dialog - PatientHistory Style */}
+      {/* View Record Dialog - Glass Morphism Design */}
       {viewRecord && (
-        <Dialog key={`view-dialog-${viewRecord.patientId}-${refreshCounter}-${records.length}`} open={!!viewRecord} onOpenChange={() => setViewRecord(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center border-b pb-4">
-              <DialogTitle className="text-2xl font-bold text-primary">Patient Call Record</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-6 py-4">
-              {/* Patient Details Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-primary">Patient Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {/* Patient Photo */}
-                  <div className="flex items-center space-x-4 col-span-2 md:col-span-3 mb-4">
-                    {(() => {
-                      const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
-                      
-                      // Construct proper photo URL
-                      let imageUrl = '';
-                      
-                      if (patient?.photo) {
-                        // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                        if (patient.photo.startsWith('http')) {
-                          imageUrl = patient.photo;
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewRecord(null)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  {(() => {
+                    const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                    
+                    // Construct proper photo URL
+                    let imageUrl = '';
+                    
+                    if (patient?.photo) {
+                      // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
+                      if (patient.photo.startsWith('http')) {
+                        imageUrl = patient.photo;
+                      } else {
+                        // Photos are stored in: server/Photos/patient Admission/{patientId}/
+                        // Database stores: Photos/patient Admission/{patientId}/{filename}
+                        // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
+                        if (patient.photo.includes('Photos/patient Admission/')) {
+                          // Photo path is already in correct format from database
+                          imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
                         } else {
-                          // Photos are stored in: server/Photos/patient Admission/{patientId}/
-                          // Database stores: Photos/patient Admission/{patientId}/{filename}
-                          // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
-                          if (patient.photo.includes('Photos/patient Admission/')) {
-                            // Photo path is already in correct format from database
-                            imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
-                          } else {
-                            // Assume it's just filename and build full path
-                            imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photo}`;
-                          }
-                        }
-                      } else if (patient?.photoUrl) {
-                        if (patient.photoUrl.startsWith('http')) {
-                          imageUrl = patient.photoUrl;
-                        } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
-                          imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
-                        } else {
-                          imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photoUrl}`;
+                          // Assume it's just filename and build full path
+                          imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photo}`;
                         }
                       }
+                    } else if (patient?.photoUrl) {
+                      if (patient.photoUrl.startsWith('http')) {
+                        imageUrl = patient.photoUrl;
+                      } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
+                        imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
+                      } else {
+                        imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photoUrl}`;
+                      }
+                    }
 
-                      return imageUrl ? (
-                        <>
-                          <img
-                            src={imageUrl}
-                            alt={`${viewRecord.patientName}'s photo`}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-                            onError={(e) => {
-                              console.log('❌ Image failed for:', viewRecord.patientName);
-                              console.log('   Failed URL:', imageUrl);
-                              
-                              // Show fallback avatar
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const avatarDiv = target.nextElementSibling as HTMLElement;
-                              if (avatarDiv) avatarDiv.style.display = 'flex';
-                            }}
-                            onLoad={() => {
-                              console.log('✅ Image loaded successfully for patient:', viewRecord.patientName, 'URL:', imageUrl);
-                            }}
-                          />
-                          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                            <span className="text-lg font-semibold text-white">
-                              {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
+                    return (
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                        {imageUrl ? (
+                          <>
+                            <img
+                              src={imageUrl}
+                              alt={`${viewRecord.patientName}'s photo`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.log('❌ Image failed for:', viewRecord.patientName);
+                                console.log('   Failed URL:', imageUrl);
+                                
+                                // Show fallback avatar
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement as HTMLElement;
+                                if (parent) {
+                                  parent.innerHTML = `<span class="text-lg font-semibold text-white">${(viewRecord.patientName || 'P').charAt(0).toUpperCase()}</span>`;
+                                }
+                              }}
+                              onLoad={() => {
+                                console.log('✅ Image loaded successfully for patient:', viewRecord.patientName, 'URL:', imageUrl);
+                              }}
+                            />
+                          </>
+                        ) : (
                           <span className="text-lg font-semibold text-white">
                             {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
                           </span>
-                        </div>
-                      );
-                    })()}
-                    <div>
-                      <p className="text-xl font-semibold text-foreground">{viewRecord.patientName}</p>
-                      <p className="text-sm text-muted-foreground">Patient ID: {formatPatientId(viewRecord.patientId)}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <div className="absolute -bottom-1 -right-1">
+                    <div className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full">
+                      Active
                     </div>
                   </div>
-                  
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient Name:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientName}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient ID:</Label>
-                    <p className="text-foreground font-medium">{formatPatientId(viewRecord.patientId)}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Joining Date:</Label>
-                    <p className="text-foreground font-medium">
-                      {(() => {
-                        const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
-                        return patient && patient.admissionDate 
-                          ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') 
-                          : 'Not Available';
-                      })()}
-                    </p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">{viewRecord.patientName}</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">Call Records Total:</span>
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                      {viewedPatientCallRecords.length} Records
+                    </span>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewRecord(null)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
+            </div>
 
-              {/* Month & Year Filter for Call History */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-primary">Call History</h3>
-                  <button
-                    type="button"
-                    className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary flex items-center gap-1 min-w-[140px] text-sm"
-                    onClick={() => setShowViewDialogMonthYearDialog(true)}
-                  >
-                    {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
-                      ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
-                      : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
-                    }
-                  </button>
+            {/* Modal Body - Glass Morphism Style */}
+            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                
+                {/* Patient Information Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                    </div>
+                    Patient Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Patient Name</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewRecord.patientName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 font-bold text-xs sm:text-sm">ID</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Patient ID</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatPatientId(viewRecord.patientId)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Joining Date</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                            {(() => {
+                              const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                              return patient && patient.admissionDate 
+                                ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') 
+                                : 'Not Available';
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
                 </div>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted">
-                        <TableHead className="text-center font-semibold">S NO</TableHead>
-                        <TableHead className="text-center font-semibold">Date</TableHead>
-                        <TableHead className="text-center font-semibold">Description</TableHead>
-                        <TableHead className="text-center font-semibold">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {/* Get all call records for this patient */}
-                      {viewedPatientCallRecords.map((record, index) => (
-                          <TableRow key={record.id} className="hover:bg-muted/50">
-                            <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                            <TableCell className="text-center">{format(new Date(record.date), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell className="text-center max-w-xs truncate" title={record.description}>
-                              {record.description || 'No description'}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex justify-center space-x-2">
-                                {/* Audio Controls */}
-                                {record.audioRecording?.url && (
-                                  <div className="flex space-x-1">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        const audioUrl = record.audioRecording?.url;
-                                        console.log('🎵 Play button clicked, URL:', audioUrl);
-                                        if (audioUrl) {
-                                          playAudio(audioUrl, record.id);
-                                        } else {
-                                          console.error('❌ No audio URL available');
-                                          toast({
-                                            title: "Audio Error",
-                                            description: "No audio file available for this record.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                      title="Play Audio"
-                                    >
-                                      {playingAudio === record.id ? (
-                                        <Pause className="w-4 h-4 text-blue-600" />
-                                      ) : (
-                                        <Play className="w-4 h-4 text-blue-600" />
-                                      )}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
-                                        const speeds = [0.5, 1, 1.25, 1.5, 2];
-                                        const currentIndex = speeds.indexOf(playbackSpeed);
-                                        const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-                                        setPlaybackSpeed(nextSpeed);
-                                        // Update current audio if playing
-                                        if (audioRef.current && playingAudio === record.id) {
-                                          audioRef.current.playbackRate = nextSpeed;
-                                        }
-                                      }}
-                                      title={`Playback Speed: ${playbackSpeed}x`}
-                                    >
-                                      <span className="text-xs font-mono text-purple-600">{playbackSpeed}x</span>
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        const audioUrl = record.audioRecording?.url;
-                                        console.log('📥 Download button clicked, URL:', audioUrl);
-                                        if (audioUrl) {
-                                          downloadAudio(audioUrl, `${record.patientName}-audio-${record.date}`);
-                                        } else {
-                                          console.error('❌ No audio URL available for download');
-                                          toast({
-                                            title: "Download Error",
-                                            description: "No audio file available for download.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                      title="Download Audio"
-                                    >
-                                      <Download className="w-4 h-4 text-green-600" />
-                                    </Button>
+
+                {/* Call History Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Phone className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Call History ({viewedPatientCallRecords.length})
+                    </h3>
+                    
+                    {/* Month/Year Selector */}
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-gray-50 min-w-[140px]"
+                      onClick={() => setShowViewDialogMonthYearDialog(true)}
+                    >
+                      {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
+                        ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
+                        : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
+                      }
+                    </button>
+                  </div>
+                  
+                  {viewedPatientCallRecords.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Phone className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500">
+                        No call records found for this patient
+                      </p>
+                      <p className="text-sm text-slate-400 mt-1">Call records will appear here when added</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Table Format */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                          <thead>
+                            <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
+                              <th className="px-4 py-3 text-left text-sm font-semibold">S No</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Audio</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {viewedPatientCallRecords.map((record, index) => (
+                              <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {index + 1}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {format(new Date(record.date), 'dd/MM/yyyy')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                                  <div className="truncate" title={record.description || 'No description'}>
+                                    {record.description || 'No description'}
                                   </div>
-                                )}
-                                
-                                {/* Delete Control */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteFromViewPopup(record)}
-                                  title="Delete Call Record"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      
-                      {/* Show message if no call records exist */}
-                      {viewedPatientCallRecords.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                            <div className="flex flex-col items-center space-y-2">
-                              <FileText className="w-8 h-8 text-muted-foreground/50" />
-                              <p>No call records found for this patient</p>
-                              <p className="text-sm">Call records will appear here when added</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {record.audioRecording?.url ? (
+                                    <div className="flex justify-center gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const audioUrl = record.audioRecording?.url;
+                                          console.log('🎵 Play button clicked, URL:', audioUrl);
+                                          if (audioUrl) {
+                                            playAudio(audioUrl, record.id);
+                                          } else {
+                                            console.error('❌ No audio URL available');
+                                            toast({
+                                              title: "Audio Error",
+                                              description: "No audio file available for this record.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                        title="Play Audio"
+                                        className="p-1 h-8 w-8"
+                                      >
+                                        {playingAudio === record.id ? (
+                                          <Pause className="w-3 h-3 text-blue-600" />
+                                        ) : (
+                                          <Play className="w-3 h-3 text-blue-600" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
+                                          const speeds = [0.5, 1, 1.25, 1.5, 2];
+                                          const currentIndex = speeds.indexOf(playbackSpeed);
+                                          const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+                                          setPlaybackSpeed(nextSpeed);
+                                          // Update current audio if playing
+                                          if (audioRef.current && playingAudio === record.id) {
+                                            audioRef.current.playbackRate = nextSpeed;
+                                          }
+                                        }}
+                                        title={`Playback Speed: ${playbackSpeed}x`}
+                                        className="p-1 h-8 w-8"
+                                      >
+                                        <span className="text-xs font-mono text-purple-600">{playbackSpeed}x</span>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const audioUrl = record.audioRecording?.url;
+                                          console.log('📥 Download button clicked, URL:', audioUrl);
+                                          if (audioUrl) {
+                                            downloadAudio(audioUrl, `${record.patientName}-audio-${record.date}`);
+                                          } else {
+                                            console.error('❌ No audio URL available for download');
+                                            toast({
+                                              title: "Download Error",
+                                              description: "No audio file available for download.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                        title="Download Audio"
+                                        className="p-1 h-8 w-8"
+                                      >
+                                        <Download className="w-3 h-3 text-green-600" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">No Audio</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <button
+                                    onClick={() => handleDeleteFromViewPopup(record)}
+                                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                    title="Delete call record"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
                 </div>
+
               </div>
             </div>
-            <div className="flex justify-end pt-4">
-              <Button variant="outline" onClick={() => setViewRecord(null)}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
 
       {/* Month/Year Filter Dialog for View */}

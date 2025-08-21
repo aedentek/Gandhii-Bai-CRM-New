@@ -216,7 +216,6 @@ const DeletedStaff: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Deleted Staff</h1>
-                <p className="text-sm sm:text-base text-gray-600">Manage and restore deleted staff members</p>
               </div>
             </div>
             

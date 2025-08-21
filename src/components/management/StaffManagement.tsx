@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Search, Users, Plus, Eye, Edit2, Trash2, RefreshCw, Activity, UserCheck, UserX, Clock } from 'lucide-react';
+import { Download, Search, Users, Plus, Eye, Edit2, Trash2, RefreshCw, Activity, UserCheck, UserX, Clock, User, Mail, Phone, MapPin, Calendar, DollarSign, X, IdCard, FileText, Briefcase } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { parseISO, format as formatDate } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -321,15 +322,11 @@ const StaffManagement: React.FC = () => {
             </div>
           
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button 
+              <ActionButtons.Refresh 
                 onClick={() => window.location.reload()}
+                loading={false}
                 disabled={false}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+              />
               <Button 
                 onClick={exportToCSV}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
@@ -733,174 +730,330 @@ const StaffManagement: React.FC = () => {
         </CardContent>
         </Card>
 
-        {/* View Staff Dialog */}
+        {/* View Staff Modal - Glass Morphism Design */}
         {viewStaff && (
-          <Dialog open={!!viewStaff} onOpenChange={() => setViewStaff(null)}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Staff Details - {viewStaff.id}</DialogTitle>
-                <DialogDescription>Complete information for {viewStaff.name}</DialogDescription>
-              </DialogHeader>
-            <div className="flex flex-col items-center py-2">
-              {viewStaff.photo ? (
-                <img
-                  src={getImageUrl(viewStaff.photo)}
-                  alt={viewStaff.name || 'Profile'}
-                  className="w-24 h-24 rounded-full object-cover border mb-4"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              {!viewStaff.photo && (
-                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4 text-lg text-muted-foreground border">
-                  N/A
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Name</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.name}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Email</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.email}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Phone</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.phone}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Role</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.role}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Join Date</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.joinDate}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Salary</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.salary}</p>
-                </div>
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label className="font-medium text-foreground">Address</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <p className="text-sm">{viewStaff.address}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-foreground">Status</Label>
-                <div className="p-3 bg-muted rounded-md border">
-                  <Badge className={getStatusBadge(viewStaff.status)}>
-                    {viewStaff.status.charAt(0).toUpperCase() + viewStaff.status.slice(1)}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            {/* Document Details Section */}
-            <div className="mt-6">
-              <Label className="font-medium text-foreground text-lg mb-2 block">Document Details</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Aadhar Card Front */}
-                <div className="space-y-1">
-                  <Label>Aadhar Card Front</Label>
-                  {(viewStaff.aadharFront || viewStaff.documents?.aadharFront) ? (
-                    <img 
-                      src={getImageUrl(viewStaff.aadharFront || viewStaff.documents?.aadharFront)} 
-                      alt="Aadhar Front" 
-                      className="w-full h-24 object-cover rounded border mb-1" 
-                    />
-                  ) : (
-                    <div className="p-2 text-muted-foreground">No file chosen</div>
-                  )}
-                </div>
-                {/* Aadhar Card Back */}
-                <div className="space-y-1">
-                  <Label>Aadhar Card Back</Label>
-                  {(viewStaff.aadharBack || viewStaff.documents?.aadharBack) ? (
-                    <img 
-                      src={getImageUrl(viewStaff.aadharBack || viewStaff.documents?.aadharBack)} 
-                      alt="Aadhar Back" 
-                      className="w-full h-24 object-cover rounded border mb-1" 
-                    />
-                  ) : (
-                    <div className="p-2 text-muted-foreground">No file chosen</div>
-                  )}
-                </div>
-                {/* Aadhar Card Number */}
-                <div className="space-y-1 col-span-2">
-                  <Label>Aadhar Card Number</Label>
-                  <div className="p-2 bg-muted rounded-md border">{viewStaff.aadharNumber || viewStaff.documents?.aadharNumber || <span className="text-muted-foreground">N/A</span>}</div>
-                </div>
-                {/* PAN Card Front */}
-                <div className="space-y-1">
-                  <Label>PAN Card Front</Label>
-                  {(viewStaff.panFront || viewStaff.documents?.panFront) ? (
-                    <img 
-                      src={getImageUrl(viewStaff.panFront || viewStaff.documents?.panFront)} 
-                      alt="PAN Front" 
-                      className="w-full h-24 object-cover rounded border mb-1" 
-                    />
-                  ) : (
-                    <div className="p-2 text-muted-foreground">No file chosen</div>
-                  )}
-                </div>
-                {/* PAN Card Back */}
-                <div className="space-y-1">
-                  <Label>PAN Card Back</Label>
-                  {(viewStaff.panBack || viewStaff.documents?.panBack) ? (
-                    <img 
-                      src={getImageUrl(viewStaff.panBack || viewStaff.documents?.panBack)} 
-                      alt="PAN Back" 
-                      className="w-full h-24 object-cover rounded border mb-1" 
-                    />
-                  ) : (
-                    <div className="p-2 text-muted-foreground">No file chosen</div>
-                  )}
-                </div>
-                {/* PAN Card Number */}
-                <div className="space-y-1 col-span-2">
-                  <Label>PAN Card Number</Label>
-                  <div className="p-2 bg-muted rounded-md border">{viewStaff.panNumber || viewStaff.documents?.panNumber || <span className="text-muted-foreground">N/A</span>}</div>
-                </div>
-              </div>
-            </div>
-            {/* Document Details Section */}
-            {viewStaff.documents && Array.isArray(viewStaff.documents) && viewStaff.documents.length > 0 && (
-              <div className="mt-6">
-                <Label className="font-medium text-foreground text-lg mb-2 block">Document Details</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {viewStaff.documents.map((doc: any, idx: number) => (
-                    <div key={idx} className="p-3 bg-muted rounded-md border flex flex-col">
-                      <span className="font-medium">{doc.type || 'Document'}:</span>
-                      {doc.url ? (
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">{doc.name || doc.url}</a>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewStaff(null)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
+                      {viewStaff.photo ? (
+                        <img
+                          src={getImageUrl(viewStaff.photo)}
+                          alt={viewStaff.name || 'Profile'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            const parent = target.parentElement as HTMLElement;
+                            if (parent) {
+                              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-lg font-semibold text-white">${(viewStaff.name || 'S').charAt(0).toUpperCase()}</span></div>`;
+                            }
+                          }}
+                        />
                       ) : (
-                        <span>{doc.name || 'N/A'}</span>
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-lg font-semibold text-white">
+                            {(viewStaff.name || 'S').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  ))}
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${getStatusBadge(viewStaff.status)}`}>
+                        {viewStaff.status}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">{viewStaff.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">Staff ID:</span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        {viewStaff.id}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewStaff(null)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
+
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Personal Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Personal Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Full Name</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewStaff.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Mail className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Email Address</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewStaff.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Phone Number</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewStaff.phone}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100 sm:col-span-2 lg:col-span-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Address</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewStaff.address}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Professional Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Briefcase className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Professional Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Role</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewStaff.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Department</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewStaff.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Join Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewStaff.joinDate || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Salary</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewStaff.salary || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Document Details Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <IdCard className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                      </div>
+                      Document Details
+                    </h3>
+                    
+                    {/* Aadhar Section */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <IdCard className="h-4 w-4 text-blue-600" />
+                        Aadhar Card Details
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Aadhar Front</div>
+                          {(viewStaff.aadharFront || viewStaff.documents?.aadharFront) ? (
+                            <img 
+                              src={getImageUrl(viewStaff.aadharFront || viewStaff.documents?.aadharFront)} 
+                              alt="Aadhar Front" 
+                              className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => window.open(getImageUrl(viewStaff.aadharFront || viewStaff.documents?.aadharFront), '_blank')}
+                            />
+                          ) : (
+                            <div className="w-full h-24 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
+                              <FileText className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Aadhar Back</div>
+                          {(viewStaff.aadharBack || viewStaff.documents?.aadharBack) ? (
+                            <img 
+                              src={getImageUrl(viewStaff.aadharBack || viewStaff.documents?.aadharBack)} 
+                              alt="Aadhar Back" 
+                              className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => window.open(getImageUrl(viewStaff.aadharBack || viewStaff.documents?.aadharBack), '_blank')}
+                            />
+                          ) : (
+                            <div className="w-full h-24 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
+                              <FileText className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="sm:col-span-2 bg-gradient-to-br from-green-50 to-white p-3 rounded-lg border border-green-100">
+                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-2">Aadhar Number</div>
+                          <p className="text-lg font-semibold text-gray-900">{viewStaff.aadharNumber || viewStaff.documents?.aadharNumber || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PAN Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-600" />
+                        PAN Card Details
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-br from-purple-50 to-white p-3 rounded-lg border border-purple-100">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide mb-2">PAN Front</div>
+                          {(viewStaff.panFront || viewStaff.documents?.panFront) ? (
+                            <img 
+                              src={getImageUrl(viewStaff.panFront || viewStaff.documents?.panFront)} 
+                              alt="PAN Front" 
+                              className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => window.open(getImageUrl(viewStaff.panFront || viewStaff.documents?.panFront), '_blank')}
+                            />
+                          ) : (
+                            <div className="w-full h-24 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
+                              <FileText className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-50 to-white p-3 rounded-lg border border-purple-100">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide mb-2">PAN Back</div>
+                          {(viewStaff.panBack || viewStaff.documents?.panBack) ? (
+                            <img 
+                              src={getImageUrl(viewStaff.panBack || viewStaff.documents?.panBack)} 
+                              alt="PAN Back" 
+                              className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => window.open(getImageUrl(viewStaff.panBack || viewStaff.documents?.panBack), '_blank')}
+                            />
+                          ) : (
+                            <div className="w-full h-24 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
+                              <FileText className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="sm:col-span-2 bg-gradient-to-br from-orange-50 to-white p-3 rounded-lg border border-orange-100">
+                          <div className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-2">PAN Number</div>
+                          <p className="text-lg font-semibold text-gray-900">{viewStaff.panNumber || viewStaff.documents?.panNumber || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Documents */}
+                    {viewStaff.documents && Array.isArray(viewStaff.documents) && viewStaff.documents.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-green-600" />
+                          Additional Documents
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {viewStaff.documents.map((doc: any, idx: number) => (
+                            <div key={idx} className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-lg border border-gray-100">
+                              <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">{doc.type || 'Document'}</div>
+                              {doc.url ? (
+                                <a 
+                                  href={doc.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-blue-600 hover:text-blue-800 underline break-all text-sm"
+                                >
+                                  {doc.name || doc.url}
+                                </a>
+                              ) : (
+                                <span className="text-gray-500 text-sm">{doc.name || 'N/A'}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Edit Staff Dialog */}
       {editStaff && (

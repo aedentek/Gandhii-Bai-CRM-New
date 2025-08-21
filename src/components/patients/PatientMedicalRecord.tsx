@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from '../../hooks/use-toast';
-import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File, TrendingUp, Clock } from 'lucide-react';
+import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File, TrendingUp, Clock, Plus, Calendar } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -141,6 +142,16 @@ const PatientMedicalRecord: React.FC = () => {
     photoFiles: [] as File[],
     documentFiles: [] as File[]
   });
+
+  // New record form states
+  const [newRecord, setNewRecord] = useState({
+    patientId: '',
+    date: new Date().toISOString().split('T')[0],
+    recordType: '',
+    description: ''
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // Function to format patient ID as P0001
   const formatPatientId = (id: string | number): string => {
@@ -983,6 +994,124 @@ const PatientMedicalRecord: React.FC = () => {
 
   const handleView = (record: MedicalRecord) => {
     setViewRecord(record);
+    // Initialize new record form with patient ID
+    setNewRecord({
+      patientId: record.patientId,
+      date: new Date().toISOString().split('T')[0],
+      recordType: '',
+      description: ''
+    });
+    setSelectedFiles([]);
+  };
+
+  // Handler for new record form submission
+  const handleAddRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!viewRecord?.patientId || !newRecord.date || !newRecord.recordType) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    
+    try {
+      // Step 1: Upload files first and collect file paths
+      const uploadedFilePaths: string[] = [];
+      
+      for (const file of selectedFiles) {
+        try {
+          // Upload each file using the patient history file upload endpoint
+          const filePath = await uploadMedicalHistoryFile(file, viewRecord.patientId, 'document');
+          uploadedFilePaths.push(filePath);
+          console.log('✅ File uploaded:', filePath);
+        } catch (error) {
+          console.error('❌ File upload failed:', error);
+          // Continue with other files even if one fails
+        }
+      }
+
+      // Step 2: Submit the record data with file paths using JSON endpoint
+      const recordData = {
+        patient_id: viewRecord.patientId,
+        patient_name: viewRecord.patientName,
+        date: newRecord.date,
+        record_type: newRecord.recordType,
+        description: newRecord.description,
+        images: uploadedFilePaths,
+        created_by: 'system'
+      };
+
+      const response = await fetch('http://localhost:4000/api/patient-medical-records/json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(recordData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Success",
+          description: "Medical record added successfully!",
+        });
+
+        // Reset form
+        setNewRecord({
+          patientId: '',
+          date: new Date().toISOString().split('T')[0],
+          recordType: '',
+          description: ''
+        });
+        setSelectedFiles([]);
+
+        // Refresh records to show the new record
+        loadData();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to add record');
+      }
+    } catch (error) {
+      console.error('Error adding record:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add medical record. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handler for file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      const maxSize = 50 * 1024 * 1024; // 50MB limit
+      
+      const invalidFiles = newFiles.filter(file => file.size > maxSize);
+      if (invalidFiles.length > 0) {
+        toast({
+          title: "File Size Error",
+          description: "Files larger than 50MB are not allowed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
+      
+      toast({
+        title: "Files Selected",
+        description: `${newFiles.length} file(s) selected successfully.`,
+      });
+    }
   };
 
   const openAddDialogForPatient = (patientId: string) => {
@@ -1134,42 +1263,19 @@ const PatientMedicalRecord: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
               <div className="flex gap-2">
-                <Button 
-                  type="button"
+                <ActionButtons.Refresh 
                   onClick={refreshData}
+                  loading={isLoadingPatients || isLoadingRecords}
                   disabled={isLoadingPatients || isLoadingRecords}
-                  className="global-btn global-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[100px]"
-                >
-                  {isLoadingPatients || isLoadingRecords ? (
-                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  )}
-                  <span className="hidden sm:inline">Refresh</span>
-                  <span className="sm:hidden">↻</span>
-                </Button>
+                />
                 
-                {/* Month & Year Filter Button */}
-                <Button 
-                  type="button"
+                <ActionButtons.MonthYear 
                   onClick={() => setShowMonthYearDialog(true)}
-                  variant="outline"
-                  className="crm-month-year-btn"
-                >
-                  <CalendarDays className="crm-month-year-btn-icon" />
-                  <span className="crm-month-year-btn-text">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth]} ${filterYear}`
-                      : `${months[selectedMonth]} ${selectedYear}`
-                    }
-                  </span>
-                  <span className="crm-month-year-btn-text-mobile">
-                    {filterMonth !== null && filterYear !== null 
-                      ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                      : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                    }
-                  </span>
-                </Button>
+                  text={filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
+                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                  }
+                />
               </div>
               
 
@@ -1509,495 +1615,613 @@ const PatientMedicalRecord: React.FC = () => {
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editRecord ? 'Edit Medical Record' : 'Add Medical Record'}
-            </DialogTitle>
-            <DialogDescription>
-              {editRecord ? 'Update the medical record details below.' : 'Add a new medical record with audio and photo uploads.'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
-            {/* Patient Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="patient">Patient *</Label>
-                <div className="w-full p-2 border rounded-md bg-gray-50 text-gray-700">
-                  {(() => {
-                    if (!formData.patientId) {
-                      return 'No patient selected';
-                    }
-                    
-                    console.log('🔍 Patient Lookup Debug:');
-                    console.log('   Looking for PatientId:', formData.patientId, typeof formData.patientId);
-                    console.log('   Patients array length:', patients.length);
-                    console.log('   First few patients:', patients.slice(0, 3).map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
-                    
-                    // Normalize the patient ID - remove P prefix and leading zeros for comparison
-                    const normalizeId = (id: string | number) => {
-                      return String(id).replace(/^P0*/, '');
-                    };
-                    
-                    const targetId = normalizeId(formData.patientId);
-                    console.log('   Normalized target ID:', targetId);
-                    
-                    // Try to find patient with normalized ID comparison
-                    let selectedPatient = patients.find(p => {
-                      const normalizedPatientId = normalizeId(p.id);
-                      console.log('   Comparing:', normalizedPatientId, 'with', targetId);
-                      return normalizedPatientId === targetId;
-                    });
-                    
-                    if (!selectedPatient) {
-                      // Try exact match as fallback
-                      selectedPatient = patients.find(p => String(p.id) === String(formData.patientId));
-                    }
-                    
-                    console.log('   Selected Patient:', selectedPatient);
-                    
-                    if (!selectedPatient) {
-                      // If still not found, try to get from the editRecord
-                      if (editRecord && editRecord.patientName !== 'Unknown') {
-                        return `${editRecord.patientName} (ID: ${formData.patientId})`;
-                      }
-                      return `Patient ID: ${formData.patientId} (Not Found - Check Console)`;
-                    }
-                    
-                    return `${selectedPatient.name} (ID: ${selectedPatient.id})`;
-                  })()}
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl">
+          {/* Modal Header - Beautiful Design */}
+          <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+              <div className="relative flex-shrink-0">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-green-100 flex items-center justify-center">
+                  <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                 </div>
               </div>
-              
-              <div>
-                <Label htmlFor="recordType">Record Type</Label>
-                <Input
-                  id="recordType"
-                  type="text"
-                  placeholder="Enter record type (e.g., Consultation, Diagnosis, Treatment)"
-                  value={formData.recordType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, recordType: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter medical record description..."
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={4}
-                required
-              />
-            </div>
-
-            {/* Camera Section */}
-            <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold flex items-center">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Instant Photo Capture
-                </h3>
-                <div className="space-x-2">
-                  {!isCameraActive ? (
-                    <Button type="button" onClick={startCamera} variant="outline">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Start Camera
-                    </Button>
-                  ) : (
-                    <>
-                      <Button type="button" onClick={capturePhoto}>
-                        <Camera className="w-4 h-4 mr-2" />
-                        Capture Photo
-                      </Button>
-                      <Button type="button" variant="outline" onClick={stopCamera}>
-                        Stop Camera
-                      </Button>
-                    </>
-                  )}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-green-600 flex-shrink-0" />
+                  <span className="truncate">{editRecord ? 'Edit Medical Record' : 'Add Medical Record'}</span>
+                </h2>
+                <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                  <span className="text-gray-600">
+                    {editRecord ? 'Update the medical record details below.' : 'Add a new medical record with audio and photo uploads.'}
+                  </span>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Camera Preview */}
-                <div>
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline 
-                    className="w-full h-64 bg-black rounded-lg"
-                    style={{ display: isCameraActive ? 'block' : 'none' }}
-                  />
-                  {!isCameraActive && (
-                    <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center text-gray-500">
-                        <Camera className="w-12 h-12 mx-auto mb-2" />
-                        <p>Click "Start Camera" to begin</p>
-                      </div>
-                    </div>
-                  )}
-                  <canvas ref={canvasRef} style={{ display: 'none' }} />
-                </div>
-                
-                {/* Captured Photos Preview */}
-                <div>
-                  <h4 className="font-medium mb-2">Captured Photos ({capturedPhotos.length})</h4>
-                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                    {capturedPhotos.map((photo, index) => (
-                      <div key={index} className="relative">
-                        <img 
-                          src={URL.createObjectURL(photo)}
-                          alt={`Captured ${index + 1}`}
-                          className="w-full h-20 object-cover rounded border"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          className="absolute top-1 right-1 h-6 w-6 p-0"
-                          onClick={() => {
-                            setCapturedPhotos(prev => prev.filter((_, i) => i !== index));
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              photoFiles: prev.photoFiles.filter((_, i) => i !== index) 
-                            }));
-                          }}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Photo Upload Section */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-4 flex items-center">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Photos
-              </h3>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handlePhotoFileUpload(e.target.files)}
-                className="mb-2"
-              />
-              {formData.photoFiles.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Selected files: {formData.photoFiles.length}
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {formData.photoFiles.map((file, index) => (
-                      <div key={index} className="relative">
-                        <img 
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          className="w-full h-20 object-cover rounded border"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          className="absolute top-1 right-1 h-6 w-6 p-0"
-                          onClick={() => {
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              photoFiles: prev.photoFiles.filter((_, i) => i !== index) 
-                            }));
-                          }}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Document Upload Section */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-4 flex items-center">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Documents
-              </h3>
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
-                multiple
-                onChange={(e) => handleDocumentFileUpload(e.target.files)}
-                className="mb-2"
-              />
-              <p className="text-xs text-muted-foreground mb-2">
-                Supported formats: PDF, Word, Excel, PowerPoint, Text, CSV, Images (Max 500MB per file)
-              </p>
-              {formData.documentFiles.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Selected documents: {formData.documentFiles.length}
-                  </p>
-                  <div className="space-y-2">
-                    {formData.documentFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 border rounded bg-gray-50">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-blue-600">
-                              {file.name.split('.').pop()?.toUpperCase() || 'DOC'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{file.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          className="h-6 w-6 p-0"
-                          onClick={() => {
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              documentFiles: prev.documentFiles.filter((_, i) => i !== index) 
-                            }));
-                          }}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAddDialog(false);
+                  setEditRecord(null);
+                  resetForm();
+                }}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
           </div>
           
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowAddDialog(false);
-                setEditRecord(null);
-                resetForm();
-              }}
-              className="global-btn global-btn-secondary"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={isUpdatingRecords || !formData.patientId || !formData.description.trim()}
-              className="global-btn global-btn-primary"
-            >
-              {isUpdatingRecords ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {editRecord ? 'Updating...' : 'Adding...'}
-                </>
-              ) : (
-                editRecord ? 'Update Record' : 'Add Record'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Modal Body - Beautiful Design */}
+          <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+            <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+            
+            {/* Form Content - Beautiful Card Layout */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+              {/* Patient Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <Label htmlFor="patient" className="text-sm font-medium text-gray-700 mb-2 block">Patient *</Label>
+                  <div className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {(() => {
+                      if (!formData.patientId) {
+                        return 'No patient selected';
+                      }
+                      
+                      console.log('🔍 Patient Lookup Debug:');
+                      console.log('   Looking for PatientId:', formData.patientId, typeof formData.patientId);
+                      console.log('   Patients array length:', patients.length);
+                      console.log('   First few patients:', patients.slice(0, 3).map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
+                      
+                      // Normalize the patient ID - remove P prefix and leading zeros for comparison
+                      const normalizeId = (id: string | number) => {
+                        return String(id).replace(/^P0*/, '');
+                      };
+                      
+                      const targetId = normalizeId(formData.patientId);
+                      console.log('   Normalized target ID:', targetId);
+                      
+                      // Try to find patient with normalized ID comparison
+                      let selectedPatient = patients.find(p => {
+                        const normalizedPatientId = normalizeId(p.id);
+                        console.log('   Comparing:', normalizedPatientId, 'with', targetId);
+                        return normalizedPatientId === targetId;
+                      });
+                      
+                      if (!selectedPatient) {
+                        // Try exact match as fallback
+                        selectedPatient = patients.find(p => String(p.id) === String(formData.patientId));
+                      }
+                      
+                      console.log('   Selected Patient:', selectedPatient);
+                      
+                      if (!selectedPatient) {
+                        // If still not found, try to get from the editRecord
+                        if (editRecord && editRecord.patientName !== 'Unknown') {
+                          return `${editRecord.patientName} (ID: ${formData.patientId})`;
+                        }
+                        return `Patient ID: ${formData.patientId} (Not Found - Check Console)`;
+                      }
+                      
+                      return `${selectedPatient.name} (ID: ${selectedPatient.id})`;
+                    })()}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="recordType" className="text-sm font-medium text-gray-700 mb-2 block">Record Type</Label>
+                  <Input
+                    id="recordType"
+                    type="text"
+                    placeholder="Enter record type (e.g., Consultation, Diagnosis, Treatment)"
+                    value={formData.recordType}
+                    onChange={(e) => setFormData(prev => ({ ...prev, recordType: e.target.value }))}
+                    className="border-gray-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <Label htmlFor="date" className="text-sm font-medium text-gray-700 mb-2 block">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  className="border-gray-200 rounded-lg"
+                />
+              </div>
+
+              <div className="mb-6">
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Enter medical record description..."
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                  required
+                  className="border-gray-200 rounded-lg"
+                />
+              </div>
+
+              {/* Camera Section */}
+              <div className="bg-white/60 backdrop-blur-sm border border-gray-200 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-gray-800 flex items-center">
+                    <Camera className="w-4 h-4 mr-2 text-blue-600" />
+                    Instant Photo Capture
+                  </h3>
+                  <div className="space-x-2">
+                    {!isCameraActive ? (
+                      <Button type="button" onClick={startCamera} variant="outline" className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200">
+                        <Camera className="w-4 h-4 mr-2" />
+                        Start Camera
+                      </Button>
+                    ) : (
+                      <>
+                        <Button type="button" onClick={capturePhoto} className="bg-blue-600 hover:bg-blue-700 text-white">
+                          <Camera className="w-4 h-4 mr-2" />
+                          Capture Photo
+                        </Button>
+                        <Button type="button" variant="outline" onClick={stopCamera} className="bg-gray-50 hover:bg-gray-100 text-gray-600 border-gray-200">
+                          Stop Camera
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Camera Preview */}
+                  <div>
+                    <video 
+                      ref={videoRef} 
+                      autoPlay 
+                      playsInline 
+                      className="w-full h-64 bg-black rounded-lg border border-gray-200"
+                      style={{ display: isCameraActive ? 'block' : 'none' }}
+                    />
+                    {!isCameraActive && (
+                      <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+                        <div className="text-center text-gray-500">
+                          <Camera className="w-12 h-12 mx-auto mb-2" />
+                          <p>Click "Start Camera" to begin</p>
+                        </div>
+                      </div>
+                    )}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                  </div>
+                  
+                  {/* Captured Photos Preview */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-gray-700">Captured Photos ({capturedPhotos.length})</h4>
+                    <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-2">
+                      {capturedPhotos.map((photo, index) => (
+                        <div key={index} className="relative">
+                          <img 
+                            src={URL.createObjectURL(photo)}
+                            alt={`Captured ${index + 1}`}
+                            className="w-full h-20 object-cover rounded border"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-1 right-1 h-6 w-6 p-0"
+                            onClick={() => {
+                              setCapturedPhotos(prev => prev.filter((_, i) => i !== index));
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                photoFiles: prev.photoFiles.filter((_, i) => i !== index) 
+                              }));
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Photo Upload Section */}
+              <div className="bg-white/60 backdrop-blur-sm border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold mb-4 text-gray-800 flex items-center">
+                  <Upload className="w-4 h-4 mr-2 text-purple-600" />
+                  Upload Photos
+                </h3>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handlePhotoFileUpload(e.target.files)}
+                  className="mb-2 border-gray-200 rounded-lg"
+                />
+                {formData.photoFiles.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Selected files: {formData.photoFiles.length}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-gray-50 rounded-lg p-2">
+                      {formData.photoFiles.map((file, index) => (
+                        <div key={index} className="relative">
+                          <img 
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-20 object-cover rounded border"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-1 right-1 h-6 w-6 p-0"
+                            onClick={() => {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                photoFiles: prev.photoFiles.filter((_, i) => i !== index) 
+                              }));
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Document Upload Section */}
+              <div className="bg-white/60 backdrop-blur-sm border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold mb-4 text-gray-800 flex items-center">
+                  <Upload className="w-4 h-4 mr-2 text-orange-600" />
+                  Upload Documents
+                </h3>
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
+                  multiple
+                  onChange={(e) => handleDocumentFileUpload(e.target.files)}
+                  className="mb-2 border-gray-200 rounded-lg"
+                />
+                <p className="text-xs text-gray-600 mb-2">
+                  Supported formats: PDF, Word, Excel, PowerPoint, Text, CSV, Images (Max 500MB per file)
+                </p>
+                {formData.documentFiles.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Selected documents: {formData.documentFiles.length}
+                    </p>
+                    <div className="space-y-2 bg-gray-50 rounded-lg p-2 max-h-48 overflow-y-auto">
+                      {formData.documentFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 border rounded bg-white">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                              <span className="text-xs font-bold text-blue-600">
+                                {file.name.split('.').pop()?.toUpperCase() || 'DOC'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{file.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                documentFiles: prev.documentFiles.filter((_, i) => i !== index) 
+                              }));
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isUpdatingRecords || !formData.patientId || !formData.description.trim()}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium shadow-sm transition-all duration-200"
+                >
+                  {isUpdatingRecords ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {editRecord ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    editRecord ? 'Update Record' : 'Add Record'
+                  )}
+                </Button>
+              </div>
+            </div>
+            </div>
+          </div>
+          </DialogContent>
+        </Dialog>
+      )
 
       {/* View Record Dialog */}
       {viewRecord && (
         <Dialog open={!!viewRecord} onOpenChange={() => setViewRecord(null)}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center border-b pb-4">
-              <DialogTitle className="text-2xl font-bold text-primary">Patient Medical Record</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-6 py-4">
-              {/* Patient Details Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-primary">Patient Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient Name:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientName}</p>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl">
+            {/* Modal Header - Beautiful Design */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-blue-100 flex items-center justify-center">
+                    <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
                   </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient ID:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientId}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Record Type:</Label>
-                    <Badge variant="outline" className="capitalize">
-                      {viewRecord.recordType}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Date:</Label>
-                    <p className="text-foreground font-medium">{format(new Date(viewRecord.date), 'dd/MM/yyyy')}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Created By:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.createdBy}</p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">Medical Record Details</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">
+                      Complete medical record information for {viewRecord.patientName}
+                    </span>
                   </div>
                 </div>
               </div>
-
-              {/* Description Section */}
-              {/* <div>
-                <h3 className="text-lg font-semibold mb-2 text-primary">Description</h3>
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-foreground">{viewRecord.description}</p>
-                </div>
-              </div> */}
-
-              {/* Media Section */}
-              {viewRecord.images && viewRecord.images.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-primary">Media Files ({viewRecord.images.length})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {viewRecord.images.map((imagePath, index) => {
-                      const fileName = imagePath.split('/').pop() || `File ${index + 1}`;
-                      const fileUrl = `http://localhost:4000${imagePath}`;
-                      const isAudio = imagePath.includes('.mp3') || imagePath.includes('.wav') || imagePath.includes('.m4a');
-                      const isImage = imagePath.includes('.jpg') || imagePath.includes('.jpeg') || imagePath.includes('.png') || imagePath.includes('.gif') || imagePath.includes('.bmp') || imagePath.includes('.webp');
-                      
-                      const handleDownload = () => {
-                        const link = document.createElement('a');
-                        link.href = fileUrl;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      };
-
-                      const handleView = () => {
-                        if (isImage) {
-                          // For images, open in modal
-                          const allImages = viewRecord.images.filter(path => 
-                            path.includes('.jpg') || path.includes('.jpeg') || 
-                            path.includes('.png') || path.includes('.gif') || 
-                            path.includes('.bmp') || path.includes('.webp')
-                          );
-                          const currentIndex = allImages.indexOf(imagePath);
-                          setViewImageModal({ 
-                            show: true, 
-                            images: allImages, 
-                            currentIndex: Math.max(0, currentIndex),
-                            recordId: viewRecord.id 
-                          });
-                        } else {
-                          // For non-images (audio, documents), open in new tab
-                          window.open(fileUrl, '_blank');
-                        }
-                      };
-
-                      return (
-                        <div key={index} className="border rounded-lg p-4 bg-muted/50 hover:bg-muted transition-colors">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              {isAudio ? (
-                                <Mic className="w-5 h-5 text-blue-600" />
-                              ) : isImage ? (
-                                <Image className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <FileText className="w-5 h-5 text-gray-600" />
-                              )}
-                              <span className="text-sm font-medium truncate" title={fileName}>
-                                {fileName.length > 20 ? `${fileName.substring(0, 20)}...` : fileName}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {isAudio && (
-                            <div className="mb-3">
-                              <audio controls className="w-full">
-                                <source src={fileUrl} />
-                                Your browser does not support the audio element.
-                              </audio>
-                            </div>
-                          )}
-                          
-                          {isImage && (
-                            <div className="mb-3">
-                              <img 
-                                src={fileUrl}
-                                alt={`Medical record ${index + 1}`}
-                                className="w-full h-24 object-cover rounded border"
-                              />
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleView}
-                              className="flex items-center bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
-                              title="View in new tab"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleDownload}
-                              className="flex items-center bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
-                              title="Download file"
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              Download
-                            </Button>
-                          </div>
+            </div>
+            
+            {/* Modal Body - Beautiful Design */}
+            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                
+                {/* Patient Details Section - Beautiful Card Layout */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    Patient Information
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
-                      );
-                    })}
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-blue-700 block">Patient Name</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-green-700 block">Patient ID</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientId}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-purple-700 block">Record Type</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 capitalize">{viewRecord.recordType}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 rounded-lg border border-orange-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                          <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-orange-700 block">Record Date</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900">{format(new Date(viewRecord.date), 'dd/MM/yyyy')}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-indigo-50 to-white p-3 sm:p-4 rounded-lg border border-indigo-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-indigo-700 block">Created By</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900">{viewRecord.createdBy}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Medical History */}
-              <div>
+                {/* Add New Medical Record Form Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Add New Medical Record
+                  </h3>
+
+                  <form onSubmit={handleAddRecord} className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Record Date */}
+                      <div className="space-y-2">
+                        <Label htmlFor="add-record-date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          Record Date <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="add-record-date"
+                          type="date"
+                          value={newRecord.date}
+                          onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })}
+                          className="w-full bg-white/90 backdrop-blur-sm border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                          required
+                        />
+                      </div>
+
+                      {/* Record Type */}
+                      <div className="space-y-2">
+                        <Label htmlFor="add-record-type" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                          Record Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="add-record-type"
+                          type="text"
+                          value={newRecord.recordType}
+                          onChange={(e) => setNewRecord({ ...newRecord, recordType: e.target.value })}
+                          className="w-full bg-white/90 backdrop-blur-sm border-purple-200 focus:border-purple-400 focus:ring-purple-300"
+                          placeholder="Enter record type (e.g., Consultation, Prescription, Lab Report)"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-description" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        Description
+                      </Label>
+                      <textarea
+                        id="add-record-description"
+                        value={newRecord.description}
+                        onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
+                        className="w-full p-3 bg-white/90 backdrop-blur-sm border border-orange-200 rounded-md focus:border-orange-400 focus:ring-orange-300 min-h-[100px] resize-y"
+                        placeholder="Enter detailed description of the medical record..."
+                      />
+                    </div>
+
+                    {/* File Upload */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-files" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-indigo-600" />
+                        Upload Files (Images, Audio, Documents)
+                      </Label>
+                      <div className="bg-white/90 backdrop-blur-sm border-2 border-dashed border-indigo-200 rounded-lg p-4 hover:border-indigo-400 transition-colors">
+                        <input
+                          id="add-record-files"
+                          type="file"
+                          multiple
+                          accept="image/*,audio/*,.pdf,.doc,.docx,.txt"
+                          onChange={handleFileSelect}
+                          className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          Supported: Images (JPG, PNG, GIF), Audio (MP3, WAV), Documents (PDF, DOC, TXT)
+                        </p>
+                      </div>
+
+                      {/* File Preview */}
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <p className="text-sm font-medium text-gray-700">Selected Files:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {selectedFiles.map((file, index) => (
+                              <div key={index} className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-lg border border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    {file.type.startsWith('image/') ? (
+                                      <Image className="w-4 h-4 text-blue-600" />
+                                    ) : file.type.startsWith('audio/') ? (
+                                      <Mic className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <FileText className="w-4 h-4 text-gray-600" />
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-700 truncate" title={file.name}>
+                                    {file.name.length > 20 ? `${file.name.substring(0, 20)}...` : file.name}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== index))}
+                                  className="w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 rounded-full flex items-center justify-center transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-end pt-4 border-t border-gray-200">
+                      <Button
+                        type="submit"
+                        disabled={submitting || !newRecord.date || !newRecord.recordType}
+                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {submitting ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Adding Record...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Medical Record
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+
+
+
+              {/* Medical History Section */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-purple-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-primary">Medical History</h3>
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                    Medical History
+                  </h3>
                   <Button
                     variant="outline"
                     onClick={() => setShowViewDialogMonthYearDialog(true)}
-                    className="min-w-[140px] text-sm"
+                    className="bg-white/80 backdrop-blur-sm border-purple-200 hover:bg-purple-50 text-purple-700 text-xs sm:text-sm px-3 py-1.5 min-w-[140px]"
                   >
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
                       ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
                       : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
                     }
                   </Button>
                 </div>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-purple-100 overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted">
-                        <TableHead className="text-center font-semibold">S NO</TableHead>
-                        <TableHead className="text-center font-semibold">Date</TableHead>
-                        <TableHead className="text-center font-semibold">Type</TableHead>
-                        <TableHead className="text-center font-semibold">Description</TableHead>
-                        <TableHead className="text-center font-semibold">Files</TableHead>
-                        <TableHead className="text-center font-semibold">Action</TableHead>
+                      <TableRow className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 border-none">
+                        <TableHead className="text-center font-semibold text-white">S NO</TableHead>
+                        <TableHead className="text-center font-semibold text-white">Date</TableHead>
+                        <TableHead className="text-center font-semibold text-white">Type</TableHead>
+                        <TableHead className="text-center font-semibold text-white">Description</TableHead>
+                        <TableHead className="text-center font-semibold text-white">Files</TableHead>
+                        <TableHead className="text-center font-semibold text-white">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2122,12 +2346,7 @@ const PatientMedicalRecord: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setViewRecord(null)}>
-                Close
-              </Button>
-            </DialogFooter>
+          </div>
           </DialogContent>
         </Dialog>
       )}

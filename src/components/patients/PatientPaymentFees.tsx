@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Eye, Edit, Plus, Search, Download, Printer, User, CreditCard, CheckCircle, RefreshCw, Receipt, Trash2 } from 'lucide-react';
+import { Eye, Edit, Plus, Search, Download, Printer, User, CreditCard, CheckCircle, RefreshCw, Receipt, Trash2, X, Phone, Mail, MapPin, Calendar, DollarSign, Activity, Users, BarChart3, History, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1735,92 +1735,249 @@ export default function PatientPaymentFees() {
         </DialogContent>
       </Dialog>
 
-      {/* View Payment History Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-900">Payment History - {viewingPatient?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <Label className="text-gray-600">Registration ID</Label>
-                <p className="font-medium text-gray-900">{viewingPatient?.registrationId}</p>
-              </div>
-              <div>
-                <Label className="text-gray-600">Total Fees</Label>
-                <p className="font-medium text-gray-900">₹{viewingPatient?.totalFees.toLocaleString()}</p>
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
-                <Button 
-                  onClick={() => {
-                    setIsViewDialogOpen(false);
-                    setSelectedPatient({ 
-                      id: viewingPatient?.patientId, 
-                      name: viewingPatient?.name, 
-                      phone: '', 
-                      email: '' 
-                    });
-                    setNewPayment(prev => ({
-                      ...prev,
-                      patientId: viewingPatient?.patientId,
-                      patientName: viewingPatient?.name
-                    }));
-                    setIsAddPaymentOpen(true);
-                  }}
+      {/* View Payment History Dialog - Medicine Stock Modal Style */}
+      {viewingPatient && isViewDialogOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setIsViewDialogOpen(false)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                    <User className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1">
+                    <div className="border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                      Active
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">{viewingPatient.name}</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">Patient ID:</span>
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                      {viewingPatient.registrationId || viewingPatient.patientId}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setIsViewDialogOpen(false)}
+                  className="text-slate-500 hover:text-slate-700"
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Add Payment
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Payment Mode</TableHead>
-                    <TableHead>Command/Note</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {viewingPatient?.payments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>{payment.date ? format(new Date(payment.date), 'dd/MM/yyyy') : 'Invalid Date'}</TableCell>
-                      <TableCell>₹{payment.amount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {payment.paymentMode || 'Cash'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{payment.comment}</TableCell>
-                      <TableCell>₹{payment.balanceRemaining.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditPayments(viewingPatient, payment)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            </div>
+
+            {/* Modal Body - Glass Morphism Style */}
+            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                
+                {/* Patient Information Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                    </div>
+                    Patient Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Patient Name</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewingPatient.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Receipt className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Registration ID</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewingPatient.registrationId || viewingPatient.patientId}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Total Fees</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewingPatient.totalFees?.toLocaleString() || '0'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Payment Summary Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                    </div>
+                    Payment Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">₹{viewingPatient.totalFees?.toLocaleString() || '0'}</div>
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Fees</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">₹{viewingPatient.paidAmount?.toLocaleString() || '0'}</div>
+                      <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Paid Amount</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-orange-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-orange-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-orange-600">₹{viewingPatient.balance?.toLocaleString() || '0'}</div>
+                      <div className="text-xs sm:text-sm font-medium text-orange-600 uppercase tracking-wide">Balance</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        (viewingPatient.balance || 0) <= 0 ? 'bg-green-100 text-green-800' :
+                        (viewingPatient.paidAmount || 0) > 0 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {(viewingPatient.balance || 0) <= 0 ? 'Paid' :
+                         (viewingPatient.paidAmount || 0) > 0 ? 'Partial' :
+                         'Unpaid'}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-2">Status</div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Payment History Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-gray-600" />
+                      </div>
+                      Payment History
+                    </h3>
+                    <Button 
+                      onClick={() => {
+                        setIsViewDialogOpen(false);
+                        setSelectedPatient({ 
+                          id: viewingPatient?.patientId, 
+                          name: viewingPatient?.name, 
+                          phone: '', 
+                          email: '' 
+                        });
+                        setNewPayment(prev => ({
+                          ...prev,
+                          patientId: viewingPatient?.patientId,
+                          patientName: viewingPatient?.name
+                        }));
+                        setIsAddPaymentOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
+                  </div>
+                  
+                  {viewingPatient?.payments && viewingPatient.payments.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50/50">
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Date</TableHead>
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Amount</TableHead>
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Payment Mode</TableHead>
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[120px]">Comment/Note</TableHead>
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Balance</TableHead>
+                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {viewingPatient.payments.map((payment: any) => (
+                            <TableRow key={payment.id}>
+                              <TableCell className="text-center">{payment.date ? format(new Date(payment.date), 'dd/MM/yyyy') : 'Invalid Date'}</TableCell>
+                              <TableCell className="text-center text-green-600 font-semibold">₹{payment.amount.toLocaleString()}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="text-xs">
+                                  {payment.paymentMode || 'Cash'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">{payment.comment}</TableCell>
+                              <TableCell className="text-center">₹{payment.balanceRemaining.toLocaleString()}</TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditPayments(viewingPatient, payment)}
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <History className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment History</h3>
+                      <p className="text-gray-500">No payment records found for this patient</p>
+                      <p className="text-gray-400 text-sm mt-2">Payment history will appear here once payments are made</p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Edit Payment Dialog */}
       <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>

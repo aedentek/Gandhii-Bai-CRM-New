@@ -24,7 +24,8 @@ import {
   File,
   Calendar,
   Volume2,
-  Users
+  Users,
+  Activity
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -160,6 +161,16 @@ const PatientHistory: React.FC = () => {
 
   // State for existing documents when editing
   const [existingDocuments, setExistingDocuments] = useState<DocumentWithData[]>([]);
+
+  // State for new medical record form
+  const [newRecord, setNewRecord] = useState({
+    date: new Date().toISOString().split('T')[0],
+    doctor: '',
+    recordType: '',
+    description: ''
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // Month and year state for view dialog filtering
   const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(new Date().getMonth());
@@ -1090,6 +1101,121 @@ const PatientHistory: React.FC = () => {
     });
   };
 
+  // Handlers for new medical record form
+  const handleAddRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRecord.date || !newRecord.recordType.trim() || !viewRecord) return;
+
+    setSubmitting(true);
+    try {
+      // Generate a unique ID for the new record
+      const recordId = `record_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      let filePaths: string[] = [];
+      
+      // Upload files if any
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          try {
+            const fileType = file.type.startsWith('audio/') ? 'audio' : 'document';
+            const filePath = await uploadMedicalHistoryFile(file, viewRecord.patientId, fileType);
+            filePaths.push(filePath);
+          } catch (error) {
+            console.error('File upload failed:', error);
+          }
+        }
+      }
+
+      // Upload audio recording if exists
+      if (audioRecording?.blob) {
+        try {
+          // Create a File-like object from blob for upload
+          const fileName = audioRecording.fileName || `audio_${Date.now()}.wav`;
+          const audioFile = Object.assign(audioRecording.blob, {
+            name: fileName,
+            lastModified: Date.now()
+          }) as File;
+          const audioPath = await uploadMedicalHistoryFile(audioFile, viewRecord.patientId, 'audio');
+          filePaths.push(audioPath);
+        } catch (error) {
+          console.error('Audio upload failed:', error);
+        }
+      }
+
+      // Create documents info
+      const documentsInfo = [
+        ...selectedFiles.map((file, index) => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          filePath: filePaths[index] || null
+        })),
+        ...(audioRecording?.blob ? [{
+          name: audioRecording.fileName || `audio_${Date.now()}.wav`,
+          size: audioRecording.blob.size,
+          type: 'audio/wav',
+          filePath: filePaths[selectedFiles.length] || null
+        }] : [])
+      ];
+
+      // Create the record
+      const dbRecord = {
+        id: recordId,
+        patient_id: viewRecord.patientId,
+        patient_name: viewRecord.patientName,
+        date: newRecord.date,
+        title: newRecord.recordType,
+        doctor: newRecord.doctor || 'System',
+        category: 'General',
+        description: newRecord.description,
+        documents_info: documentsInfo.length > 0 ? JSON.stringify(documentsInfo) : null
+      };
+
+      await DatabaseService.addPatientHistory(dbRecord);
+      
+      toast({
+        title: "Record Added",
+        description: "Medical record has been added successfully.",
+      });
+
+      // Reset form
+      setNewRecord({
+        date: new Date().toISOString().split('T')[0],
+        doctor: '',
+        recordType: '',
+        description: ''
+      });
+      setSelectedFiles([]);
+      setAudioRecording(null);
+      setRecordingTime(0);
+      
+      // Refresh the view
+      setRefreshCounter(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Error adding record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add medical record.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const exportToPDF = () => {
     const htmlContent = `
       <html>
@@ -1444,22 +1570,7 @@ const PatientHistory: React.FC = () => {
               />
             </div>
             
-            <div className="flex space-x-2">
-              <Button 
-                onClick={exportToExcel} 
-                className="global-btn global-btn-secondary flex-1"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Button 
-                onClick={exportToPDF} 
-                className="global-btn global-btn-secondary flex-1"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
+
 
             {/* Month & Year Selector */}
             <Button
@@ -2262,164 +2373,345 @@ const PatientHistory: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Record Dialog - Settlement History Style */}
+      {/* View Record Dialog - Modern Glass Morphism Design */}
       {viewRecord && (
         <Dialog key={`view-dialog-${viewRecord.patientId}-${refreshCounter}-${medicalRecords.length}`} open={!!viewRecord} onOpenChange={() => setViewRecord(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center border-b pb-4">
-              <DialogTitle className="text-2xl font-bold text-primary">Patient History</DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl flex flex-col">
+            {/* Modal Header - Beautiful Design */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-shrink-0">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-blue-100 flex items-center justify-center">
+                    <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">Medical History Details</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">
+                      Complete medical record information for {viewRecord.patientName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
             
-            <div className="space-y-6 py-4">
-              {/* Patient Details Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-primary">Patient Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {/* Patient Photo */}
-                  <div className="flex items-center space-x-4 col-span-2 md:col-span-3 mb-4">
-                    {(() => {
-                      const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
-                      
-                      // Construct proper photo URL
-                      let imageUrl = '';
-                      
-                      if (patient?.photo) {
-                        // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                        if (patient.photo.startsWith('http')) {
-                          imageUrl = patient.photo;
-                        } else {
-                          // Photos are stored in: server/Photos/patient Admission/{patientId}/
-                          // Database stores: Photos/patient Admission/{patientId}/{filename}
-                          // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
-                          if (patient.photo.includes('Photos/patient Admission/')) {
-                            // Photo path is already in correct format from database
-                            imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
-                          } else {
-                            // Assume it's just filename and build full path
-                            imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photo}`;
-                          }
-                        }
-                      } else if (patient?.photoUrl) {
-                        if (patient.photoUrl.startsWith('http')) {
-                          imageUrl = patient.photoUrl;
-                        } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
-                          imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
-                        } else {
-                          imageUrl = `/Photos/patient%20Admission/${viewRecord.patientId}/${patient.photoUrl}`;
-                        }
-                      }
+            {/* Main content with scrolling enabled */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+              {/* Patient Information Cards */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  Patient Information
+                </h3>
 
-                      return imageUrl ? (
-                        <>
-                          <img
-                            src={imageUrl}
-                            alt={`${viewRecord.patientName}'s photo`}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-                            onError={(e) => {
-                              console.log('❌ Image failed for:', viewRecord.patientName);
-                              console.log('   Failed URL:', imageUrl);
-                              
-                              // Show fallback avatar
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const avatarDiv = target.nextElementSibling as HTMLElement;
-                              if (avatarDiv) avatarDiv.style.display = 'flex';
-                            }}
-                            onLoad={() => {
-                              console.log('✅ Image loaded successfully for patient:', viewRecord.patientName, 'URL:', imageUrl);
-                            }}
-                          />
-                          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                            <span className="text-lg font-semibold text-white">
-                              {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
-                          <span className="text-lg font-semibold text-white">
-                            {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      );
-                    })()}
-                    <div>
-                      <p className="text-xl font-semibold text-foreground">{viewRecord.patientName}</p>
-                      <p className="text-sm text-muted-foreground">Patient ID: {formatPatientId(viewRecord.patientId)}</p>
+           
+
+                {/* Patient Details Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-blue-700 block">Patient Name</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientName}</p>
+                      </div>
                     </div>
                   </div>
                   
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient Name:</Label>
-                    <p className="text-foreground font-medium">{viewRecord.patientName}</p>
+                  <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-purple-700 block">Patient ID</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900">{formatPatientId(viewRecord.patientId)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Patient ID:</Label>
-                    <p className="text-foreground font-medium">{formatPatientId(viewRecord.patientId)}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-muted-foreground">Joining Date:</Label>
-                    <p className="text-foreground font-medium">
-                      {(() => {
-                        const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
-                        return patient && patient.admissionDate 
-                          ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') 
-                          : 'Not Available';
-                      })()}
-                    </p>
+                  
+                  <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-green-700 block">Joining Date</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900">
+                          {(() => {
+                            const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                            return patient && patient.admissionDate 
+                              ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') 
+                              : 'Not Available';
+                          })()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Month & Year Filter for Medical History */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-primary">Medical History</h3>
+              {/* Add New Medical Record Form Section */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  Add New Medical Record
+                </h3>
+
+                <form onSubmit={handleAddRecord} className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Record Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        Record Date <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="add-record-date"
+                        type="date"
+                        value={newRecord.date}
+                        onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })}
+                        className="w-full bg-white/90 backdrop-blur-sm border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                        required
+                      />
+                    </div>
+
+                    {/* Doctor Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-doctor" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Users className="h-4 w-4 text-indigo-600" />
+                        Doctor <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="add-record-doctor"
+                        value={newRecord.doctor}
+                        onChange={(e) => setNewRecord({ ...newRecord, doctor: e.target.value })}
+                        className="w-full bg-white/90 backdrop-blur-sm border-indigo-200 focus:border-indigo-400 focus:ring-indigo-300 px-3 py-2 rounded-md text-sm"
+                        required
+                      >
+                        <option value="">Select doctor</option>
+                        <option value="Sabarish 2 (DOC002)">Sabarish 2 (DOC002)</option>
+                        <option value="Sabarish 1 (DOC001)">Sabarish 1 (DOC001)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Record Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-type" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-600" />
+                        Record Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="add-record-type"
+                        type="text"
+                        value={newRecord.recordType}
+                        onChange={(e) => setNewRecord({ ...newRecord, recordType: e.target.value })}
+                        className="w-full bg-white/90 backdrop-blur-sm border-purple-200 focus:border-purple-400 focus:ring-purple-300"
+                        placeholder="Enter record type (e.g., Consultation, Prescription, Lab Report)"
+                        required
+                      />
+                    </div>
+
+                    {/* Category Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-record-category" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        Category
+                      </Label>
+                      <select
+                        id="add-record-category"
+                        className="w-full bg-white/90 backdrop-blur-sm border-orange-200 focus:border-orange-400 focus:ring-orange-300 px-3 py-2 rounded-md text-sm"
+                      >
+                        <option value="">Select category</option>
+                        <option value="consultation">Consultation</option>
+                        <option value="prescription">Prescription</option>
+                        <option value="lab-report">Lab Report</option>
+                        <option value="imaging">Imaging</option>
+                        <option value="procedure">Procedure</option>
+                        <option value="follow-up">Follow-up</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="add-record-description" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-orange-600" />
+                      Description
+                    </Label>
+                    <Textarea
+                      id="add-record-description"
+                      value={newRecord.description}
+                      onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
+                      className="w-full bg-white/90 backdrop-blur-sm border border-orange-200 focus:border-orange-400 focus:ring-orange-300 min-h-[100px] resize-y"
+                      placeholder="Enter detailed description of the medical record..."
+                    />
+                  </div>
+
+                  {/* Audio Recording Section */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-blue-600" />
+                      Audio Recording
+                    </Label>
+                    <div className="bg-white/90 backdrop-blur-sm border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-4">
+                        {!isRecording ? (
+                          <Button
+                            type="button"
+                            onClick={startRecording}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                          >
+                            <Mic className="w-4 h-4" />
+                            Record
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={stopRecording}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                          >
+                            <Square className="w-4 h-4" />
+                            Stop ({formatTime(recordingTime)})
+                          </Button>
+                        )}
+                        
+                        {audioRecording && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Volume2 className="w-4 h-4" />
+                            <span>Audio recorded ({formatTime(audioRecording.duration)})</span>
+                            <audio controls src={audioRecording.url} className="h-8" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {isRecording && (
+                        <div className="mt-2 text-sm text-blue-600 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                          Recording in progress... {formatTime(recordingTime)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* File Upload */}
+                  <div className="space-y-2">
+                    <Label htmlFor="add-record-files" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Upload className="h-4 w-4 text-indigo-600" />
+                      Upload Files (Images, Audio, Documents)
+                    </Label>
+                    <div className="bg-white/90 backdrop-blur-sm border-2 border-dashed border-indigo-200 rounded-lg p-4 hover:border-indigo-400 transition-colors">
+                      <input
+                        id="add-record-files"
+                        type="file"
+                        multiple
+                        accept="image/*,audio/*,.pdf,.doc,.docx,.txt"
+                        onChange={handleFileSelect}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:border-indigo-400 focus:ring-indigo-300"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        You can select multiple files including images, audio recordings, and documents
+                      </p>
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <p className="text-sm font-medium text-gray-700">Selected Files:</p>
+                          {selectedFiles.map((file, index) => (
+                            <p key={index} className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      type="submit"
+                      disabled={submitting || !newRecord.date || !newRecord.doctor.trim() || !newRecord.recordType.trim()}
+                      className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-sm transition-all duration-200"
+                    >
+                      {submitting ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Adding Record...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Add Medical Record
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Medical History Section with Beautiful Design */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-purple-100 shadow-sm">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                    Medical History Records
+                  </h3>
                   <button
                     type="button"
-                    className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary flex items-center gap-1 min-w-[140px] text-sm"
+                    className="bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 flex items-center gap-2 min-w-[140px] text-sm hover:bg-purple-50 transition-colors"
                     onClick={() => setShowViewDialogMonthYearDialog(true)}
                   >
+                    <Calendar className="h-4 w-4 text-purple-600" />
                     {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
                       ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
                       : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
                     }
                   </button>
                 </div>
-                <div className="border rounded-lg overflow-hidden">
+
+                {/* Medical Records Table with Glass Morphism */}
+                <div className="bg-white/60 backdrop-blur-sm rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted">
-                        <TableHead className="text-center font-semibold">S NO</TableHead>
-                        <TableHead className="text-center font-semibold">Date</TableHead>
-                        <TableHead className="text-center font-semibold">Doctor</TableHead>
-                        <TableHead className="text-center font-semibold">Description</TableHead>
-                        <TableHead className="text-center font-semibold">Documents</TableHead>
-                        <TableHead className="text-center font-semibold">Action</TableHead>
+                      <TableRow className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 hover:bg-gradient-to-r hover:from-purple-600 hover:via-blue-600 hover:to-indigo-600">
+                        <TableHead className="text-center font-bold text-white">S NO</TableHead>
+                        <TableHead className="text-center font-bold text-white">Date</TableHead>
+                        <TableHead className="text-center font-bold text-white">Doctor</TableHead>
+                        <TableHead className="text-center font-bold text-white">Description</TableHead>
+                        <TableHead className="text-center font-bold text-white">Documents</TableHead>
+                        <TableHead className="text-center font-bold text-white">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {/* Get all medical records for this patient */}
                       {viewedPatientMedicalRecords.map((record, index) => (
-                          <TableRow key={record.id} className="hover:bg-muted/50">
-                            <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                            <TableCell className="text-center">{format(new Date(record.date), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell className="text-center">{record.doctor}</TableCell>
-                            <TableCell className="text-center max-w-xs truncate" title={record.description}>
+                          <TableRow key={record.id} className="hover:bg-blue-50/50 backdrop-blur-sm transition-all duration-200 border-b border-gray-100">
+                            <TableCell className="text-center font-medium text-gray-700">{index + 1}</TableCell>
+                            <TableCell className="text-center text-gray-700">{format(new Date(record.date), 'dd/MM/yyyy')}</TableCell>
+                            <TableCell className="text-center text-gray-700">{record.doctor}</TableCell>
+                            <TableCell className="text-center max-w-xs truncate text-gray-700" title={record.description}>
                               {record.description || 'No description'}
                             </TableCell>
                             <TableCell className="text-center">
                               {/* Documents Column */}
                               {record.documents && record.documents.length > 0 ? (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
                                   {record.documents.length} file{record.documents.length > 1 ? 's' : ''}
                                 </Badge>
                               ) : (
-                                <span className="text-gray-400">No docs</span>
+                                <span className="text-gray-400 text-sm">No docs</span>
                               )}
                             </TableCell>
                             <TableCell className="text-center">
-                              <div className="flex justify-center space-x-2">
+                              <div className="flex justify-center space-x-1 sm:space-x-2">
                                 {/* Audio Controls */}
                                 {(record.audioRecording || (record.audioFiles && record.audioFiles.length > 0)) && (
                                   <div className="flex space-x-1">
@@ -2432,30 +2724,13 @@ const PatientHistory: React.FC = () => {
                                         if (audioUrl) playAudio(audioUrl, record.id);
                                       }}
                                       title="Play Audio"
+                                      className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
                                     >
                                       {playingAudio === record.id ? (
-                                        <Pause className="w-4 h-4 text-blue-600" />
+                                        <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
                                       ) : (
-                                        <Play className="w-4 h-4 text-blue-600" />
+                                        <Play className="w-3 h-3 sm:w-4 sm:h-4" />
                                       )}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
-                                        const speeds = [0.5, 1, 1.25, 1.5, 2];
-                                        const currentIndex = speeds.indexOf(playbackSpeed);
-                                        const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-                                        setPlaybackSpeed(nextSpeed);
-                                        // Update current audio if playing
-                                        if (audioRef.current && playingAudio === record.id) {
-                                          audioRef.current.playbackRate = nextSpeed;
-                                        }
-                                      }}
-                                      title={`Playback Speed: ${playbackSpeed}x`}
-                                    >
-                                      <span className="text-xs font-mono text-purple-600">{playbackSpeed}x</span>
                                     </Button>
                                     <Button
                                       size="sm"
@@ -2466,8 +2741,9 @@ const PatientHistory: React.FC = () => {
                                         if (audioUrl) downloadAudio(audioUrl, `${record.patientName}-audio`);
                                       }}
                                       title="Download Audio"
+                                      className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
                                     >
-                                      <Download className="w-4 h-4 text-green-600" />
+                                      <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                                     </Button>
                                   </div>
                                 )}
@@ -2475,9 +2751,6 @@ const PatientHistory: React.FC = () => {
                                 {/* Document Controls */}
                                 {record.documents.length > 0 && (
                                   <div className="flex space-x-1">
-                                    <Badge variant="secondary" className="text-xs">
-                                      {record.documents.length} files
-                                    </Badge>
                                     <Button
                                       size="sm"
                                       variant="ghost"
@@ -2513,8 +2786,9 @@ const PatientHistory: React.FC = () => {
                                         });
                                       }}
                                       title="Download All Documents"
+                                      className="bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-200"
                                     >
-                                      <File className="w-4 h-4 text-purple-600" />
+                                      <File className="w-3 h-3 sm:w-4 sm:h-4" />
                                     </Button>
                                   </div>
                                 )}
@@ -2557,7 +2831,7 @@ const PatientHistory: React.FC = () => {
                                     title="View Document"
                                     className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
                                   >
-                                    <Eye className="w-4 h-4" />
+                                    <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                   </Button>
                                 )}
                                 
@@ -2569,7 +2843,7 @@ const PatientHistory: React.FC = () => {
                                   title="Delete Medical Record"
                                   className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -2579,11 +2853,15 @@ const PatientHistory: React.FC = () => {
                       {/* Show message if no medical records exist */}
                       {viewedPatientMedicalRecords.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            <div className="flex flex-col items-center space-y-2">
-                              <FileText className="w-8 h-8 text-muted-foreground/50" />
-                              <p>No medical records found for this patient</p>
-                              <p className="text-sm">Medical records will appear here when added</p>
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                            <div className="flex flex-col items-center space-y-3">
+                              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                <FileText className="w-8 h-8 text-gray-400" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-medium text-gray-600">No medical records found</p>
+                                <p className="text-xs text-gray-500 mt-1">Medical records will appear here when added</p>
+                              </div>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2593,131 +2871,155 @@ const PatientHistory: React.FC = () => {
                 </div>
               </div>
 
-              {/* Audio Section */}
+              {/* Audio Section with Beautiful Design */}
               {viewRecord.audioRecording && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-primary">Audio Recording</h3>
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <div className="space-y-4">
-                      {/* Audio File Info */}
-                      <div className="flex items-center space-x-3 p-3 bg-background rounded border">
-                        <div className="p-2 bg-blue-100 rounded">
-                          <Volume2 className="w-5 h-5 text-blue-600" />
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <Volume2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    Audio Recording
+                  </h3>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-4 md:p-6 rounded-lg border border-blue-200">
+                    {/* Audio File Info Card */}
+                    <div className="bg-white/90 backdrop-blur-sm p-3 sm:p-4 rounded-lg border border-blue-200 mb-4 sm:mb-6">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Volume2 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{viewRecord.audioRecording.fileName || 'Audio Recording'}</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.audioRecording.fileName || 'Audio Recording'}</p>
+                          <p className="text-xs sm:text-sm text-blue-600">
                             Duration: {formatDuration(viewRecord.audioRecording.duration)} • Audio File
                           </p>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Audio Controls */}
-                      <div className="flex items-center space-x-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            if (viewRecord.audioRecording?.url) {
-                              playAudio(viewRecord.audioRecording.url, viewRecord.id);
-                            }
-                          }}
-                          className="flex items-center space-x-2"
-                        >
-                          {playingAudio === viewRecord.id ? (
-                            <>
-                              <Pause className="w-4 h-4" />
-                              <span>Pause</span>
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4" />
-                              <span>Play</span>
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            if (viewRecord.audioRecording?.url) {
-                              downloadAudio(viewRecord.audioRecording.url, `${viewRecord.patientName}-${viewRecord.audioRecording.fileName || 'audio.wav'}`);
-                            }
-                          }}
-                          className="flex items-center space-x-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>Download</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
-                            const speeds = [0.5, 1, 1.25, 1.5, 2];
-                            const currentIndex = speeds.indexOf(playbackSpeed);
-                            const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-                            setPlaybackSpeed(nextSpeed);
-                            // Update current audio if playing
-                            if (audioRef.current && playingAudio === viewRecord.id) {
-                              audioRef.current.playbackRate = nextSpeed;
-                            }
-                          }}
-                          className="flex items-center space-x-2"
-                          title={`Playback Speed: ${playbackSpeed}x`}
-                        >
-                          <span className="text-sm font-mono">{playbackSpeed}x</span>
-                        </Button>
-                        {viewRecord.audioRecording && (
-                          <span className="text-sm text-muted-foreground">
+                    {/* Audio Controls */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (viewRecord.audioRecording?.url) {
+                            playAudio(viewRecord.audioRecording.url, viewRecord.id);
+                          }
+                        }}
+                        className="bg-white/90 backdrop-blur-sm border-blue-200 hover:bg-blue-50 flex items-center gap-2"
+                      >
+                        {playingAudio === viewRecord.id ? (
+                          <>
+                            <Pause className="w-4 h-4 text-blue-600" />
+                            <span className="text-blue-600 font-medium">Pause</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 text-green-600" />
+                            <span className="text-green-600 font-medium">Play</span>
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (viewRecord.audioRecording?.url) {
+                            downloadAudio(viewRecord.audioRecording.url, `${viewRecord.patientName}-${viewRecord.audioRecording.fileName || 'audio.wav'}`);
+                          }
+                        }}
+                        className="bg-white/90 backdrop-blur-sm border-green-200 hover:bg-green-50 flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4 text-green-600" />
+                        <span className="text-green-600 font-medium">Download</span>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
+                          const speeds = [0.5, 1, 1.25, 1.5, 2];
+                          const currentIndex = speeds.indexOf(playbackSpeed);
+                          const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+                          setPlaybackSpeed(nextSpeed);
+                          // Update current audio if playing
+                          if (audioRef.current && playingAudio === viewRecord.id) {
+                            audioRef.current.playbackRate = nextSpeed;
+                          }
+                        }}
+                        className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 flex items-center gap-2"
+                        title={`Playback Speed: ${playbackSpeed}x`}
+                      >
+                        <span className="text-sm font-mono text-purple-600 font-bold">{playbackSpeed}x</span>
+                      </Button>
+                      
+                      {viewRecord.audioRecording && (
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-200">
+                          <span className="text-sm text-gray-600 font-medium">
                             Duration: {formatDuration(viewRecord.audioRecording.duration)}
                           </span>
-                        )}
-                      </div>
-
-                      {/* Playback Speed Controls */}
-                      <div className="flex items-center space-x-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Speed:</Label>
-                        <div className="flex space-x-1">
-                          {[1, 1.25, 1.5, 2, 2.5, 3].map(speed => (
-                            <Button
-                              key={speed}
-                              variant={playbackSpeed === speed ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => changePlaybackSpeed(speed)}
-                              className={`px-3 py-1 text-xs ${
-                                playbackSpeed === speed 
-                                  ? 'bg-primary text-primary-foreground' 
-                                  : 'hover:bg-muted'
-                              }`}
-                            >
-                              {speed}x
-                            </Button>
-                          ))}
                         </div>
-                        {playingAudio === viewRecord.id && (
-                          <span className="text-xs text-muted-foreground ml-2">
+                      )}
+                    </div>
+
+                    {/* Playback Speed Controls */}
+                    <div className="bg-white/90 backdrop-blur-sm p-3 sm:p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                        <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <Volume2 className="h-4 w-4 text-purple-600" />
+                          Playback Speed:
+                        </Label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 1.25, 1.5, 2, 2.5, 3].map(speed => (
+                          <Button
+                            key={speed}
+                            variant={playbackSpeed === speed ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => changePlaybackSpeed(speed)}
+                            className={`px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                              playbackSpeed === speed 
+                                ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md transform scale-105' 
+                                : 'bg-white/90 backdrop-blur-sm border-gray-200 hover:bg-gray-50 text-gray-700'
+                            }`}
+                          >
+                            {speed}x
+                          </Button>
+                        ))}
+                      </div>
+                      {playingAudio === viewRecord.id && (
+                        <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                          <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                            <Play className="h-3 w-3" />
                             Playing at {playbackSpeed}x speed
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
               
-              {/* Documents Section */}
+              {/* Documents Section with Beautiful Design */}
               {viewRecord.documents.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-primary">Documents & Photos</h3>
-                  <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <File className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Documents & Media Files
+                  </h3>
+
+                  <div className="bg-gradient-to-br from-green-50 to-blue-50 p-3 sm:p-4 md:p-6 rounded-lg border border-green-200">
                     
                     {/* Photos Section */}
                     {viewRecord.documents.filter(doc => doc.type?.startsWith('image/')).length > 0 && (
                       <div className="mb-6">
-                        <h4 className="text-md font-medium mb-3 text-muted-foreground">Photos</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <h4 className="text-sm sm:text-base font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                          <Eye className="h-4 w-4 text-blue-600" />
+                          Photo Gallery
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                           {viewRecord.documents.filter(doc => doc.type?.startsWith('image/')).map((photo, index) => (
                             <div key={`photo-${index}`} className="relative group">
                               <div 
-                                className="w-full h-24 bg-gray-100 rounded border cursor-pointer overflow-hidden"
+                                className="w-full h-20 sm:h-24 md:h-28 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-blue-200 cursor-pointer overflow-hidden hover:border-blue-400 transition-all duration-300 shadow-sm hover:shadow-md"
                                 onClick={() => {
                                   // Open photo in new tab
                                   if (photo.filePath) {
@@ -2730,18 +3032,20 @@ const PatientHistory: React.FC = () => {
                                   <img 
                                     src={getFileUrl(photo.filePath)}
                                     alt={photo.name}
-                                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                                   />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                                    <File className="w-6 h-6 text-muted-foreground" />
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                    <File className="w-6 h-6 text-gray-400" />
                                   </div>
                                 )}
                               </div>
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded transition-all duration-200 flex items-center justify-center">
-                                <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-300 flex items-center justify-center">
+                                <div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                                  <Eye className="w-4 h-4 text-blue-600" />
+                                </div>
                               </div>
-                              <p className="text-xs text-center mt-1 text-muted-foreground truncate">{photo.name}</p>
+                              <p className="text-xs text-center mt-2 text-gray-600 font-medium truncate">{photo.name}</p>
                             </div>
                           ))}
                         </div>
@@ -2751,58 +3055,65 @@ const PatientHistory: React.FC = () => {
                     {/* Documents Section */}
                     {viewRecord.documents.filter(doc => !doc.type?.startsWith('image/')).length > 0 && (
                       <div>
-                        <h4 className="text-md font-medium mb-3 text-muted-foreground">Documents</h4>
-                        <div className="grid gap-3">
+                        <h4 className="text-sm sm:text-base font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                          Document Files
+                        </h4>
+                        <div className="grid gap-3 sm:gap-4">
                           {viewRecord.documents.filter(doc => !doc.type?.startsWith('image/')).map((doc, index) => (
-                            <div key={`doc-${index}`} className="flex items-center justify-between p-3 bg-background rounded border">
-                              <div className="flex items-center space-x-3">
-                                <File className="w-5 h-5 text-muted-foreground" />
-                                <div>
-                                  <span className="text-sm font-medium">{doc.name}</span>
-                                  <p className="text-xs text-muted-foreground">
-                                    {(doc.size / 1024).toFixed(1)} KB • {doc.type}
-                                  </p>
+                            <div key={`doc-${index}`} className="bg-white/90 backdrop-blur-sm p-3 sm:p-4 rounded-lg border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all duration-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <File className="w-5 h-5 text-purple-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{doc.name}</p>
+                                    <p className="text-xs text-purple-600">
+                                      {(doc.size / 1024).toFixed(1)} KB • {doc.type}
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  // Handle both legacy base64 and new server-side files
-                                  if (doc.filePath) {
-                                    // New server-side file
-                                    const fileUrl = getFileUrl(doc.filePath);
-                                    const a = document.createElement('a');
-                                    a.href = fileUrl;
-                                    a.download = doc.name;
-                                    a.target = '_blank';
-                                    a.click();
-                                  } else if (doc.data) {
-                                    // Legacy base64 data
-                                    const byteCharacters = atob(doc.data);
-                                    const byteNumbers = new Array(byteCharacters.length);
-                                    for (let i = 0; i < byteCharacters.length; i++) {
-                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Handle both legacy base64 and new server-side files
+                                    if (doc.filePath) {
+                                      // New server-side file
+                                      const fileUrl = getFileUrl(doc.filePath);
+                                      const a = document.createElement('a');
+                                      a.href = fileUrl;
+                                      a.download = doc.name;
+                                      a.target = '_blank';
+                                      a.click();
+                                    } else if (doc.data) {
+                                      // Legacy base64 data
+                                      const byteCharacters = atob(doc.data);
+                                      const byteNumbers = new Array(byteCharacters.length);
+                                      for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                      }
+                                      const byteArray = new Uint8Array(byteNumbers);
+                                      const blob = new Blob([byteArray], { type: doc.type });
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = doc.name;
+                                      a.click();
+                                      URL.revokeObjectURL(url);
+                                    } else {
+                                      // Fallback for old records without data
+                                      console.warn('Document data not available for download:', doc.name);
+                                      alert('This document cannot be downloaded as it was uploaded before file storage was implemented.');
                                     }
-                                    const byteArray = new Uint8Array(byteNumbers);
-                                    const blob = new Blob([byteArray], { type: doc.type });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = doc.name;
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                  } else {
-                                    // Fallback for old records without data
-                                    console.warn('Document data not available for download:', doc.name);
-                                    alert('This document cannot be downloaded as it was uploaded before file storage was implemented.');
-                                  }
-                                }}
-                                className="text-blue-600 hover:text-blue-700"
-                                title="Download"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
+                                  }}
+                                  className="bg-green-100 hover:bg-green-200 text-green-600 border border-green-200 px-3 py-2"
+                                  title="Download Document"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2813,54 +3124,56 @@ const PatientHistory: React.FC = () => {
               )}
             </div>
 
-            <DialogFooter className="border-t pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setViewRecord(null);
-                  // Reset view dialog filters when closing
-                  setViewDialogFilterMonth(null);
-                  setViewDialogFilterYear(null);
-                  setViewDialogSelectedMonth(new Date().getMonth());
-                  setViewDialogSelectedYear(currentYear);
-                }} 
-                className="global-btn global-btn-secondary w-full"
-              >
-                Close
-              </Button>
-            </DialogFooter>
+
           </DialogContent>
         </Dialog>
       )}
 
-      {/* View Dialog Month/Year Picker Dialog */}
+      {/* View Dialog Month/Year Picker Dialog with Beautiful Design */}
       <Dialog open={showViewDialogMonthYearDialog} onOpenChange={setShowViewDialogMonthYearDialog}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Select Month & Year for Medical History</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[400px] bg-gradient-to-br from-white to-blue-50/30 backdrop-blur-xl border-0 shadow-2xl">
+          <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 p-4 -mt-6 -mx-6 mb-4 rounded-t-lg">
+            <DialogHeader>
+              <DialogTitle className="text-white font-bold flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Select Month & Year
+              </DialogTitle>
+              <DialogDescription className="text-blue-100">
+                Choose the time period for medical history records
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
           <div className="flex flex-col gap-4 py-2">
-            <div className="flex gap-2">
-              <select
-                className="border rounded px-3 py-2 flex-1"
-                value={viewDialogSelectedMonth}
-                onChange={e => setViewDialogSelectedMonth(Number(e.target.value))}
-              >
-                {months.map((month, idx) => (
-                  <option key={month} value={idx}>{month}</option>
-                ))}
-              </select>
-              <select
-                className="border rounded px-3 py-2 flex-1"
-                value={viewDialogSelectedYear}
-                onChange={e => setViewDialogSelectedYear(Number(e.target.value))}
-              >
-                {[...Array(10)].map((_, i) => (
-                  <option key={currentYear - 5 + i} value={currentYear - 5 + i}>{currentYear - 5 + i}</option>
-                ))}
-              </select>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Month</Label>
+                <select
+                  className="w-full bg-white/90 backdrop-blur-sm border border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-300 transition-all"
+                  value={viewDialogSelectedMonth}
+                  onChange={e => setViewDialogSelectedMonth(Number(e.target.value))}
+                >
+                  {months.map((month, idx) => (
+                    <option key={month} value={idx}>{month}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex-1">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Year</Label>
+                <select
+                  className="w-full bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg px-3 py-2 focus:border-purple-400 focus:ring-2 focus:ring-purple-300 transition-all"
+                  value={viewDialogSelectedYear}
+                  onChange={e => setViewDialogSelectedYear(Number(e.target.value))}
+                >
+                  {[...Array(10)].map((_, i) => (
+                    <option key={currentYear - 5 + i} value={currentYear - 5 + i}>{currentYear - 5 + i}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <DialogFooter>
+            
+            <DialogFooter className="flex gap-2 pt-4">
               <Button 
                 type="button" 
                 onClick={() => {
@@ -2868,14 +3181,16 @@ const PatientHistory: React.FC = () => {
                   setViewDialogFilterYear(viewDialogSelectedYear);
                   setShowViewDialogMonthYearDialog(false);
                 }}
-                className="global-btn global-btn-primary"
+                className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
               >
+                <Calendar className="w-4 h-4 mr-2" />
                 Apply Filter
               </Button>
               <Button 
                 type="button" 
                 onClick={() => setShowViewDialogMonthYearDialog(false)}
-                className="global-btn global-btn-secondary"
+                variant="outline"
+                className="flex-1 bg-white/90 backdrop-blur-sm border-gray-200 hover:bg-gray-50"
               >
                 Cancel
               </Button>
@@ -2887,7 +3202,7 @@ const PatientHistory: React.FC = () => {
                   setViewDialogFilterYear(null);
                   setShowViewDialogMonthYearDialog(false);
                 }}
-                className="global-btn global-btn-secondary"
+                className="flex-1 bg-white/90 backdrop-blur-sm border-red-200 hover:bg-red-50 text-red-600"
               >
                 Clear Filter
               </Button>

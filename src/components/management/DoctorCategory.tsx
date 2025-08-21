@@ -233,7 +233,6 @@ const DoctorCategory: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Categories</h1>
-                <p className="text-sm sm:text-base text-gray-600">Manage doctor specializations and categories</p>
               </div>
             </div>
 

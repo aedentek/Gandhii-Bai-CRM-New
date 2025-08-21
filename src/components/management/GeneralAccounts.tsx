@@ -29,10 +29,11 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, CreditCard, TrendingUp, TrendingDown, FileText, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Package, Plus, DollarSign } from 'lucide-react';
+import { Search, CreditCard, TrendingUp, TrendingDown, FileText, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Package, Plus, DollarSign, X, Receipt, History, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 
@@ -476,7 +477,7 @@ const GeneralAccounts: React.FC = () => {
             </div>
 
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
+              <ActionButtons.Refresh
                 onClick={() => {
                   const currentMonth = new Date().getMonth();
                   const currentYear = new Date().getFullYear();
@@ -491,32 +492,16 @@ const GeneralAccounts: React.FC = () => {
                   
                   handleGlobalRefresh();
                 }}
-                disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+                loading={loading}
+              />
               
-              <Button 
+              <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
+                text={filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
+                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                }
+              />
               
               <Button 
                 onClick={handleExportCSV}
@@ -862,100 +847,232 @@ const GeneralAccounts: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* View Settlement History Dialog */}
-        <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Eye className="h-6 w-6 text-blue-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Settlement History
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Complete payment details and settlement records
-              </DialogDescription>
-            </DialogHeader>
-            
-            {viewProduct && (
-              <div className="space-y-6 p-4">
-                {/* Product Details Section */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Product Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
-                    <div>
-                      <span className="font-semibold">Product Name:</span> {viewProduct.name}
+        {/* View Settlement History Dialog - Medicine Stock Modal Style */}
+        {viewProduct && viewModalOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewModalOpen(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                      <Receipt className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
                     </div>
-                    <div>
-                      <span className="font-semibold">Category:</span> {viewProduct.category}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Supplier:</span> {viewProduct.supplier}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Purchase Date:</span> {formatDateDDMMYYYY(viewProduct.purchase_date)}
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className="border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                        Active
+                      </div>
                     </div>
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">{viewProduct.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">Product ID:</span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        {typeof viewProduct.id === 'number' ? `PR${viewProduct.id.toString().padStart(4, '0')}` : (typeof viewProduct.id === 'string' && /^\d+$/.test(viewProduct.id) ? `PR${viewProduct.id.padStart(4, '0')}` : viewProduct.id)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewModalOpen(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
+              </div>
 
-                {/* Settlement History Table */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Settlement History</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-200 rounded-lg">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="px-3 py-2 text-center font-semibold">S NO</th>
-                          <th className="px-3 py-2 text-center font-semibold">Payment Date</th>
-                          <th className="px-3 py-2 text-center font-semibold">Amount Paid</th>
-                          <th className="px-3 py-2 text-center font-semibold">Payment Type</th>
-                          <th className="px-3 py-2 text-center font-semibold">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {viewSettlements.length === 0 && (
-                          <tr><td colSpan={5} className="text-center p-2">No payments found</td></tr>
-                        )}
-                        {viewSettlements.map((s, idx) => {
-                          const formattedDate = formatDateDDMMYYYY(s.payment_date);
-                          return (
-                            <tr key={idx}>
-                              <td className="px-3 py-2 text-center">{idx + 1}</td>
-                              <td className="px-3 py-2 text-center">{formattedDate}</td>
-                              <td className="px-3 py-2 text-center">₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                              <td className="px-3 py-2 text-center">{s.payment_type || '-'}</td>
-                              <td className="px-3 py-2 text-center">
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded transition-colors"
-                                  title="Delete"
-                                  onClick={() => handleDeleteSettlement(idx)}
-                                  disabled={submitting}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Product Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Package className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Product Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Product Name</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.category}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewProduct.supplier || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Purchase Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatDateDDMMYYYY(viewProduct.purchase_date)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Settlement Summary Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Banknote className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Settlement Summary
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <History className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{viewSettlements.length}</div>
+                        <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Payments</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                          ₹{viewSettlements.reduce((sum, s) => sum + Number(s.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Total Amount</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
+                        </div>
+                        <div className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-800">
+                          Active Account
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-2">Status</div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Settlement History Table */}
+                  {viewSettlements.length > 0 && (
+                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Receipt className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                        </div>
+                        Payment History ({viewSettlements.length})
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">S.No</th>
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Payment Date</th>
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Amount Paid</th>
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Payment Type</th>
+                              <th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          </thead>
+                          <tbody>
+                            {viewSettlements.map((s, idx) => {
+                              const formattedDate = formatDateDDMMYYYY(s.payment_date);
+                              return (
+                                <tr key={idx} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
+                                  <td className="py-3 px-4 text-gray-900 font-medium">{idx + 1}</td>
+                                  <td className="py-3 px-4 text-gray-900">{formattedDate}</td>
+                                  <td className="py-3 px-4">
+                                    <span className="text-green-600 font-semibold">
+                                      ₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <Badge variant="outline" className="text-xs">
+                                      {s.payment_type || 'Not specified'}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center justify-center w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors shadow-sm"
+                                      title="Delete Payment"
+                                      onClick={() => handleDeleteSettlement(idx)}
+                                      disabled={submitting}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No Payments State */}
+                  {viewSettlements.length === 0 && (
+                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Banknote className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment Records</h3>
+                      <p className="text-gray-500">No settlement history available for this product</p>
+                    </div>
+                  )}
+
                 </div>
               </div>
-            )}
-
-            <DialogFooter className="flex justify-center pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setViewModalOpen(false)}
-                className="w-full sm:w-auto"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </div>
+          </div>
+        )}
 
         {/* Edit Transaction Dialog */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -254,15 +255,11 @@ const StaffCategoryManagement: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button 
+              <ActionButtons.Refresh 
                 onClick={() => loadCategories()}
+                loading={loading}
                 disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+              />
 
               <Button 
                 onClick={() => setIsAddingCategory(true)}
@@ -351,15 +348,13 @@ const StaffCategoryManagement: React.FC = () => {
               />
             </div>
             <div className="w-full sm:w-auto min-w-[150px]">
-              <Button
+              <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                className="global-btn w-full"
-              >
-                {filterMonth !== null && filterYear !== null ? 
+                text={filterMonth !== null && filterYear !== null ? 
                   `${months[filterMonth]} ${filterYear}` : 
                   'Show All'
                 }
-              </Button>
+              />
             </div>
           </div>
         </div>

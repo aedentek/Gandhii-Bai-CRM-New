@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Stethoscope } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Stethoscope, User, Phone, Mail, MapPin, Calendar, DollarSign, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
@@ -370,7 +371,6 @@ const DoctorManagement: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Doctor Management</h1>
-                <p className="text-sm sm:text-base text-gray-600">Manage medical professionals and their information</p>
               </div>
             </div>
 
@@ -383,13 +383,11 @@ const DoctorManagement: React.FC = () => {
                 <span className="hidden sm:inline">Add Doctor</span>
                 <span className="sm:hidden">+</span>
               </Button>
-              <Button 
+              <ActionButtons.Refresh 
                 onClick={loadDoctors}
-                variant="outline"
-                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+                loading={false}
+                disabled={false}
+              />
             </div>
           </div>
         </div>
@@ -710,101 +708,225 @@ const DoctorManagement: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* View Doctor Modal */}
-        <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <Stethoscope className="w-5 h-5 text-blue-600" />
-                <span>Doctor Details</span>
-              </DialogTitle>
-            </DialogHeader>
-            {selectedDoctor && (
-              <div className="space-y-6">
-                {/* Photo and Basic Info */}
-                <div className="flex items-start space-x-4">
-                  <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
-                    <img
-                      src={getDoctorPhotoUrl(selectedDoctor.photo)}
-                      alt={selectedDoctor.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/api/placeholder/80/80';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900">{selectedDoctor.name}</h3>
-                    <p className="text-gray-600">{selectedDoctor.id}</p>
-                    <Badge className={getStatusColor(selectedDoctor.status)}>
-                      {selectedDoctor.status}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Email</Label>
-                    <p className="text-gray-900">{selectedDoctor.email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Phone</Label>
-                    <p className="text-gray-900">{selectedDoctor.phone}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-sm font-medium text-gray-700">Address</Label>
-                    <p className="text-gray-900">{selectedDoctor.address}</p>
-                  </div>
-                </div>
-
-                {/* Professional Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Specialization</Label>
-                    <p className="text-gray-900">{selectedDoctor.specialization}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Department</Label>
-                    <p className="text-gray-900">{selectedDoctor.department}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Join Date</Label>
-                    <p className="text-gray-900">
-                      {selectedDoctor.join_date ? format(selectedDoctor.join_date, 'MMMM dd, yyyy') : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Salary</Label>
-                    <p className="text-gray-900">₹{selectedDoctor.salary.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {/* Documents */}
-                {selectedDoctor.documents && Object.keys(selectedDoctor.documents).length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Documents</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(selectedDoctor.documents).map(([key, path]) => (
-                        <Button
-                          key={key}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(getDoctorPhotoUrl(path as string), '_blank')}
-                          className="justify-start"
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                        </Button>
-                      ))}
+        {/* View Doctor Modal - Glass Morphism Design */}
+        {showViewModal && selectedDoctor && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowViewModal(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
+                      <img
+                        src={getDoctorPhotoUrl(selectedDoctor.photo)}
+                        alt={selectedDoctor.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          const parent = target.parentElement as HTMLElement;
+                          if (parent) {
+                            parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-lg font-semibold text-white">${selectedDoctor.name.charAt(0).toUpperCase()}</span></div>`;
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${getStatusColor(selectedDoctor.status)}`}>
+                        {selectedDoctor.status}
+                      </div>
                     </div>
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">Dr. {selectedDoctor.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">Doctor ID:</span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        {selectedDoctor.id}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowViewModal(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Personal Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Personal Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Full Name</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedDoctor.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Mail className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Email Address</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedDoctor.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Phone Number</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.phone}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100 sm:col-span-2 lg:col-span-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Address</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.address}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Professional Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Stethoscope className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Professional Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Stethoscope className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Specialization</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.specialization}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Department</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedDoctor.department}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Join Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                              {selectedDoctor.join_date ? format(selectedDoctor.join_date, 'dd/MM/yyyy') : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Salary</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{selectedDoctor.salary.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Documents Section */}
+                  {selectedDoctor.documents && Object.keys(selectedDoctor.documents).length > 0 && (
+                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <FileText className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                        </div>
+                        Documents ({Object.keys(selectedDoctor.documents).length})
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                        {Object.entries(selectedDoctor.documents).map(([key, path]) => (
+                          <Button
+                            key={key}
+                            variant="outline"
+                            onClick={() => window.open(getDoctorPhotoUrl(path as string), '_blank')}
+                            className="justify-start bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100 hover:from-blue-100 hover:to-white h-auto"
+                          >
+                            <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            </span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Doctor Modal */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>

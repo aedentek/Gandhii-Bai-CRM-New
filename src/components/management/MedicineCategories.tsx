@@ -27,6 +27,7 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -387,7 +388,6 @@ const handleRefresh = React.useCallback(() => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Categories</h1>
-                <p className="text-sm lg:text-base text-gray-600 mt-1">Manage and organize medicine categories</p>
               </div>
             </div>
           

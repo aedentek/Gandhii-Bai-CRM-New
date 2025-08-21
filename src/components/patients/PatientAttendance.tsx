@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -392,14 +393,11 @@ const PatientAttendance: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={refreshData}
-                disabled={refreshing}
-                className="global-btn flex items-center gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </Button>
+              <ActionButtons.Refresh 
+                onClick={refreshData} 
+                loading={refreshing} 
+                disabled={refreshing} 
+              />
             </div>
           </div>
         </div>

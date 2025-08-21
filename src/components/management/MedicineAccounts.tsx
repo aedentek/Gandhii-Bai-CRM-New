@@ -27,10 +27,11 @@ class ErrorCatcher extends React.Component<{ onError: (e: Error) => void, childr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, FileText, Pencil, Eye, CreditCard, Search, Trash2, RefreshCw, Activity, Calendar, Download, DollarSign, Package, BarChart3, History } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileText, Pencil, Eye, CreditCard, Search, Trash2, RefreshCw, Activity, Calendar, Download, DollarSign, Package, BarChart3, History, X, User, Pill, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, Receipt, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 import '@/styles/global-crm-design.css';
@@ -479,7 +480,6 @@ const MedicineAccounts: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Accounts</h1>
-                <p className="text-sm sm:text-base text-gray-600">Manage medicine financial records and transactions</p>
               </div>
             </div>
           
@@ -810,220 +810,281 @@ const MedicineAccounts: React.FC = () => {
         )}
       </div>
 
-        {/* View Settlement History Dialog - Enhanced to match GeneralStock design with Mobile Responsive */}
-        <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="px-2 sm:px-6">
-              <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                <span className="truncate">Account Information History</span>
-              </DialogTitle>
-            </DialogHeader>
-            
-            {viewProduct && (
-              <div className="space-y-4 sm:space-y-6 px-2 sm:px-6 pb-6">
-                {/* Product Details Card */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                      Product Details
-                    </h3>
-                  </div>
-                  
-                  <div className="p-3 sm:p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product ID</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
-                          {viewProduct.id}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Product Name</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {viewProduct.name}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Category</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {viewProduct.category}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Supplier</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-words">
-                          {viewProduct.supplier}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Unit</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          Units
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Price</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          ₹{viewProduct.price || 0}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Purchase Date</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          {formatDateDDMMYYYY(viewProduct.purchase_date)}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Expiry Date</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          {formatDateDDMMYYYY(viewProduct.expiry_date)}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium text-gray-600">Quantity</label>
-                        <p className="font-semibold text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                          {viewProduct.quantity || 0}
-                        </p>
+        {/* View Settlement History Modal - Glass Morphism Design */}
+        {viewModalOpen && viewProduct && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewModalOpen(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
+                      <Receipt className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${
+                        viewProduct.status === 'paid' ? 'bg-green-100 text-green-800' :
+                        viewProduct.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {viewProduct.status ? viewProduct.status.charAt(0).toUpperCase() + viewProduct.status.slice(1) : 'Pending'}
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Account Summary Card */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                      Account Summary
-                    </h3>
-                  </div>
-                  
-                  <div className="p-3 sm:p-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="text-center">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">
-                          ₹{viewProduct.total_amount ? Number(viewProduct.total_amount).toLocaleString('en-IN') : '0'}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Amount</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
-                          ₹{viewProduct.paid_amount ? Number(viewProduct.paid_amount).toLocaleString('en-IN') : '0'}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Amount Paid</div>
-                      </div>
-                      <div className="text-center lg:col-start-3">
-                        <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
-                          ₹{viewProduct.pending_amount ? Number(viewProduct.pending_amount).toLocaleString('en-IN') : '0'}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending</div>
-                      </div>
-                      <div className="text-center lg:col-start-4">
-                        <div className="mb-2">
-                          <Badge 
-                            variant={
-                              viewProduct.status === 'paid' ? 'default' : 
-                              viewProduct.status === 'pending' ? 'secondary' : 'destructive'
-                            }
-                            className={`text-xs sm:text-sm font-medium px-2 py-1 ${
-                              viewProduct.status === 'paid' ? 'bg-green-100 text-green-800' :
-                              viewProduct.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {viewProduct.status ? viewProduct.status.charAt(0).toUpperCase() + viewProduct.status.slice(1) : 'Pending'}
-                          </Badge>
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600">Status</div>
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">{viewProduct.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">Product ID:</span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        {viewProduct.id}
+                      </span>
                     </div>
                   </div>
-                </div>
-                
-                {/* Payment History */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 sm:px-6 py-3 sm:py-4 border-b">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
-                      <History className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
-                      Payment History
-                    </h3>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50/50">
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[50px]">S NO</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Payment Date</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Amount Paid</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Payment Type</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Description</TableHead>
-                          <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {viewSettlements.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-6 sm:py-8 text-muted-foreground">
-                              <div className="flex flex-col items-center gap-2">
-                                <CreditCard className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
-                                <span className="text-sm sm:text-base">No payment records found</span>
-                                <span className="text-xs text-gray-500 hidden sm:block">Payment history will appear here</span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          viewSettlements.map((s, idx) => {
-                            const formattedDate = formatDateDDMMYYYY(s.payment_date);
-                            return (
-                              <TableRow key={idx} className="hover:bg-gray-50">
-                                <TableCell className="text-center font-medium text-xs sm:text-sm">{idx + 1}</TableCell>
-                                <TableCell className="text-center text-xs sm:text-sm">{formattedDate}</TableCell>
-                                <TableCell className="text-center font-bold text-green-600 text-xs sm:text-sm">
-                                  ₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell className="text-center text-xs sm:text-sm">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {s.payment_type || 'Cash'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-center text-xs sm:text-sm">{s.description || '-'}</TableCell>
-                                <TableCell className="text-center">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
-                                    title="Delete Payment Record"
-                                    onClick={() => handleDeleteSettlement(idx)}
-                                    disabled={submitting}
-                                  >
-                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewModalOpen(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-            )}
 
-            <DialogFooter className="flex justify-center pt-4 px-3 sm:px-6 pb-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setViewModalOpen(false)}
-                className="w-full sm:w-auto text-sm sm:text-base"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Product Information Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Package className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Product Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Product Name</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.category}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Building className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewProduct.supplier}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Unit Price</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewProduct.price || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Warehouse className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Quantity</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewProduct.quantity || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Expiry Date</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatDateDDMMYYYY(viewProduct.expiry_date)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Account Summary Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Account Summary
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Receipt className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                          ₹{viewProduct.total_amount ? Number(viewProduct.total_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Amount</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Banknote className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                          ₹{viewProduct.paid_amount ? Number(viewProduct.paid_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Amount Paid</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-red-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-red-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600" />
+                        </div>
+                        <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
+                          ₹{viewProduct.pending_amount ? Number(viewProduct.pending_amount).toLocaleString('en-IN') : '0'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Pending</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
+                        </div>
+                        <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          viewProduct.status === 'paid' ? 'bg-green-100 text-green-800' :
+                          viewProduct.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {viewProduct.status ? viewProduct.status.charAt(0).toUpperCase() + viewProduct.status.slice(1) : 'Pending'}
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-1">Status</div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Payment History Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                      </div>
+                      Payment History
+                    </h3>
+                    
+                    <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[50px]">S NO</TableHead>
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[90px]">Payment Date</TableHead>
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[90px]">Amount Paid</TableHead>
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[90px]">Payment Type</TableHead>
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[100px]">Description</TableHead>
+                            <TableHead className="text-center font-semibold text-gray-700 min-w-[70px]">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {viewSettlements.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                <div className="flex flex-col items-center gap-3">
+                                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <CreditCard className="h-8 w-8 text-gray-400" />
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-lg font-medium text-gray-500">No payment records found</p>
+                                    <p className="text-sm text-gray-400 mt-1">Payment history will appear here</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            viewSettlements.map((s, idx) => {
+                              const formattedDate = formatDateDDMMYYYY(s.payment_date);
+                              return (
+                                <TableRow key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                  <TableCell className="text-center font-medium text-xs sm:text-sm">{idx + 1}</TableCell>
+                                  <TableCell className="text-center text-xs sm:text-sm">{formattedDate}</TableCell>
+                                  <TableCell className="text-center font-bold text-green-600 text-xs sm:text-sm">
+                                    ₹{Number(s.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell className="text-center text-xs sm:text-sm">
+                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                      {s.payment_type || 'Cash'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center text-xs sm:text-sm">{s.description || '-'}</TableCell>
+                                  <TableCell className="text-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                                      title="Delete Payment Record"
+                                      onClick={() => handleDeleteSettlement(idx)}
+                                      disabled={submitting}
+                                    >
+                                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Transaction Dialog */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
