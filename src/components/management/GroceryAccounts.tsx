@@ -700,7 +700,7 @@ const GroceryAccounts: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(item)}
-                          className="action-btn-view"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Settlement History"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -709,7 +709,7 @@ const GroceryAccounts: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(item)}
-                          className="action-btn-edit"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Transaction"
                         >
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />

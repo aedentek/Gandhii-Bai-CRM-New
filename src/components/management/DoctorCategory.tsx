@@ -459,7 +459,7 @@ const DoctorCategory: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditCategory(category)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Category"
                         >
                           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -468,7 +468,7 @@ const DoctorCategory: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteClick(category)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 rounded-lg"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Category"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

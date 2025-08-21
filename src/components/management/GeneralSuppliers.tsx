@@ -621,7 +621,7 @@ const GeneralSuppliers: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => setViewingSupplier(supplier)}
-                        className="action-btn action-btn-view"
+                        className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="View Supplier"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -630,7 +630,7 @@ const GeneralSuppliers: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditSupplier(supplier)}
-                        className="action-btn action-btn-edit"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Supplier"
                       >
                         <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -639,7 +639,7 @@ const GeneralSuppliers: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteSupplier(supplier)}
-                        className="action-btn action-btn-delete"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Supplier"
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

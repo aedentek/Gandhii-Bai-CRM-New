@@ -850,7 +850,7 @@ const DoctorSalary: React.FC = () => {
                             size="sm" 
                             variant="outline" 
                             onClick={() => handleRecordPayment(doctor)}
-                            className="crm-action-btn crm-action-btn-edit"
+                            className="action-btn-lead action-btn-add h-8 w-8 sm:h-9 sm:w-9 p-0"
                             title="Record Payment"
                           >
                             <CreditCard className="h-3 w-3" />

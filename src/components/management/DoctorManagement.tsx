@@ -674,7 +674,7 @@ const DoctorManagement: React.FC = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleView(doctor)}
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-green-200 text-green-600 hover:bg-green-50 hover:border-green-400 rounded-md"
+                              className="action-btn-lead action-btn-view h-7 w-7 sm:h-8 sm:w-8 p-0"
                               title="View Doctor"
                             >
                               <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -683,7 +683,7 @@ const DoctorManagement: React.FC = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(doctor)}
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-400 rounded-md"
+                              className="action-btn-lead action-btn-edit h-7 w-7 sm:h-8 sm:w-8 p-0"
                               title="Edit Doctor"
                             >
                               <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -692,7 +692,7 @@ const DoctorManagement: React.FC = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleDelete(doctor)}
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-400 rounded-md"
+                              className="action-btn-lead action-btn-delete h-7 w-7 sm:h-8 sm:w-8 p-0"
                               title="Delete Doctor"
                             >
                               <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

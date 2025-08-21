@@ -663,30 +663,30 @@ const RoleManagement: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(role)}
-                          className="crm-action-btn crm-action-btn-view"
+                          className="action-btn-lead action-btn-view h-7 w-7 sm:h-8 sm:w-8 p-0"
                           title="View Details"
                         >
-                          <Eye className="h-3 w-3" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="sr-only">View</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(role)}
-                          className="crm-action-btn crm-action-btn-edit"
+                          className="action-btn-lead action-btn-edit h-7 w-7 sm:h-8 sm:w-8 p-0"
                           title="Edit Role"
                         >
-                          <Pencil className="h-3 w-3" />
+                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="sr-only">Edit</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteRole(role.id, role.name)}
-                          className="crm-action-btn crm-action-btn-delete"
+                          className="action-btn-lead action-btn-delete h-7 w-7 sm:h-8 sm:w-8 p-0"
                           title="Delete Role"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="sr-only">Delete</span>
                         </Button>
                       </div>

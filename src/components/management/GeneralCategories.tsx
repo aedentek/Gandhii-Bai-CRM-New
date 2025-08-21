@@ -709,7 +709,7 @@ const GeneralCategories: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleViewCategory(category)}
-                        className="action-btn action-btn-view"
+                        className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="View Category"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -718,7 +718,7 @@ const GeneralCategories: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditCategory(category)}
-                        className="action-btn action-btn-edit"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Category"
                       >
                         <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -727,7 +727,7 @@ const GeneralCategories: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteCategory(category)}
-                        className="action-btn action-btn-delete"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Category"
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

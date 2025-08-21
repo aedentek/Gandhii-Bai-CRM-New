@@ -721,7 +721,7 @@ const MedicineAccounts: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(item)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Settlement History"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -730,7 +730,7 @@ const MedicineAccounts: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(item)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Transaction"
                         >
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />

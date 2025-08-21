@@ -716,7 +716,7 @@ const DoctorAdvancePage: React.FC = () => {
                                 size="sm" 
                                 variant="outline" 
                                 onClick={() => handleViewDoctor(doctor)}
-                                className="crm-action-btn crm-action-btn-view"
+                                className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="View Doctor Details"
                               >
                                 <Eye className="h-3 w-3" />
@@ -726,7 +726,7 @@ const DoctorAdvancePage: React.FC = () => {
                                 size="sm" 
                                 variant="outline" 
                                 onClick={() => handleEditDoctor(doctor)}
-                                className="crm-action-btn crm-action-btn-edit"
+                                className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Edit Doctor"
                               >
                                 <Edit className="h-3 w-3" />
@@ -1101,13 +1101,15 @@ const DoctorAdvancePage: React.FC = () => {
                                     </Badge>
                                   </td>
                                   <td className="px-4 py-3 text-center">
-                                    <button
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       onClick={() => handleDeleteAdvance(advance.id!)}
-                                      className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                      className="action-btn-lead action-btn-delete h-8 w-8 p-0"
                                       title="Delete advance record"
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                    </button>
+                                    </Button>
                                   </td>
                                 </tr>
                               ))}

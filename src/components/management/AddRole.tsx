@@ -556,7 +556,7 @@ const AddRole: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(role)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-400 rounded-lg"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Details"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -565,7 +565,7 @@ const AddRole: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(role)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 rounded-lg"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Role"
                         >
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -575,7 +575,7 @@ const AddRole: React.FC = () => {
                           variant="outline" 
                           onClick={() => handleDeleteRole(role.id, role.name)}
                           disabled={submitting}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 rounded-lg"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Role"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

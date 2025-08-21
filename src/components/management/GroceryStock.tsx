@@ -791,7 +791,7 @@ const handleRefresh = React.useCallback(() => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewStock(product)}
-                          className="action-btn-view"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Details"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -800,7 +800,7 @@ const handleRefresh = React.useCallback(() => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditStock(product)}
-                          className="action-btn-edit"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Stock"
                         >
                           <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -809,7 +809,7 @@ const handleRefresh = React.useCallback(() => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteStock(product)}
-                          className="action-btn-delete"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Stock"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

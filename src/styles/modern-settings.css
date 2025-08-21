@@ -283,6 +283,202 @@
   left: 100%;
 }
 
+.action-btn-view {
+  --shadow-color: rgba(34, 197, 94, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-view:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-view:hover::before {
+  left: 100%;
+}
+
+.action-btn-success {
+  --shadow-color: rgba(34, 197, 94, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-success::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-success:hover::before {
+  left: 100%;
+}
+
+.action-btn-present {
+  --shadow-color: rgba(34, 197, 94, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-present::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-present:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-present:hover::before {
+  left: 100%;
+}
+
+.action-btn-late {
+  --shadow-color: rgba(245, 158, 11, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-late::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-late:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-late:hover::before {
+  left: 100%;
+}
+
+.action-btn-absent {
+  --shadow-color: rgba(239, 68, 68, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-absent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-absent:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-absent:hover::before {
+  left: 100%;
+}
+
+.action-btn-reset {
+  --shadow-color: rgba(107, 114, 128, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-reset::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(107, 114, 128, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-reset:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-reset:hover::before {
+  left: 100%;
+}
+
+.action-btn-add {
+  --shadow-color: rgba(124, 58, 237, 0.2);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-add::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.action-btn-add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.action-btn-add:hover::before {
+  left: 100%;
+}
+
 /* Stats Grid */
 .modern-stats-grid {
   display: grid;

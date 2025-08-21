@@ -833,7 +833,7 @@ const GeneralStock: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => openViewPopup(item)}
-                        className="action-btn action-btn-view"
+                        className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="View Details"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -842,7 +842,7 @@ const GeneralStock: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => openEditPopup(item)}
-                        className="action-btn action-btn-edit"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Stock"
                       >
                         <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />

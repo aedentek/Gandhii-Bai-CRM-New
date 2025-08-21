@@ -887,19 +887,19 @@ const handleRefresh = React.useCallback(() => {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleEditProduct(product)}
-                        className="action-btn action-btn-edit"
+                        className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Product"
                       >
-                        <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteProduct(product)}
-                        className="action-btn action-btn-delete"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Product"
                       >
-                        <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
