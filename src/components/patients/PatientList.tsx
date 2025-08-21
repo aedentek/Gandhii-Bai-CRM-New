@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
@@ -1159,7 +1159,8 @@ const PatientList: React.FC = () => {
                       <button 
                         onClick={() => {
                           try {
-                            const patientIdForRoute = patient.id?.startsWith('P') ? patient.id : `P${String(patient.originalId || patient.id).padStart(4, '0')}`;
+                            // Use raw numeric ID for navigation - the PatientBiodata component will handle the format
+                            const patientIdForRoute = patient.id;
                             console.log('🔗 Button clicked for patient details:', {
                               patientId: patient.id,
                               originalId: patient.originalId,
@@ -1169,8 +1170,8 @@ const PatientList: React.FC = () => {
                             });
                             console.log('🚀 Attempting navigation to:', `/patients/details/${patientIdForRoute}`);
                             
-                            // Use window.location instead of navigate for testing
-                            window.location.href = `/patients/details/${patientIdForRoute}`;
+                            // Use React Router navigate
+                            navigate(`/patients/details/${patientIdForRoute}`);
                             
                             console.log('✅ Navigation call completed');
                           } catch (error) {
@@ -1326,36 +1327,64 @@ const PatientList: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* View Patient Dialog */}
+      {/* View Patient Dialog - Glass Morphism Design */}
       {viewPatient && (
-        <Dialog open={!!viewPatient} onOpenChange={() => setViewPatient(null)}>
-          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewPatient(null)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              {/* Gradient Top Bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              
+              {/* Header Content */}
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                
+                {/* Avatar Section */}
                 <div className="relative flex-shrink-0">
                   <PatientPhoto 
                     photoPath={viewPatient.photo} 
                     alt={viewPatient.name}
                     className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg"
                   />
+                  {/* Status Badge */}
                   <div className="absolute -bottom-1 -right-1">
                     <Badge className={`${getStatusBadge(viewPatient.status)} border-2 border-white shadow-sm text-xs`}>
                       {viewPatient.status.charAt(0).toUpperCase() + viewPatient.status.slice(1)}
                     </Badge>
                   </div>
                 </div>
+                
+                {/* Title and Info Section */}
                 <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
                     <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
                     <span className="truncate">{viewPatient.name}</span>
-                  </DialogTitle>
-                  <DialogDescription className="text-xs sm:text-sm md:text-lg lg:text-xl text-gray-600 mt-1 truncate">
-                    Patient ID: {viewPatient.id} • Complete Medical Profile
-                  </DialogDescription>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">Patient ID:</span>
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                      {viewPatient.id}
+                    </span>
+                  </div>
                 </div>
+                
+                {/* Close Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewPatient(null)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-            </DialogHeader>
+            </div>
             
             <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
               <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
@@ -1881,8 +1910,8 @@ const PatientList: React.FC = () => {
                 </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
 
       {/* Edit Patient Dialog */}

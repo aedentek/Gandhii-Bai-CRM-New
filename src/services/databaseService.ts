@@ -1582,4 +1582,30 @@ export class DatabaseService {
     if (!res.ok) throw new Error('Failed to delete staff attendance');
     return res.json();
   }
+
+  // --- DOCTOR SALARY PAYMENTS ---
+  static async getAllDoctorSalaryPayments() {
+    // For now, return empty array since we need to get actual payment data from doctor_salary_settlements
+    // This will be used for revenue calculation in dashboard
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/doctor-salaries/settlements`);
+      if (!res.ok) {
+        console.warn('Failed to fetch doctor salary settlements, returning empty array');
+        return [];
+      }
+      const result = await res.json();
+      return result.data || result;
+    } catch (error) {
+      console.warn('Error fetching doctor salary payments:', error);
+      return [];
+    }
+  }
+
+  // --- DOCTOR ADVANCES ---
+  static async getAllDoctorAdvances() {
+    const res = await fetch(`${this.apiBaseUrl}/doctor-advance`);
+    if (!res.ok) throw new Error('Failed to fetch doctor advances');
+    const result = await res.json();
+    return result.data || result; // Handle both wrapped and direct responses
+  }
 }

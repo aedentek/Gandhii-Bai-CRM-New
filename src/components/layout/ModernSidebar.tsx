@@ -88,11 +88,11 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
       submenu: [
         { title: 'Add Patient', href: '/patients/add', icon: UserPlus },
         { title: 'Patient List', href: '/patients/list', icon: List },
-        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: TestTube },
         { title: 'Attendance', href: '/patients/attendance', icon: Calendar },
         { title: 'Medical Record', href: '/patients/medical-records', icon: FileText },
         { title: 'Patient History', href: '/patients/history', icon: History },
         { title: 'Call Records', href: '/patients/call-records', icon: PhoneCall },
+        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: TestTube },
         { title: 'Payment Fees', href: '/patients/payment-fees', icon: CreditCard },
         { title: 'Deleted Patients', href: '/patients/deleted', icon: Trash2 },
       ]

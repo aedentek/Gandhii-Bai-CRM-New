@@ -2,22 +2,23 @@ import DoctorCategory from '@/components/management/DoctorCategory';
 import DeletedDoctors from '@/components/management/DeletedDoctors';
 import AddDoctor from '@/components/management/AddDoctor';
 import SalaryPayment from '@/components/management/SalaryPayment';
-import PatientCallRecord from '@/components/patients/PatientCallRecord';
-import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
+// import PatientCallRecord from '@/components/patients/PatientCallRecord';
+// import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
 import PatientFullyHistory from '@/components/patients/PatientFullyHistory';
 import PatientFullDetails from '@/components/patients/PatientFullDetailsSimple';
+import PatientBiodata from '@/components/patients/PatientBiodata';
 import TestReportAmount from '@/components/patients/TestReportAmount';
 import TestRoute from '@/components/TestRoute';
 import StaffCategoryManagement from './components/management/StaffCategory';
 import AddStaff from './components/management/AddStaff';
 import DoctorAttendance from '@/components/management/DoctorAttendance';
 import DoctorSalary from '@/components/management/DoctorSalary';
-import DoctorAdvance from '@/pages/management/doctor-advance';
+// import DoctorAdvance from '@/pages/management/doctor-advance';
 import AddRole from '@/components/management/AddRole';
 import AddUser from '@/components/management/AddUser';
 import UserManagement from '@/components/management/UserManagement';
 import AddLeadCategory from '@/components/leads/AddLeadCategory';
-import LeadsList from '@/components/leads/LeadsList';
+// import LeadsList from '@/components/leads/LeadsList';
 
 // Import CSS globally
 import './styles/modern-forms.css';
@@ -173,7 +174,7 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard user={user} />} />
                     
                   {/* Patient Management Routes */}
-                  <Route path="/patients/details/:patientId" element={<PatientFullDetails />} />
+                  <Route path="/patients/details/:patientId" element={<PatientBiodata />} />
                   <Route path="/patients/fully-history/:patientId" element={<PatientFullyHistory />} />
                   <Route path="/test/:testId" element={<TestRoute />} />
                   <Route path="/patients/add" element={<AddPatient />} />
@@ -182,8 +183,8 @@ function App() {
                   <Route path="/patients/deleted" element={<DeletedPatients />} />
                   <Route path="/patients/attendance" element={<PatientAttendance />} />
                   <Route path="/patients/history" element={<PatientHistory />} />
-                  <Route path="/patients/call-records" element={<PatientCallRecord />} />
-                  <Route path="/patients/medical-records" element={<PatientMedicalRecord />} />
+                  {/* <Route path="/patients/call-records" element={<PatientCallRecord />} /> */}
+                  {/* <Route path="/patients/medical-records" element={<PatientMedicalRecord />} /> */}
                   <Route path="/patients/payment-fees" element={<PatientPaymentFees />} />
                   
                   {/* Staff Management Routes */}
@@ -191,7 +192,7 @@ function App() {
                   <Route path="/management/deleted-doctors" element={<DeletedDoctors />} />
                   <Route path="/management/doctor-attendance" element={<DoctorAttendance />} />
                   <Route path="/management/doctor-salary" element={<DoctorSalary />} />
-                  <Route path="/management/doctor-advance" element={<DoctorAdvance />} />
+                  {/* <Route path="/management/doctor-advance" element={<DoctorAdvance />} /> */}
                   <Route path="/management/doctor-category" element={<DoctorCategory />} />
               <Route path="/management/staff-category" element={<StaffCategoryManagement />} />
               <Route path="/management/add-staff" element={<AddStaff />} />
@@ -229,7 +230,7 @@ function App() {
                   {/* Settings */}
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/leads/add-category" element={<AddLeadCategory />} />
-                  <Route path="/leads/list" element={<LeadsList />} />
+                  {/* <Route path="/leads/list" element={<LeadsList />} /> */}
                     
                   <Route path="*" element={
                     <div style={{ padding: '20px', backgroundColor: 'red', color: 'white' }}>
@@ -237,7 +238,14 @@ function App() {
                       <p>Current URL: {window.location.href}</p>
                       <p>Pathname: {window.location.pathname}</p>
                       <p>This means the route pattern did not match any defined routes.</p>
+                      <p><strong>Expected routes that should match:</strong></p>
+                      <ul>
+                        <li>/patients/details/:patientId - for PatientBiodata</li>
+                        <li>/patients/list - for PatientList</li>
+                        <li>/dashboard - for Dashboard</li>
+                      </ul>
                       <button onClick={() => window.location.href = '/dashboard'}>Go to Dashboard</button>
+                      <button onClick={() => window.location.href = '/patients/list'} style={{marginLeft: '10px'}}>Go to Patient List</button>
                     </div>
                   } />
                 </Routes>

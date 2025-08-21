@@ -25,7 +25,8 @@ import {
   Calendar,
   Volume2,
   Users,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -2373,17 +2374,25 @@ const PatientHistory: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Record Dialog - Modern Glass Morphism Design */}
+      {/* View Record Dialog - Glass Morphism Design */}
       {viewRecord && (
-        <Dialog key={`view-dialog-${viewRecord.patientId}-${refreshCounter}-${medicalRecords.length}`} open={!!viewRecord} onOpenChange={() => setViewRecord(null)}>
-          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl flex flex-col">
-            {/* Modal Header - Beautiful Design */}
-            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-shrink-0">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewRecord(null)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
                 <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-blue-100 flex items-center justify-center">
-                    <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2397,6 +2406,14 @@ const PatientHistory: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewRecord(null)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
             </div>
             
@@ -3125,8 +3142,8 @@ const PatientHistory: React.FC = () => {
             </div>
 
 
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
 
       {/* View Dialog Month/Year Picker Dialog with Beautiful Design */}

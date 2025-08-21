@@ -275,19 +275,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch leads
+  // Fetch leads with month/year filtering
   useEffect(() => {
     const fetchLeads = async () => {
       try {
         const { DatabaseService } = await import('@/services/databaseService');
         const allLeads = await DatabaseService.getAllLeads();
         
-        // Filter leads based on search query
-        const filteredLeads = allLeads.filter(lead => 
+        // Apply month/year filtering if active
+        let filteredLeads = allLeads;
+        if (filterMonth !== null && filterYear !== null) {
+          filteredLeads = allLeads.filter(lead => {
+            // Filter by reminder date within the selected month/year
+            if (lead.reminderDate) {
+              const reminderDate = new Date(lead.reminderDate);
+              return reminderDate.getMonth() === filterMonth && reminderDate.getFullYear() === filterYear;
+            }
+            // Also include leads created in the selected month/year
+            if (lead.created_at || lead.date) {
+              const createdDate = new Date(lead.created_at || lead.date);
+              return createdDate.getMonth() === filterMonth && createdDate.getFullYear() === filterYear;
+            }
+            return false;
+          });
+        }
+        
+        // Apply search filter
+        filteredLeads = filteredLeads.filter(lead => 
           lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          lead.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          lead.status.toLowerCase().includes(searchQuery.toLowerCase())
+          (lead.email && lead.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (lead.phone && lead.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          lead.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (lead.category && lead.category.toLowerCase().includes(searchQuery.toLowerCase()))
         );
         
         setLeads(filteredLeads);
@@ -298,7 +317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     };
 
     fetchLeads();
-  }, [searchQuery]);
+  }, [searchQuery, filterMonth, filterYear]);
 
   // Reminders state for Leads List
   const [reminders, setReminders] = useState([]);
@@ -348,22 +367,81 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   ]);
 
   useEffect(() => {
-    // Load statistics including real patient, doctor and staff counts
+    // Load statistics including real patient, doctor and staff counts based on month/year filter
     const loadStats = async () => {
       try {
         const { DatabaseService } = await import('@/services/databaseService');
-        const [patients, doctors, staff, medicines] = await Promise.all([
+        const [patients, doctors, staff, medicines, leads, salaryPayments, doctorAdvances] = await Promise.all([
           DatabaseService.getAllPatients(),
           DatabaseService.getAllDoctors(),
           DatabaseService.getAllStaff(),
-          DatabaseService.getAllGeneralProducts()
+          DatabaseService.getAllGeneralProducts(),
+          DatabaseService.getAllLeads(),
+          DatabaseService.getAllDoctorSalaryPayments(),
+          DatabaseService.getAllDoctorAdvances()
         ]);
         
-        // Filter active doctors
-        const activeDoctorCount = doctors.filter(doctor => doctor.status === 'Active').length;
+        // Apply month/year filtering based on filterMonth and filterYear
+        const filterByMonthYear = (items: any[], dateField: string) => {
+          if (filterMonth === null || filterYear === null) return items;
+          
+          return items.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            if (isNaN(itemDate.getTime())) return true; // Include items with invalid dates
+            return itemDate.getMonth() === filterMonth && itemDate.getFullYear() === filterYear;
+          });
+        };
+
+        // Filter data based on selected month/year
+        const filteredPatients = filterByMonthYear(patients, 'createdAt');
+        const filteredStaff = filterByMonthYear(staff, 'createdAt');
+        const filteredLeads = filterByMonthYear(leads, 'created_at');
         
-        // Filter active staff
-        const activeStaffCount = staff.filter(s => s.status === 'Active').length;
+        // For cumulative data (total counts), show all records up to the selected month/year
+        const getCumulativeCount = (items: any[], dateField: string) => {
+          if (filterMonth === null || filterYear === null) return items.length;
+          
+          const endDate = new Date(filterYear, filterMonth + 1, 0); // Last day of selected month
+          return items.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            if (isNaN(itemDate.getTime())) return true;
+            return itemDate <= endDate;
+          }).length;
+        };
+
+        // Calculate monthly revenue from salary payments and doctor advances
+        let monthlyRevenue = 0;
+        if (filterMonth !== null && filterYear !== null) {
+          const filteredPayments = filterByMonthYear(salaryPayments, 'payment_date');
+          const filteredAdvances = filterByMonthYear(doctorAdvances, 'date');
+          
+          monthlyRevenue = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0) +
+                          filteredAdvances.reduce((sum, advance) => sum + (advance.amount || 0), 0);
+        }
+        
+        // Filter active doctors (cumulative up to selected month)
+        const activeDoctorCount = doctors.filter(doctor => {
+          if (doctor.status !== 'Active') return false;
+          if (filterMonth === null || filterYear === null) return true;
+          
+          const joinDate = new Date(doctor.join_date || doctor.createdAt);
+          if (isNaN(joinDate.getTime())) return true;
+          
+          const endDate = new Date(filterYear, filterMonth + 1, 0);
+          return joinDate <= endDate;
+        }).length;
+        
+        // Filter active staff (cumulative up to selected month)
+        const activeStaffCount = staff.filter(s => {
+          if (s.status !== 'Active') return false;
+          if (filterMonth === null || filterYear === null) return true;
+          
+          const joinDate = new Date(s.join_date || s.createdAt);
+          if (isNaN(joinDate.getTime())) return true;
+          
+          const endDate = new Date(filterYear, filterMonth + 1, 0);
+          return joinDate <= endDate;
+        }).length;
         
         // Calculate medicine stock statistics
         const medicineStats = medicines.reduce((acc: any, medicine: any) => {
@@ -381,12 +459,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         }, { inStockProducts: 0, lowStockProducts: 0, outOfStockProducts: 0 });
 
         setStats({
-          totalPatients: patients.length,
+          totalPatients: getCumulativeCount(patients, 'createdAt'),
           activeDoctors: activeDoctorCount,
           totalStaff: activeStaffCount,
           totalMedicines: medicines.length,
-          pendingApprovals: 8,
-          totalRevenue: 85420,
+          pendingApprovals: filteredLeads.filter(lead => lead.status === 'Pending' || lead.status === 'Reminder').length,
+          totalRevenue: Math.round(monthlyRevenue),
           ...medicineStats
         });
       } catch (error) {
@@ -403,54 +481,71 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     loadStats();
   }, [filterMonth, filterYear]);
 
+  const getMonthYearText = () => {
+    if (filterMonth === null || filterYear === null) return 'All Time';
+    return `${months[filterMonth]} ${filterYear}`;
+  };
+
   const statCards = [
     {
       title: 'Total Patients',
       value: stats.totalPatients.toLocaleString(),
-      description: '+12% from last month',
+      description: `As of ${getMonthYearText()}`,
       icon: Users,
       trend: 'up',
-      color: 'text-blue-600'
+      color: 'text-blue-600',
+      bgGradient: 'from-blue-50 to-blue-100/50 dark:from-blue-900/50 dark:to-blue-800/30',
+      borderColor: 'border-blue-200 hover:border-blue-300 dark:border-blue-700 dark:hover:border-blue-600'
     },
     {
       title: 'Active Doctors',
       value: stats.activeDoctors.toString(),
-      description: '2 new this week',
+      description: `Active in ${getMonthYearText()}`,
       icon: Stethoscope,
       trend: 'up',
-      color: 'text-green-600'
+      color: 'text-green-600',
+      bgGradient: 'from-green-50 to-green-100/50 dark:from-green-900/50 dark:to-green-800/30',
+      borderColor: 'border-green-200 hover:border-green-300 dark:border-green-700 dark:hover:border-green-600'
     },
     {
       title: 'Total Staff',
       value: stats.totalStaff.toString(),
-      description: 'Active staff members',
+      description: `Active staff members`,
       icon: Users,
       trend: 'neutral',
-      color: 'text-orange-600'
+      color: 'text-orange-600',
+      bgGradient: 'from-orange-50 to-orange-100/50 dark:from-orange-900/50 dark:to-orange-800/30',
+      borderColor: 'border-orange-200 hover:border-orange-300 dark:border-orange-700 dark:hover:border-orange-600'
     },
     {
       title: 'Total Medicines',
       value: stats.totalMedicines.toString(),
-      description: '15 low stock alerts',
+      description: `${stats.lowStockProducts} low stock alerts`,
       icon: Pill,
-      trend: 'down',
-      color: 'text-purple-600'
+      trend: stats.lowStockProducts > 0 ? 'down' : 'neutral',
+      color: 'text-purple-600',
+      bgGradient: 'from-purple-50 to-purple-100/50 dark:from-purple-900/50 dark:to-purple-800/30',
+      borderColor: 'border-purple-200 hover:border-purple-300 dark:border-purple-700 dark:hover:border-purple-600'
     },
     {
-      title: 'Pending Approvals',
+      title: 'Pending Leads',
       value: stats.pendingApprovals.toString(),
-      description: 'Requires attention',
+      description: `Requires attention in ${getMonthYearText()}`,
       icon: AlertCircle,
       trend: 'neutral',
-      color: 'text-red-600'
+      color: 'text-red-600',
+      bgGradient: 'from-red-50 to-red-100/50 dark:from-red-900/50 dark:to-red-800/30',
+      borderColor: 'border-red-200 hover:border-red-300 dark:border-red-700 dark:hover:border-red-600'
     },
     {
-      title: 'Revenue (Monthly)',
+      title: `Revenue (${getMonthYearText()})`,
       value: `₹${stats.totalRevenue.toLocaleString()}`,
-      description: '+8% from last month',
+      description: filterMonth !== null && filterYear !== null ? 'Monthly revenue' : 'Total revenue',
       icon: TrendingUp,
       trend: 'up',
-      color: 'text-green-600'
+      color: 'text-emerald-600',
+      bgGradient: 'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/50 dark:to-emerald-800/30',
+      borderColor: 'border-emerald-200 hover:border-emerald-300 dark:border-emerald-700 dark:hover:border-emerald-600'
     }
   ];
 
@@ -469,75 +564,120 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   return (
     <div className="min-h-screen space-y-6 bg-gradient-to-b from-gray-50 via-gray-50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-6 rounded-lg">
-      {/* Welcome Header with Month/Year Filter */}
-      <div className="flex justify-between items-start backdrop-blur-sm bg-white/30 dark:bg-gray-800/30 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg">
+      {/* Welcome Header with Enhanced Month/Year Filter */}
+      <div className="flex justify-between items-start backdrop-blur-sm bg-gradient-to-r from-white/40 via-blue-50/30 to-purple-50/30 dark:from-gray-800/40 dark:via-blue-900/20 dark:to-purple-900/20 p-6 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl hover:shadow-2xl transition-all duration-300">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-100 dark:to-gray-300">
             Welcome back, {user.name}!
           </h1>
-          {/* <p className="text-muted-foreground">
-            Here's what's happening at your healthcare facility today.
-          </p> */}
+          <p className="text-muted-foreground font-medium">
+            {getMonthYearText() !== 'All Time' 
+              ? `Viewing data for ${getMonthYearText()}` 
+              : "Here's your complete healthcare facility overview"
+            }
+          </p>
         </div>
-        <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => setShowMonthYearDialog(true)}
-        >
-          <CalendarDays className="h-4 w-4" />
-          {months[selectedMonth]} {selectedYear}
-        </Button>
+        <div className="flex items-center gap-3">
+          {(filterMonth !== null || filterYear !== null) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-red-50/70 hover:bg-red-100 border-red-200 hover:border-red-400 text-red-700 hover:text-red-800 transition-all duration-300"
+              onClick={() => {
+                setFilterMonth(null);
+                setFilterYear(null);
+                setSelectedMonth(new Date().getMonth());
+                setSelectedYear(new Date().getFullYear());
+              }}
+            >
+              <Clock className="h-4 w-4" />
+              Show All Data
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800 shadow-md hover:shadow-lg transition-all duration-300"
+            onClick={() => setShowMonthYearDialog(true)}
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span className="font-medium">
+              {getMonthYearText()}
+            </span>
+          </Button>
+        </div>
       </div>
 
-      {/* Month/Year Selection Dialog */}
+      {/* Enhanced Month/Year Selection Dialog */}
       <Dialog open={showMonthYearDialog} onOpenChange={setShowMonthYearDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Month and Year</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">
+              Select Time Period
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Filter dashboard data by specific month and year
+            </p>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+          <div className="grid gap-6 py-6">
+            <div className="grid gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Month</label>
               <Select
                 value={selectedMonth.toString()}
                 onValueChange={(value) => setSelectedMonth(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/70 backdrop-blur-sm border-gray-200 hover:border-blue-400 transition-all duration-300">
                   <SelectValue placeholder="Select month" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white/95 backdrop-blur-md border-gray-200">
                   {months.map((month, index) => (
-                    <SelectItem key={index} value={index.toString()}>
+                    <SelectItem key={index} value={index.toString()} className="hover:bg-blue-50">
                       {month}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
               <Select
                 value={selectedYear.toString()}
                 onValueChange={(value) => setSelectedYear(parseInt(value))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/70 backdrop-blur-sm border-gray-200 hover:border-blue-400 transition-all duration-300">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white/95 backdrop-blur-md border-gray-200">
                   {Array.from({ length: 5 }, (_, i) => currentYear - 2 + i).map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
+                    <SelectItem key={year} value={year.toString()} className="hover:bg-blue-50">
                       {year}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {selectedMonth !== null && selectedYear !== null && (
+              <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3">
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium text-center">
+                  Preview: {months[selectedMonth]} {selectedYear}
+                </p>
+              </div>
+            )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-3 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+            <Button
+              variant="outline"
+              onClick={() => setShowMonthYearDialog(false)}
+              className="flex-1 border-gray-300 hover:border-gray-400 transition-all duration-300"
+            >
+              Cancel
+            </Button>
             <Button
               onClick={() => {
                 setFilterMonth(selectedMonth);
                 setFilterYear(selectedYear);
                 setShowMonthYearDialog(false);
               }}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
             >
               Apply Filter
             </Button>
@@ -545,30 +685,58 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Date Selection Dialog for Leads */}
+      {/* Enhanced Date Selection Dialog for Daily Leads */}
       <Dialog open={showMonthDateDialog} onOpenChange={setShowMonthDateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Date Range</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400">
+              Select Reminder Date
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Filter lead reminders by specific date
+            </p>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              {/* <Label>Start Date</Label> */}
+          <div className="grid gap-6 py-6">
+            <div className="grid gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
               <Input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  handleDateSelect(e.target.value);
+                }}
+                className="bg-white/70 backdrop-blur-sm border-gray-200 hover:border-green-400 focus:border-green-500 transition-all duration-300"
               />
             </div>
+            {selectedDate && (
+              <div className="bg-green-50/70 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3">
+                <p className="text-sm text-green-700 dark:text-green-300 font-medium text-center">
+                  Showing reminders for: {new Date(selectedDate).toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </p>
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMonthDateDialog(false)}>
+          <DialogFooter className="flex gap-3 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowMonthDateDialog(false)}
+              className="flex-1 border-gray-300 hover:border-gray-400 transition-all duration-300"
+            >
               Cancel
             </Button>
-            <Button onClick={() => {
-              // Add date filtering logic here
-              setShowMonthDateDialog(false);
-            }}>
+            <Button 
+              onClick={() => {
+                handleDateSelect(selectedDate);
+                setShowMonthDateDialog(false);
+              }}
+              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+            >
               Apply Filter
             </Button>
           </DialogFooter>
@@ -576,35 +744,43 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       </Dialog>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {statCards.map((card, index) => (
-          <Card key={index} className="group transition-all hover:shadow-2xl transform hover:-translate-y-2 duration-300 overflow-hidden backdrop-blur-sm bg-gradient-to-br from-white/50 via-white/40 to-white/30 dark:from-gray-800/50 dark:via-gray-800/40 dark:to-gray-800/30 border border-gray-200/50 dark:border-gray-700/50 hover:border-blue-200/50 dark:hover:border-blue-700/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-2">
+          <Card key={index} className={cn(
+            "group transition-all hover:shadow-2xl transform hover:-translate-y-2 duration-300 overflow-hidden backdrop-blur-sm bg-gradient-to-br",
+            card.bgGradient,
+            card.borderColor,
+            "border hover:shadow-lg"
+          )}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="space-y-2 flex-1">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <card.icon className={cn("h-5 w-5 transform group-hover:scale-110 transition-transform duration-300", card.color)} />
                   {card.title}
                 </CardTitle>
-                <div className="text-3xl font-bold tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">{card.value}</div>
+                <div className={cn(
+                  "text-3xl font-bold tracking-tight group-hover:scale-105 transition-all duration-300",
+                  card.color
+                )}>{card.value}</div>
               </div>
               <div className={cn(
-                "p-3 rounded-full transform group-hover:scale-110 transition-all duration-300",
-                card.trend === 'up' && "bg-green-100/50 dark:bg-green-900/50 group-hover:bg-green-200/60 dark:group-hover:bg-green-800/60",
-                card.trend === 'down' && "bg-red-100/50 dark:bg-red-900/50 group-hover:bg-red-200/60 dark:group-hover:bg-red-800/60",
-                card.trend === 'neutral' && "bg-gray-100/50 dark:bg-gray-700/50 group-hover:bg-gray-200/60 dark:group-hover:bg-gray-600/60"
+                "p-3 rounded-full transform group-hover:scale-110 transition-all duration-300 shadow-lg",
+                card.trend === 'up' && "bg-green-100/80 dark:bg-green-900/50 group-hover:bg-green-200/90 dark:group-hover:bg-green-800/60",
+                card.trend === 'down' && "bg-red-100/80 dark:bg-red-900/50 group-hover:bg-red-200/90 dark:group-hover:bg-red-800/60",
+                card.trend === 'neutral' && "bg-gray-100/80 dark:bg-gray-700/50 group-hover:bg-gray-200/90 dark:group-hover:bg-gray-600/60"
               )}>
                 {card.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />}
                 {card.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />}
                 {card.trend === 'neutral' && <Activity className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="flex items-center text-sm font-medium">
                 <div className={cn(
-                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2",
-                  card.trend === 'up' && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                  card.trend === 'down' && "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                  card.trend === 'neutral' && "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                  "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm",
+                  card.trend === 'up' && "bg-green-100/70 text-green-800 dark:bg-green-900/70 dark:text-green-200",
+                  card.trend === 'down' && "bg-red-100/70 text-red-800 dark:bg-red-900/70 dark:text-red-200",
+                  card.trend === 'neutral' && "bg-gray-100/70 text-gray-800 dark:bg-gray-700/70 dark:text-gray-200"
                 )}>
                   {card.description}
                 </div>
@@ -1022,37 +1198,72 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </CardContent>
         </Card> */}
 
-        {/* Leads Table */}
-        <Card className="col-span-7 backdrop-blur-sm bg-gradient-to-br from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300">
-          <CardHeader className="pb-3">
+        {/* Enhanced Leads Table with Month/Year Filtering */}
+        <Card className="col-span-7 backdrop-blur-sm bg-gradient-to-br from-white/60 to-gray-50/40 dark:from-gray-800/60 dark:to-gray-900/40 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg border-b border-blue-100/50 dark:border-blue-800/50">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <CardTitle className="text-xl font-bold">
-                    Add Leads
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 flex items-center gap-2">
+                    <Users className="h-6 w-6 text-blue-500" />
+                    Lead Reminders {getMonthYearText() !== 'All Time' && `- ${getMonthYearText()}`}
                   </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => setShowMonthDateDialog(true)}
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                    Filter by Date
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2 bg-white/70 hover:bg-white border-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800 transition-all duration-300"
+                      onClick={() => setShowMonthDateDialog(true)}
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Filter by Date
+                    </Button>
+                    {(filterMonth !== null || selectedFilterDate) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 bg-red-50/70 hover:bg-red-100 border-red-200 hover:border-red-400 text-red-700 hover:text-red-800 transition-all duration-300"
+                        onClick={() => {
+                          setFilterMonth(null);
+                          setFilterYear(null);
+                          setSelectedFilterDate(null);
+                          setSelectedDate(new Date().toISOString().split('T')[0]);
+                        }}
+                      >
+                        <Clock className="h-4 w-4" />
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-3 text-gray-500" />
                     <Input
                       type="search"
                       placeholder="Search leads..."
-                      className="pl-9 pr-4 py-2"
+                      className="pl-9 pr-4 py-2 bg-white/70 backdrop-blur-sm border-gray-200 focus:border-blue-400 transition-all duration-300"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
+                  <Badge variant="secondary" className="bg-blue-100/70 text-blue-800 font-medium px-3 py-1">
+                    {leads.length} leads
+                  </Badge>
                 </div>
             </div>
+            {(filterMonth !== null || selectedFilterDate) && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium">
+                  {selectedFilterDate 
+                    ? `Showing reminders for ${new Date(selectedFilterDate).toLocaleDateString('en-GB', { 
+                        day: '2-digit', month: '2-digit', year: 'numeric' 
+                      })}` 
+                    : `Showing data for ${getMonthYearText()}`
+                  }
+                </span>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">

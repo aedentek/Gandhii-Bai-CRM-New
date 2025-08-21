@@ -12,6 +12,7 @@ import DemoShowcase from '@/components/demo/DemoShowcase';
 // Import existing components
 import AddPatient from '@/components/patients/AddPatient';
 import PatientList from '@/components/patients/PatientList';
+import PatientBiodata from '@/components/patients/PatientBiodata';
 import DeletedPatients from '@/components/patients/DeletedPatients';
 import PatientAttendance from '@/components/patients/PatientAttendance';
 import PatientHistory from '@/components/patients/PatientHistory';
@@ -159,6 +160,7 @@ function ModernApp() {
                     {/* Patient Management Routes */}
                     <Route path="/patients/add" element={<AddPatient />} />
                     <Route path="/patients/list" element={<PatientList />} />
+                    <Route path="/patients/details/:patientId" element={<PatientBiodata />} />
                     <Route path="/patients/test-report-amount" element={<TestReportAmount />} />
                     <Route path="/patients/deleted" element={<DeletedPatients />} />
                     <Route path="/patients/attendance" element={<PatientAttendance />} />
