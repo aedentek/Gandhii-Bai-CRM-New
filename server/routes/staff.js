@@ -151,9 +151,10 @@ router.post('/upload-staff-file', upload.single('file'), async (req, res) => {
 router.get('/staff', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY created_at DESC');
-    // Parse documents JSON field for each staff member
+    // Parse documents JSON field and convert field names for each staff member
     const parsedRows = rows.map(staff => ({
       ...staff,
+      joinDate: staff.join_date, // Convert snake_case to camelCase for frontend
       documents: staff.documents ? JSON.parse(staff.documents) : null
     }));
     res.json(parsedRows);
@@ -208,9 +209,10 @@ router.get('/staff/:id', async (req, res) => {
     const [rows] = await db.query('SELECT * FROM staff WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Staff member not found' });
     
-    // Parse documents JSON field
+    // Parse documents JSON field and convert field names
     const staff = {
       ...rows[0],
+      joinDate: rows[0].join_date, // Convert snake_case to camelCase for frontend
       documents: rows[0].documents ? JSON.parse(rows[0].documents) : null
     };
     
@@ -222,21 +224,26 @@ router.get('/staff/:id', async (req, res) => {
 
 // Add a staff member
 router.post('/staff', async (req, res) => {
-  const { id, name, email, phone, address, role, department, join_date, salary, status, photo, documents } = req.body;
+  const { id, name, email, phone, address, role, category_id, department, join_date, salary, status, photo, documents } = req.body;
   try {
+    console.log('📝 Creating staff with data:', {
+      id, name, role, category_id, department, join_date, salary, status
+    });
+    
     const [result] = await db.query(
-      'INSERT INTO staff (id, name, email, phone, address, role, department, join_date, salary, status, photo, documents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, name, email, phone, address, role, department, join_date, salary, status, photo, JSON.stringify(documents)]
+      'INSERT INTO staff (id, name, email, phone, address, role, category_id, department, join_date, salary, status, photo, documents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, name, email, phone, address, role, category_id, department, join_date, salary, status, photo, JSON.stringify(documents)]
     );
     res.status(201).json({ id, ...req.body });
   } catch (err) {
+    console.error('❌ Error creating staff:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 // Update a staff member
 router.put('/staff/:id', async (req, res) => {
-  const { name, email, phone, address, role, department, join_date, salary, status, photo, documents, total_paid, payment_mode } = req.body;
+  const { name, email, phone, address, role, category_id, department, join_date, salary, status, photo, documents, total_paid, payment_mode } = req.body;
   try {
     let updateFields = [];
     let values = [];
@@ -246,6 +253,7 @@ router.put('/staff/:id', async (req, res) => {
     if (phone !== undefined) { updateFields.push('phone = ?'); values.push(phone); }
     if (address !== undefined) { updateFields.push('address = ?'); values.push(address); }
     if (role !== undefined) { updateFields.push('role = ?'); values.push(role); }
+    if (category_id !== undefined) { updateFields.push('category_id = ?'); values.push(category_id); }
     if (department !== undefined) { updateFields.push('department = ?'); values.push(department); }
     if (join_date !== undefined) { updateFields.push('join_date = ?'); values.push(join_date); }
     if (salary !== undefined) { updateFields.push('salary = ?'); values.push(salary); }
@@ -272,6 +280,7 @@ router.put('/staff/:id', async (req, res) => {
     const [updated] = await db.query('SELECT * FROM staff WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
     const updatedStaff = {
       ...updated[0],
+      joinDate: updated[0].join_date, // Convert snake_case to camelCase for frontend
       documents: updated[0].documents ? JSON.parse(updated[0].documents) : null
     };
     

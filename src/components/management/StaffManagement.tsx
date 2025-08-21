@@ -227,9 +227,40 @@ const StaffManagement: React.FC = () => {
     if (!editStaff) return;
     
     try {
+      // Get category ID from the selected role name
+      let categoryId = null;
+      if (editStaff.role) {
+        try {
+          const categoriesResponse = await fetch('/api/staff-categories');
+          if (categoriesResponse.ok) {
+            const categories = await categoriesResponse.json();
+            const selectedCategory = categories.find((cat: any) => cat.name === editStaff.role);
+            categoryId = selectedCategory ? selectedCategory.id : null;
+          }
+        } catch (error) {
+          console.warn('Could not fetch category ID:', error);
+        }
+      }
+
+      // Format join date as YYYY-MM-DD for MySQL DATE format
+      let formattedJoinDate = editStaff.joinDate;
+      if (editStaff.joinDate && !editStaff.joinDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // If not already in YYYY-MM-DD format, try to parse and format it
+        try {
+          const date = new Date(editStaff.joinDate);
+          if (!isNaN(date.getTime())) {
+            formattedJoinDate = date.toISOString().split('T')[0];
+          }
+        } catch (error) {
+          console.warn('Could not format join date:', error);
+        }
+      }
+
       // Create a clean update object with all fields
       const updateData = {
         ...editStaff,
+        category_id: categoryId,
+        join_date: formattedJoinDate,
         photo: editStaff.photo && editStaff.photo.startsWith('data:image/') ? editStaff.photo : '', // Only send if it's a valid base64 image
         documents: {
           aadharFront: editStaff.aadharFront || '',
@@ -243,6 +274,8 @@ const StaffManagement: React.FC = () => {
 
       // Log update data for debugging
       console.log('Updating staff:', editStaff.id);
+      console.log('Category ID:', categoryId);
+      console.log('Formatted join date:', formattedJoinDate);
       console.log('Photo included:', !!updateData.photo);
       console.log('Photo data length:', updateData.photo?.length || 0);
 
@@ -493,7 +526,12 @@ const StaffManagement: React.FC = () => {
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center">
-                    <span>Email</span>
+                    <span>Specialization</span>
+                  </div>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span>Department</span>
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
@@ -502,20 +540,10 @@ const StaffManagement: React.FC = () => {
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center">
-                    <span>Role</span>
-                  </div>
-                </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">Join Date</span>
                     <span className="sm:hidden">Date</span>
-                  </div>
-                </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center">
-                    <span>Salary</span>
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
@@ -536,7 +564,10 @@ const StaffManagement: React.FC = () => {
                 .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
                 .map((s, idx) => (
                   <TableRow key={s.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
+                    {/* S No */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
+                    
+                    {/* Photo */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
                       {s.photo ? (
                         <img
@@ -555,15 +586,27 @@ const StaffManagement: React.FC = () => {
                         </div>
                       )}
                     </TableCell>
+                    
+                    {/* Staff ID */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">
                       <span className="text-primary font-medium hover:underline hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 p-1 h-auto text-xs sm:text-sm cursor-pointer rounded-md inline-flex items-center gap-1">
                         {s.id}
                       </span>
                     </TableCell>
+                    
+                    {/* Name */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm max-w-[100px] sm:max-w-[120px] truncate">{s.name}</TableCell>
-                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.email}</TableCell>
-                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.phone}</TableCell>
+                    
+                    {/* Specialization (Role) */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.role}</TableCell>
+                    
+                    {/* Department */}
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.department || '-'}</TableCell>
+                    
+                    {/* Phone */}
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.phone}</TableCell>
+                    
+                    {/* Join Date */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
                       {s.joinDate ? (() => {
                         try {
@@ -579,12 +622,15 @@ const StaffManagement: React.FC = () => {
                         return s.joinDate;
                       })() : <span className="text-gray-400 text-xs">Not Set</span>}
                     </TableCell>
-                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{s.salary}</TableCell>
+                    
+                    {/* Status */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
                       <Badge className={`${getStatusBadge(s.status)} text-xs`}>
                         {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
                       </Badge>
                     </TableCell>
+                    
+                    {/* Actions */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center whitespace-nowrap">
                       <div className="action-buttons-container">
                         <Button
@@ -1157,7 +1203,16 @@ const StaffManagement: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label>Join Date</Label>
-                <Input value={editStaff.joinDate} onChange={e => handleEditChange('joinDate', e.target.value)} />
+                <Input 
+                  type="date" 
+                  value={editStaff.joinDate ? 
+                    (editStaff.joinDate.match(/^\d{4}-\d{2}-\d{2}$/) ? 
+                      editStaff.joinDate : 
+                      new Date(editStaff.joinDate).toISOString().split('T')[0]
+                    ) : ''
+                  } 
+                  onChange={e => handleEditChange('joinDate', e.target.value)} 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Salary</Label>

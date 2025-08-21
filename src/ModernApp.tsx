@@ -20,6 +20,7 @@ import PatientPaymentFees from '@/components/patients/PatientPaymentFees';
 import PatientCallRecord from '@/components/patients/PatientCallRecord';
 import PatientMedicalRecord from '@/components/patients/PatientMedicalRecord';
 import TestReportAmount from '@/components/patients/TestReportAmount';
+import TestReportAmountPage from '@/pages/management/test-report-amount';
 import StaffManagement from '@/components/management/StaffManagement';
 import DeletedStaff from '@/components/management/DeletedStaff';
 import AddStaff from '@/components/management/AddStaff';
@@ -161,7 +162,7 @@ function ModernApp() {
                     <Route path="/patients/add" element={<AddPatient />} />
                     <Route path="/patients/list" element={<PatientList />} />
                     <Route path="/patients/details/:patientId" element={<PatientBiodata />} />
-                    <Route path="/patients/test-report-amount" element={<TestReportAmount />} />
+                    <Route path="/patients/test-report-amount" element={<TestReportAmountPage />} />
                     <Route path="/patients/deleted" element={<DeletedPatients />} />
                     <Route path="/patients/attendance" element={<PatientAttendance />} />
                     <Route path="/patients/medical-records" element={<PatientMedicalRecord />} />
@@ -187,6 +188,7 @@ function ModernApp() {
                     <Route path="/management/doctor-salary" element={<DoctorSalary />} />
                     <Route path="/management/doctor-advance" element={<DoctorAdvance />} />
                     <Route path="/management/staff-advance" element={<StaffAdvance />} />
+                    <Route path="/management/test-report-amount" element={<TestReportAmountPage />} />
                     <Route path="/management/deleted-doctors" element={<DeletedDoctors />} />
                     
                     {/* User Role Management Routes */}

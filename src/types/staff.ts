@@ -5,9 +5,11 @@ export interface Staff {
   phone: string;
   address?: string;
   role?: string;
+  category_id?: number;
   department?: string;
   salary?: number;
   joinDate?: string;
+  join_date?: string;
   status: 'Active' | 'Inactive';
   photo?: string;
   documents?: {

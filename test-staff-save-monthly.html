@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Staff Save Monthly API</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>Testing Staff Save Monthly Records API</h1>
+    <button onclick="testSaveMonthly()">Test Save Monthly Records</button>
+    <div id="results"></div>
+    
+    <script>
+async function testSaveMonthly() {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '<div class="result">🔍 Testing Staff Save Monthly Records API...</div>';
+    
+    try {
+        const testData = {
+            month: new Date().getMonth() + 1, // Current month
+            year: new Date().getFullYear()    // Current year
+        };
+        
+        resultsDiv.innerHTML += '<div class="result">📤 Sending request for: ' + JSON.stringify(testData) + '</div>';
+        
+        const response = await fetch('http://localhost:4000/api/staff-salaries/save-monthly-records', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(testData)
+        });
+        
+        resultsDiv.innerHTML += '<div class="result">📡 Response status: ' + response.status + '</div>';
+        
+        if (response.ok) {
+            const result = await response.json();
+            resultsDiv.innerHTML += '<div class="result success">✅ Success: <pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
+        } else {
+            const error = await response.text();
+            resultsDiv.innerHTML += '<div class="result error">❌ API Error: ' + error + '</div>';
+        }
+        
+    } catch (error) {
+        resultsDiv.innerHTML += '<div class="result error">❌ Test failed: ' + error.message + '</div>';
+    }
+}
+    </script>
+</body>
+</html>

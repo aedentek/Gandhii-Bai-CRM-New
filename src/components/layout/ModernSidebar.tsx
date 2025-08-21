@@ -92,7 +92,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Medical Record', href: '/patients/medical-records', icon: FileText },
         { title: 'Patient History', href: '/patients/history', icon: History },
         { title: 'Call Records', href: '/patients/call-records', icon: PhoneCall },
-        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: TestTube },
+        { title: 'Test Report Amount', href: '/patients/test-report-amount', icon: IndianRupee },
         { title: 'Payment Fees', href: '/patients/payment-fees', icon: CreditCard },
         { title: 'Deleted Patients', href: '/patients/deleted', icon: Trash2 },
       ]
@@ -105,8 +105,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Staff Category', href: '/management/staff-category', icon: FolderOpen },
         { title: 'Staff List', href: '/management/staff', icon: UserCog },
         { title: 'Staff Attendance', href: '/management/attendance', icon: ClipboardCheck },
-        { title: 'Salary Payment', href: '/management/salary-payment', icon: CreditCard },
         { title: 'Staff Advance', href: '/management/staff-advance', icon: IndianRupee },
+        { title: 'Salary Payment', href: '/management/salary-payment', icon: CreditCard },
         { title: 'Deleted Staff', href: '/management/deleted-staff', icon: Trash2 },
       ]
     },
@@ -118,7 +118,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
         { title: 'Doctor Role', href: '/management/doctor-category', icon: FolderOpen },
         { title: 'Doctor List', href: '/management/doctors', icon: Stethoscope },
         { title: 'Doctor Attendance', href: '/management/doctor-attendance', icon: Calendar },
-        { title: 'Doctor Advance', href: '/management/doctor-advance', icon: DollarSign },
+        { title: 'Doctor Advance', href: '/management/doctor-advance', icon: IndianRupee },
         { title: 'Doctor Salary', href: '/management/doctor-salary', icon: CreditCard },
         { title: 'Deleted Doctors', href: '/management/deleted-doctors', icon: Trash2 },
       ]

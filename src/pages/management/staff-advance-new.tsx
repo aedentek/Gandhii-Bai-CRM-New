@@ -27,8 +27,7 @@ import {
   Save,
   Calendar,
   Trash2,
-  IndianRupee,
-  Briefcase
+  IndianRupee
 } from 'lucide-react';
 import '@/styles/global-crm-design.css';
 import '@/styles/global-modal-design.css';
@@ -41,8 +40,6 @@ interface Staff {
   role?: string;
   department?: string;
   status?: string;
-  salary?: number | string;
-  join_date?: string;
 }
 
 const StaffAdvancePage: React.FC = () => {
@@ -100,50 +97,19 @@ const StaffAdvancePage: React.FC = () => {
     loadData();
   }, []);
 
-    // Helper function to format Staff ID for display (STF001, STF002, etc.)
-  const formatStaffId = (id: string): string => {
-    // Extract the numeric part and format it with leading zeros
-    const numStr = id.replace(/\D/g, '');
-    const num = parseInt(numStr, 10) || 0;
-    
-    // Format as 3-digit number with leading zeros (STF001, STF002, etc.)
-    return `STF${num.toString().padStart(3, '0')}`;
-  };
-
-  // Helper function to sort staff by ID in ascending order (STF001, STF002, etc.)
-  const sortStaffById = (staffList: Staff[]): Staff[] => {
-    return staffList.sort((a, b) => {
-      // Handle different Staff ID formats: STF001, STF0001, STF1, STF05, etc.
-      // Extract all digits from staff ID for proper numeric comparison
-      const extractNumber = (id: string): number => {
-        const numStr = id.replace(/\D/g, ''); // Remove all non-digits
-        return parseInt(numStr, 10) || 0;
-      };
-      
-      const aNum = extractNumber(a.id);
-      const bNum = extractNumber(b.id);
-      
-      return aNum - bNum;
-    });
-  };
-
   // Filter staff based on search term
   useEffect(() => {
-    let filtered: Staff[];
     if (!searchTerm.trim()) {
-      filtered = [...staff];
+      setFilteredStaff(staff);
     } else {
-      filtered = staff.filter((staffMember) =>
+      const filtered = staff.filter((staffMember) =>
         staffMember.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         staffMember.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (staffMember.role && staffMember.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (staffMember.department && staffMember.department.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+      setFilteredStaff(filtered);
     }
-    
-    // Sort the filtered staff by ID in ascending order
-    const sortedFiltered = sortStaffById(filtered);
-    setFilteredStaff(sortedFiltered);
   }, [searchTerm, staff]);
 
   // Apply filters when month/year changes
@@ -193,14 +159,11 @@ const StaffAdvancePage: React.FC = () => {
           status: staffMember.status
         }));
       
-      // Sort staff by ID in ascending order
-      const sortedActiveStaff = sortStaffById(activeStaff);
+      setStaff(activeStaff);
+      setFilteredStaff(activeStaff);
       
-      setStaff(sortedActiveStaff);
-      setFilteredStaff(sortedActiveStaff);
-      
-      // Prepare staff list for modal (using sorted staff)
-      const staffForModal = sortedActiveStaff.map((staffMember: any) => ({
+      // Prepare staff list for modal
+      const staffForModal = activeStaff.map((staffMember: any) => ({
         staff_id: staffMember.id,
         staff_name: staffMember.name,
         phone: staffMember.phone,
@@ -429,7 +392,7 @@ const StaffAdvancePage: React.FC = () => {
   // Dashboard statistics
   const totalStaff = filteredStaff.length;
   const totalAdvances = filteredAllAdvances.length;
-  const totalAmount = filteredAllAdvances.reduce((sum, advance) => sum + (Number(advance.amount) || 0), 0);
+  const totalAmount = filteredAllAdvances.reduce((sum, advance) => sum + advance.amount, 0);
   const currentDate = new Date().toLocaleDateString('en-IN');
 
   if (isLoading) {
@@ -455,6 +418,9 @@ const StaffAdvancePage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Staff Advance</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage staff advance payments and records
+                </p>
               </div>
             </div>
             
@@ -594,56 +560,39 @@ const StaffAdvancePage: React.FC = () => {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table className="w-full min-w-[800px]">
+                <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50 border-b">
-                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                        <div className="flex items-center justify-center">
-                          <span>S No</span>
-                        </div>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Photo
                       </TableHead>
-                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                          <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span>Photo</span>
-                        </div>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Staff ID
                       </TableHead>
-                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                          <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span>Staff ID</span>
-                        </div>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name & Role
                       </TableHead>
-                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                          <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span>Name & Role</span>
-                        </div>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
                       </TableHead>
-                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredStaff.map((staffMember, index) => {
                       return (
-                        <TableRow key={staffMember.id || index} className="bg-white border-b hover:bg-gray-50 transition-colors">
-                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
-                            <div className="flex justify-center">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage 
-                                  src={staffMember.photo ? `http://localhost:4000${staffMember.photo}` : undefined} 
-                                />
-                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                                  {staffMember.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                            </div>
+                        <TableRow key={staffMember.id || index} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3">
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                              <AvatarImage 
+                                src={staffMember.photo ? `http://localhost:4000${staffMember.photo}` : undefined} 
+                              />
+                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm">
+                                {staffMember.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">
-                            {formatStaffId(staffMember.id)}
+                            {staffMember.id}
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm">
                             <div className="font-medium text-slate-800">{staffMember.name}</div>
@@ -669,7 +618,7 @@ const StaffAdvancePage: React.FC = () => {
                                 title="Add Advance"
                               >
                                 <Edit className="h-3 w-3" />
-                                <span className="sr-only">Edit</span>
+                                <span className="sr-only">Add Advance</span>
                               </Button>
                             </div>
                           </TableCell>
@@ -792,173 +741,103 @@ const StaffAdvancePage: React.FC = () => {
           </div>
         )}
 
-        {/* Staff View Modal - Glass Morphism Design */}
+        {/* Staff View Modal with Exact PatientList Design */}
         {isViewModalOpen && selectedStaff && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={handleCloseViewModal}
           >
             <div 
-              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header - Glass Morphism Style */}
-              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
-                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
-                      {selectedStaff.photo ? (
-                        <img
-                          src={`http://localhost:4000${selectedStaff.photo}`}
-                          alt={selectedStaff.name || 'Profile'}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            const parent = target.parentElement as HTMLElement;
-                            if (parent) {
-                              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-lg font-semibold text-white">${(selectedStaff.name || 'S').charAt(0).toUpperCase()}</span></div>`;
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-lg font-semibold text-white">
-                            {(selectedStaff.name || 'S').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1">
-                      <div className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full">
-                        {selectedStaff.status || 'Active'}
-                      </div>
-                    </div>
+              {/* Modal Header - Fixed */}
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
+                    <AvatarImage 
+                      src={selectedStaff.photo ? `http://localhost:4000${selectedStaff.photo}` : undefined} 
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-lg sm:text-xl">
+                      {selectedStaff.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{selectedStaff.name}</h2>
+                    <p className="text-sm sm:text-base text-gray-600">Staff ID: {selectedStaff.id}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">{selectedStaff.role} • {selectedStaff.department}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
-                      <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
-                      <span className="truncate">{selectedStaff.name}</span>
-                    </h2>
-                    <div className="text-xs sm:text-sm md:text-base lg:text-lg mt-1 flex items-center gap-2">
-                      <span className="text-gray-600">Staff ID:</span>
-                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
-                        {formatStaffId(selectedStaff.id)}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCloseViewModal}
-                    className="text-slate-500 hover:text-slate-700"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseViewModal}
+                  className="text-slate-500 hover:text-slate-700 h-8 w-8 p-0"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
 
-              {/* Modal Body - Glass Morphism Style */}
+              {/* Modal Content - Scrollable */}
               <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
                 <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
                   
-                  {/* Staff Information - Doctor-style Layout */}
+                  {/* Staff Information Section - Exact PatientList Style */}
                   <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
                     <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
-                      </div>
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                       Staff Information
                     </h3>
                     
-                    {/* First Row - Full Name, Staff ID, Role */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-6">
-                      
-                      {/* Full Name */}
-                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                      {/* Staff ID */}
+                      <div className="bg-blue-50/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                            <span className="text-blue-600 font-bold text-xs sm:text-sm">#</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">FULL NAME</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedStaff.name}</p>
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">ID</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedStaff.id}</p>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Staff ID */}
-                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+
+                      {/* Phone */}
+                      <div className="bg-green-50/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-green-600 font-bold text-xs sm:text-sm">ID</span>
+                            <span className="text-green-600 font-bold text-xs sm:text-sm">📞</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">STAFF ID</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatStaffId(selectedStaff.id)}</p>
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Phone</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedStaff.phone || 'N/A'}</p>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Role/Department */}
-                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+
+                      {/* Department */}
+                      <div className="bg-purple-50/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-purple-200">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                            <span className="text-purple-600 font-bold text-xs sm:text-sm">🏢</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">ROLE</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedStaff.role}</p>
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Department</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedStaff.department}</p>
                           </div>
                         </div>
                       </div>
-                      
-                    </div>
-                    
-                    {/* Second Row - Salary, Join Date, Status */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                      
-                      {/* Salary */}
-                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-orange-600 font-bold text-xs sm:text-sm">₹</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">SALARY</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{selectedStaff.salary ? new Intl.NumberFormat('en-IN').format(Number(selectedStaff.salary)) : '15,000'}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Join Date */}
-                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">JOIN DATE</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                              {selectedStaff.join_date ? new Date(selectedStaff.join_date).toLocaleDateString('en-GB', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              }) : '20 Mar 2025'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
+
                       {/* Status */}
-                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                      <div className="bg-green-50/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-green-600 font-bold text-xs sm:text-sm">✓</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">STATUS</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedStaff.status || 'Active'}</p>
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Status</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedStaff.status}</p>
                           </div>
                         </div>
                       </div>
@@ -966,20 +845,18 @@ const StaffAdvancePage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Advance Records Section */}
+                  {/* Advance Records Section - Detailed Table Format */}
                   <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                       <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <FileText className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
-                        </div>
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         Advance Records ({filteredAdvances.length})
                       </h3>
                       <div className="flex items-center gap-2">
                         <select
                           value={selectedMonth}
                           onChange={(e) => handleMonthFilterChange(parseInt(e.target.value), selectedYear)}
-                          className="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white"
+                          className="px-3 py-1 border border-gray-300 rounded-md text-sm"
                         >
                           {months.map((month, index) => (
                             <option key={index} value={index + 1}>
@@ -990,7 +867,7 @@ const StaffAdvancePage: React.FC = () => {
                         <select
                           value={selectedYear}
                           onChange={(e) => handleMonthFilterChange(selectedMonth, parseInt(e.target.value))}
-                          className="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white"
+                          className="px-3 py-1 border border-gray-300 rounded-md text-sm"
                         >
                           {[2023, 2024, 2025, 2026].map((year) => (
                             <option key={year} value={year}>
@@ -1002,56 +879,68 @@ const StaffAdvancePage: React.FC = () => {
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
-                        <thead>
-                          <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
-                            <th className="px-4 py-3 text-center text-sm font-semibold">S No</th>
-                            <th className="px-4 py-3 text-center text-sm font-semibold">Staff ID</th>
-                            <th className="px-4 py-3 text-center text-sm font-semibold">Date</th>
-                            <th className="px-4 py-3 text-center text-sm font-semibold">Reason</th>
-                            <th className="px-4 py-3 text-center text-sm font-semibold">Amount</th>
-                            <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              #
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Staff ID
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Reason
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Amount
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="bg-white divide-y divide-gray-200">
                           {filteredAdvances.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500 bg-gray-50">
-                                <div className="flex flex-col items-center gap-2">
-                                  <FileText className="h-8 w-8 text-gray-400" />
-                                  <span>No advance records found for {months[selectedMonth - 1]} {selectedYear}</span>
-                                </div>
+                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                No advance records found for {months[selectedMonth - 1]} {selectedYear}
                               </td>
                             </tr>
                           ) : (
                             filteredAdvances.map((advance, index) => (
-                              <tr key={advance.id || index} className="hover:bg-blue-50 transition-colors border-b border-gray-200">
-                                <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">
+                              <tr key={advance.id || index} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-sm text-gray-900">
                                   {index + 1}
                                 </td>
-                                <td className="px-4 py-3 text-center text-sm font-semibold text-blue-600">
-                                  {formatStaffId(advance.staff_id)}
+                                <td className="px-4 py-3 text-sm font-medium text-blue-600">
+                                  {advance.staff_id}
                                 </td>
-                                <td className="px-4 py-3 text-center text-sm text-gray-900">
+                                <td className="px-4 py-3 text-sm text-gray-900">
                                   {new Date(advance.date).toLocaleDateString('en-IN')}
                                 </td>
-                                <td className="px-4 py-3 text-center text-sm text-gray-600 max-w-xs">
+                                <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
                                   <div className="truncate" title={advance.reason || 'No reason provided'}>
                                     {advance.reason || 'No reason provided'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-center text-sm">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <td className="px-4 py-3 text-sm">
+                                  <Badge className="bg-green-100 text-green-800 font-semibold">
                                     {formatCurrency(advance.amount)}
-                                  </span>
+                                  </Badge>
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                  <button 
-                                    onClick={() => handleDeleteAdvance(advance.id)}
-                                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteAdvance(advance.id!)}
+                                    className="action-btn-lead action-btn-delete h-8 w-8 p-0"
+                                    title="Delete advance record"
                                   >
                                     <Trash2 className="h-4 w-4" />
-                                  </button>
+                                  </Button>
                                 </td>
                               </tr>
                             ))
@@ -1059,51 +948,21 @@ const StaffAdvancePage: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
-
+                    
                     {/* Summary Section */}
-                    {filteredAdvances.length > 0 && (
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-blue-600 font-bold text-xs">#</span>
-                              </div>
-                              <div>
-                                <div className="text-xs text-blue-600 uppercase tracking-wide">Total Records</div>
-                                <div className="text-lg font-bold text-gray-900">{filteredAdvances.length}</div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-gradient-to-br from-green-50 to-white p-3 rounded-lg border border-green-100">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                                <IndianRupee className="h-3 w-3 text-green-600" />
-                              </div>
-                              <div>
-                                <div className="text-xs text-green-600 uppercase tracking-wide">Total Amount</div>
-                                <div className="text-lg font-bold text-gray-900">
-                                  {formatCurrency(filteredAdvances.reduce((sum, advance) => sum + (Number(advance.amount) || 0), 0))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-gradient-to-br from-purple-50 to-white p-3 rounded-lg border border-purple-100">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Calendar className="h-3 w-3 text-purple-600" />
-                              </div>
-                              <div>
-                                <div className="text-xs text-purple-600 uppercase tracking-wide">Period</div>
-                                <div className="text-lg font-bold text-gray-900">{months[selectedMonth - 1]} {selectedYear}</div>
-                              </div>
-                            </div>
-                          </div>
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-gray-900">
+                            Total for {months[selectedMonth - 1]} {selectedYear}:
+                          </span>
+                          <Badge className="bg-blue-100 text-blue-800 font-bold text-lg px-3 py-1">
+                            {formatCurrency(filteredAdvances.reduce((sum, advance) => sum + advance.amount, 0))}
+                          </Badge>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-
                 </div>
               </div>
             </div>

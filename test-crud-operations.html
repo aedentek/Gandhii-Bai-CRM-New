@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Report Amount CRUD Operations Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .operation-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Report Amount CRUD Operations Test</h1>
+        <p>This page tests all CRUD operations for the Test Report Amount system with real database connections.</p>
+        
+        <div class="operation-buttons">
+            <button onclick="testGetAll()">📖 GET All Reports</button>
+            <button onclick="testCreate()">➕ CREATE New Report</button>
+            <button onclick="testUpdate()">✏️ UPDATE Report</button>
+            <button onclick="testDelete()">🗑️ DELETE Report</button>
+            <button onclick="runFullCRUDTest()">🔄 Run Full CRUD Test</button>
+            <button onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+
+        <!-- Create Test Report Form -->
+        <div class="test-section">
+            <h3>📝 Create New Test Report</h3>
+            <div class="form-group">
+                <label for="patientId">Patient ID:</label>
+                <input type="text" id="patientId" value="PAT001" placeholder="e.g., PAT001">
+            </div>
+            <div class="form-group">
+                <label for="patientName">Patient Name:</label>
+                <input type="text" id="patientName" value="John Doe" placeholder="Patient Name">
+            </div>
+            <div class="form-group">
+                <label for="testType">Test Type:</label>
+                <input type="text" id="testType" value="Blood Test" placeholder="e.g., Blood Test, X-Ray">
+            </div>
+            <div class="form-group">
+                <label for="testDate">Test Date:</label>
+                <input type="date" id="testDate">
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" value="500" placeholder="Amount in rupees">
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                <textarea id="notes" placeholder="Additional notes...">Test report for routine checkup</textarea>
+            </div>
+            <div class="form-group">
+                <label for="status">Status:</label>
+                <select id="status">
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:4000/api';
+        let createdReportId = null;
+
+        // Set today's date as default
+        document.getElementById('testDate').value = new Date().toISOString().split('T')[0];
+
+        function logResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function makeApiCall(url, options = {}) {
+            try {
+                logResult(`🌐 Making API call: ${options.method || 'GET'} ${url}`);
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult(`✅ API Success: ${JSON.stringify(data, null, 2)}`, 'success');
+                    return { success: true, data };
+                } else {
+                    logResult(`❌ API Error: ${response.status} - ${JSON.stringify(data, null, 2)}`, 'error');
+                    return { success: false, error: data };
+                }
+            } catch (error) {
+                logResult(`💥 Network Error: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testGetAll() {
+            logResult('🔍 Testing GET all test reports...');
+            const result = await makeApiCall(`${API_BASE_URL}/test-reports`);
+            
+            if (result.success) {
+                logResult(`📊 Found ${result.data.data.length} test reports in database`, 'success');
+                if (result.data.data.length > 0) {
+                    logResult(`🔍 First report sample: ${JSON.stringify(result.data.data[0], null, 2)}`, 'info');
+                }
+            }
+            return result;
+        }
+
+        async function testCreate() {
+            logResult('➕ Testing CREATE new test report...');
+            
+            const formData = {
+                patient_id: document.getElementById('patientId').value,
+                patient_name: document.getElementById('patientName').value,
+                test_type: document.getElementById('testType').value,
+                test_date: document.getElementById('testDate').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                notes: document.getElementById('notes').value,
+                status: document.getElementById('status').value
+            };
+
+            logResult(`📝 Creating test report with data: ${JSON.stringify(formData, null, 2)}`, 'info');
+
+            const result = await makeApiCall(`${API_BASE_URL}/test-reports`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (result.success && result.data.data) {
+                createdReportId = result.data.data.id;
+                logResult(`✅ Test report created with ID: ${createdReportId}`, 'success');
+                logResult(`📊 Created report details: ${JSON.stringify(result.data.data, null, 2)}`, 'success');
+            }
+            
+            return result;
+        }
+
+        async function testUpdate() {
+            if (!createdReportId) {
+                logResult('⚠️ No report ID available. Please create a report first.', 'error');
+                return;
+            }
+
+            logResult(`✏️ Testing UPDATE test report with ID: ${createdReportId}...`);
+            
+            const updateData = {
+                test_type: 'Updated Blood Test - Complete Panel',
+                test_date: document.getElementById('testDate').value,
+                amount: 750,
+                notes: 'Updated notes: Comprehensive blood work including CBC, liver function, kidney function',
+                status: 'Completed'
+            };
+
+            logResult(`📝 Updating with data: ${JSON.stringify(updateData, null, 2)}`, 'info');
+
+            const result = await makeApiCall(`${API_BASE_URL}/test-reports/${createdReportId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (result.success) {
+                logResult(`✅ Test report ${createdReportId} updated successfully`, 'success');
+                logResult(`📊 Updated report details: ${JSON.stringify(result.data.data, null, 2)}`, 'success');
+            }
+            
+            return result;
+        }
+
+        async function testDelete() {
+            if (!createdReportId) {
+                logResult('⚠️ No report ID available. Please create a report first.', 'error');
+                return;
+            }
+
+            logResult(`🗑️ Testing DELETE test report with ID: ${createdReportId}...`);
+
+            const result = await makeApiCall(`${API_BASE_URL}/test-reports/${createdReportId}`, {
+                method: 'DELETE'
+            });
+
+            if (result.success) {
+                logResult(`✅ Test report ${createdReportId} deleted successfully`, 'success');
+                createdReportId = null; // Reset the ID since it's deleted
+            }
+            
+            return result;
+        }
+
+        async function runFullCRUDTest() {
+            logResult('🚀 Starting Full CRUD Test Sequence...', 'info');
+            logResult('='.repeat(50), 'info');
+            
+            try {
+                // 1. GET all (initial state)
+                logResult('📖 STEP 1: GET All Reports (Initial)', 'info');
+                await testGetAll();
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 2. CREATE
+                logResult('➕ STEP 2: CREATE New Report', 'info');
+                const createResult = await testCreate();
+                if (!createResult.success) {
+                    throw new Error('Create operation failed');
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 3. GET all (after create)
+                logResult('📖 STEP 3: GET All Reports (After Create)', 'info');
+                await testGetAll();
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 4. UPDATE
+                logResult('✏️ STEP 4: UPDATE Report', 'info');
+                const updateResult = await testUpdate();
+                if (!updateResult.success) {
+                    throw new Error('Update operation failed');
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 5. GET all (after update)
+                logResult('📖 STEP 5: GET All Reports (After Update)', 'info');
+                await testGetAll();
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 6. DELETE
+                logResult('🗑️ STEP 6: DELETE Report', 'info');
+                const deleteResult = await testDelete();
+                if (!deleteResult.success) {
+                    throw new Error('Delete operation failed');
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 7. GET all (after delete)
+                logResult('📖 STEP 7: GET All Reports (After Delete)', 'info');
+                await testGetAll();
+
+                logResult('='.repeat(50), 'info');
+                logResult('🎉 FULL CRUD TEST COMPLETED SUCCESSFULLY! 🎉', 'success');
+                logResult('✅ All operations (CREATE, READ, UPDATE, DELETE) working correctly', 'success');
+                logResult('✅ Frontend to Backend database connection established', 'success');
+                logResult('✅ Test Report Amount system is fully functional', 'success');
+                
+            } catch (error) {
+                logResult(`❌ FULL CRUD TEST FAILED: ${error.message}`, 'error');
+            }
+        }
+
+        // Test connection on page load
+        window.addEventListener('load', async () => {
+            logResult('🌐 Testing initial connection to backend...', 'info');
+            const result = await testGetAll();
+            if (result.success) {
+                logResult('✅ Backend connection successful! Ready for CRUD testing.', 'success');
+            } else {
+                logResult('❌ Backend connection failed. Please check if the server is running on localhost:4000', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

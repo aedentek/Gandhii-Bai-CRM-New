@@ -393,6 +393,26 @@ const AddStaff: React.FC = () => {
         }
       }
 
+      // Get category ID from the selected role name
+      let categoryId = null;
+      if (formData.role) {
+        try {
+          const categoriesResponse = await fetch('/api/staff-categories');
+          if (categoriesResponse.ok) {
+            const categories = await categoriesResponse.json();
+            const selectedCategory = categories.find((cat: any) => cat.name === formData.role);
+            categoryId = selectedCategory ? selectedCategory.id : null;
+          }
+        } catch (error) {
+          console.warn('Could not fetch category ID:', error);
+        }
+      }
+
+      // Format join date as YYYY-MM-DD for MySQL DATE format
+      const formattedJoinDate = joinDate ? 
+        joinDate.toISOString().split('T')[0] : 
+        new Date().toISOString().split('T')[0];
+
       // Prepare staff data for API
       const staffData: Partial<Staff> = {
         id: nextId,
@@ -401,8 +421,9 @@ const AddStaff: React.FC = () => {
         phone: formData.phone,
         address: formData.address,
         role: formData.role,
+        category_id: categoryId,
         department: formData.department,
-        joinDate: (joinDate || new Date()).toISOString(),
+        join_date: formattedJoinDate,
         salary: formData.salary ? parseFloat(formData.salary) : undefined,
         status: formData.status,
         photo: finalPhotoPath,

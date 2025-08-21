@@ -1,0 +1,1130 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { DatabaseService } from '@/services/databaseService';
+import { TestReportAmountAPI } from '@/services/testReportAmountAPI';
+import { TestReportAmount } from '@/types/testReportAmount';
+import { patientsAPI } from '@/utils/api';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import { toast } from 'sonner';
+import {
+  Search,
+  Eye,
+  Edit,
+  User,
+  RefreshCcw,
+  TrendingUp,
+  DollarSign,
+  Plus,
+  FileText,
+  Clock,
+  X,
+  Save,
+  Calendar,
+  Trash2,
+  IndianRupee,
+  TestTube,
+  Activity,
+  Phone,
+  Briefcase
+} from 'lucide-react';
+import '@/styles/global-crm-design.css';
+import '@/styles/global-modal-design.css';
+
+interface Patient {
+  id: string;
+  name: string;
+  phone?: string;
+  photo?: string;
+  age?: number;
+  gender?: string;
+  status?: string;
+}
+
+const TestReportAmountPage: React.FC = () => {
+  // Debug: Component is rendering
+  console.log('🧪 TestReportAmountPage component is rendering...');
+  
+  // Months array for filtering
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [testReports, setTestReports] = useState<TestReportAmount[]>([]);
+  const [filteredReports, setFilteredReports] = useState<TestReportAmount[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth + 1);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [isMonthYearDialogOpen, setIsMonthYearDialogOpen] = useState(false);
+
+  // Modal states
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form states
+  const [testType, setTestType] = useState('');
+  const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+  const [amount, setAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState<'Pending' | 'Completed' | 'Cancelled'>('Pending');
+
+  useEffect(() => {
+    loadPatients();
+    loadTestReports();
+  }, []);
+
+  useEffect(() => {
+    filterPatients();
+  }, [patients, searchTerm]);
+
+  useEffect(() => {
+    filterReports();
+  }, [testReports, selectedMonth, selectedYear]);
+
+  const formatPatientId = (id: string | number): string => {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    if (isNaN(numericId)) return 'PAT000';
+    return `PAT${String(numericId).padStart(3, '0')}`;
+  };
+
+  const sortPatientsById = (patients: Patient[]): Patient[] => {
+    return [...patients].sort((a, b) => {
+      const numA = parseInt(a.id, 10) || 0;
+      const numB = parseInt(b.id, 10) || 0;
+      return numA - numB;
+    });
+  };
+
+  const loadPatients = async () => {
+    try {
+      console.log('🔄 Loading patients...');
+      setIsLoading(true);
+      
+      // Try the unified API first, then fallback to DatabaseService
+      let data;
+      try {
+        data = await patientsAPI.getAll();
+        console.log('✅ Patients loaded via unified API:', data.length, 'patients');
+      } catch (apiError) {
+        console.warn('⚠️ Unified API failed, falling back to DatabaseService:', apiError.message);
+        const result = await DatabaseService.getAllPatients();
+        
+        // Handle DatabaseService response format
+        if (result && result.success && result.data && Array.isArray(result.data)) {
+          data = result.data;
+        } else if (result && Array.isArray(result)) {
+          data = result;
+        } else {
+          throw new Error('Invalid response format from DatabaseService');
+        }
+        console.log('✅ Patients loaded via DatabaseService fallback:', data.length, 'patients');
+      }
+      
+      console.log('📋 Raw patient data:', data);
+      
+      if (!data || !Array.isArray(data)) {
+        console.warn('⚠️ Invalid patient data received:', data);
+        setPatients([]);
+        toast('Warning', {
+          description: 'No patient data received from server',
+        });
+        return;
+      }
+      
+      const formattedPatients: Patient[] = data.map((patient: any) => ({
+        id: patient.id?.toString() || '',
+        name: patient.name || '',
+        phone: patient.phone || '',
+        photo: patient.photo || '',
+        age: patient.age || 0,
+        gender: patient.gender || '',
+        status: patient.status || 'Active'
+      }));
+      
+      console.log('🎯 Formatted patients:', formattedPatients);
+      
+      const sortedPatients = sortPatientsById(formattedPatients);
+      setPatients(sortedPatients);
+      console.log(`✅ Successfully loaded ${sortedPatients.length} patients`);
+      
+    } catch (error) {
+      console.error('❌ Error loading patients:', error);
+      console.error('❌ Error details:', error.message);
+      setPatients([]);
+      toast('Error', {
+        description: `Failed to load patients: ${error.message}`,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTestReports = async () => {
+    try {
+      console.log('🔄 Loading test reports...');
+      const result = await TestReportAmountAPI.getAll();
+      
+      if (result.success && result.data) {
+        setTestReports(result.data);
+        console.log(`✅ Loaded ${result.data.length} test reports from database`);
+      } else {
+        console.warn('⚠️ Failed to load test reports:', result.message);
+        setTestReports([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading test reports:', error);
+      setTestReports([]);
+    }
+  };
+
+  const filterPatients = () => {
+    let filtered = [...patients];
+
+    if (searchTerm) {
+      filtered = filtered.filter(patient =>
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        formatPatientId(patient.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.phone && patient.phone.includes(searchTerm))
+      );
+    }
+
+    setFilteredPatients(filtered);
+  };
+
+  const filterReports = () => {
+    let filtered = [...testReports];
+
+    // Filter by selected month and year
+    filtered = filtered.filter(report => {
+      const reportDate = new Date(report.test_date);
+      return reportDate.getMonth() + 1 === selectedMonth && reportDate.getFullYear() === selectedYear;
+    });
+
+    setFilteredReports(filtered);
+  };
+
+  const handleMonthFilterChange = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+  };
+
+  const handleViewPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleAddTestReport = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsReportModalOpen(true);
+    // Reset form
+    setTestType('');
+    setTestDate(new Date().toISOString().split('T')[0]);
+    setAmount('');
+    setNotes('');
+    setStatus('Pending');
+  };
+
+  const handleCloseReportModal = () => {
+    setIsReportModalOpen(false);
+    setSelectedPatient(null);
+    setTestType('');
+    setTestDate(new Date().toISOString().split('T')[0]);
+    setAmount('');
+    setNotes('');
+    setStatus('Pending');
+  };
+
+  const handleAddReport = async () => {
+    if (!selectedPatient || !testType || !amount || !testDate) {
+      toast('Validation Error', {
+        description: 'Please fill in all required fields',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      console.log('🧪 Adding test report for patient:', selectedPatient);
+      console.log('📝 Report data:', { testType, testDate, amount, status, notes });
+      
+      const reportData = {
+        patient_id: selectedPatient.id,
+        patient_name: selectedPatient.name, // ✅ Added missing patient_name
+        test_type: testType,
+        test_date: testDate,
+        amount: parseFloat(amount), // ✅ Ensure proper number conversion
+        status: status,
+        notes: notes || '' // ✅ Ensure notes is never undefined
+      };
+
+      console.log('📤 Sending report data to API:', reportData);
+
+      const result = await TestReportAmountAPI.create(reportData);
+      
+      console.log('📥 API Response:', result);
+      
+      if (result.success) {
+        toast('Success!', {
+          description: 'Test report added successfully',
+        });
+        
+        handleCloseReportModal();
+        loadTestReports(); // Reload to get updated data
+      } else {
+        throw new Error(result.message || 'Failed to add test report');
+      }
+    } catch (error) {
+      console.error('❌ Error adding test report:', error);
+      toast('Error', {
+        description: `Failed to add test report: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Stats calculations
+  const totalPatients = patients.length;
+  const activePatients = patients.filter(p => p.status === 'Active').length;
+  const totalReports = filteredReports.length;
+  const pendingReports = filteredReports.filter(r => r.status === 'Pending').length;
+  
+  // Fixed totalAmount calculation with proper number conversion and formatting
+  const totalAmount = filteredReports.reduce((sum, report) => {
+    const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+
+  // Debug logging
+  console.log('🔍 Debug Stats:', {
+    totalPatients,
+    activePatients,
+    filteredPatientsLength: filteredPatients.length,
+    isLoading,
+    patientsArrayLength: patients.length,
+    filteredReportsLength: filteredReports.length,
+    totalAmount,
+    filteredReports: filteredReports.map(r => ({ id: r.id, amount: r.amount, type: typeof r.amount }))
+  });
+
+  return (
+    <div className="crm-page-bg">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 p-4 sm:p-6">
+        {/* Header Section */}
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <TestTube className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Test Report Amount</h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                onClick={() => setIsMonthYearDialogOpen(true)}
+                className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                {months[selectedMonth - 1]} {selectedYear}
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered');
+                  loadPatients();
+                  loadTestReports();
+                }}
+                disabled={isLoading}
+                className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              {/* <Button 
+                onClick={async () => {
+                  console.log('🧪 Testing Test Reports API directly...');
+                  try {
+                    // Test GET
+                    console.log('📡 Testing GET /api/test-reports...');
+                    const getResponse = await fetch('http://localhost:4000/api/test-reports');
+                    console.log('📡 GET API response status:', getResponse.status);
+                    const getData = await getResponse.json();
+                    console.log('📡 GET API response data:', getData);
+                    
+                    // Test CREATE with sample data
+                    console.log('📡 Testing POST /api/test-reports...');
+                    const testData = {
+                      patient_id: 'PAT111',
+                      patient_name: 'Sabarish T',
+                      test_type: 'API Test Report',
+                      test_date: '2025-08-22',
+                      amount: 999,
+                      notes: 'Direct API test from frontend',
+                      status: 'Pending'
+                    };
+                    console.log('� Sending test data:', testData);
+                    
+                    const createResponse = await fetch('http://localhost:4000/api/test-reports', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(testData)
+                    });
+                    console.log('📡 CREATE API response status:', createResponse.status);
+                    const createData = await createResponse.json();
+                    console.log('📡 CREATE API response data:', createData);
+                    
+                    if (createData.success) {
+                      toast('API Test Success!', {
+                        description: 'Test report created successfully via direct API',
+                      });
+                      loadTestReports(); // Refresh the data
+                    }
+                  } catch (error) {
+                    console.error('📡 Direct API error:', error);
+                    toast('API Test Error', {
+                      description: `API test failed: ${error.message}`,
+                    });
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                Test API
+              </Button> */}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          {/* Total Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{totalPatients}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <User className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Registered</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Patients Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{activePatients}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">In treatment</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Test Reports Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Test Reports</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{totalReports}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <TestTube className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">This month</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TestTube className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Amount Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Total Amount</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
+                    ₹{totalAmount.toLocaleString('en-IN', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    })}
+                  </p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Revenue</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Patients List */}
+        {!isLoading && (
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <User className="h-5 w-5 text-blue-600" />
+                  Patients ({filteredPatients.length})
+                </CardTitle>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search patients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table className="w-full min-w-[800px]">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 border-b">
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center">
+                          <span>S No</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>Photo</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                          <span>Patient ID</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                          <span>Patient Name</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                          <span>Phone</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                          <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>Status</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="flex items-center justify-center">
+                          <span>Actions</span>
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPatients.map((patient, index) => {
+                      const patientReports = filteredReports.filter(report => report.patient_id === patient.id);
+                      const reportCount = patientReports.length;
+                      const totalPatientAmount = patientReports.reduce((sum, report) => sum + report.amount, 0);
+
+                      return (
+                        <TableRow key={patient.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
+                            <div className="flex justify-center">
+                              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                                <AvatarImage 
+                                  src={patient.photo ? `http://localhost:4000${patient.photo}` : undefined}
+                                />
+                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm">
+                                  {patient.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium text-blue-600">
+                            {formatPatientId(patient.id)}
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium">
+                            {patient.name}
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
+                            {patient.phone || 'N/A'}
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
+                            <Badge 
+                              className={`text-xs ${
+                                patient.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                patient.status === 'Inactive' ? 'bg-gray-100 text-gray-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              {patient.status || 'Active'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1 sm:gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleViewPatient(patient)}
+                                className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                title="View Patient Details"
+                              >
+                                <Eye className="h-3 w-3" />
+                                <span className="sr-only">View</span>
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleAddTestReport(patient)}
+                                className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                title="Add Test Report"
+                              >
+                                <Plus className="h-3 w-3" />
+                                <span className="sr-only">Add Report</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Month Year Picker Dialog */}
+        <MonthYearPickerDialog
+          open={isMonthYearDialogOpen}
+          onOpenChange={setIsMonthYearDialogOpen}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          onApply={() => {
+            setIsMonthYearDialogOpen(false);
+          }}
+          title="Select Month & Year for Test Reports"
+          description="Filter test reports by specific month and year"
+        />
+
+        {/* Add Test Report Modal */}
+        {isReportModalOpen && selectedPatient && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseReportModal}
+          >
+            <div 
+              className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage 
+                        src={selectedPatient.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
+                      />
+                      <AvatarFallback className="bg-blue-100 text-blue-600">
+                        {selectedPatient.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h2 className="text-xl font-semibold text-slate-800">
+                        Add Test Report - {selectedPatient.name}
+                      </h2>
+                      <p className="text-sm text-slate-600">ID: {formatPatientId(selectedPatient.id)}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCloseReportModal}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                {/* Add Test Report Form */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TestTube className="h-5 w-5 text-blue-600" />
+                      Test Report Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Test Type *
+                      </label>
+                      <select
+                        value={testType}
+                        onChange={(e) => setTestType(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select test type</option>
+                        <option value="Blood Test">Blood Test</option>
+                        <option value="Urine Test">Urine Test</option>
+                        <option value="X-Ray">X-Ray</option>
+                        <option value="CT Scan">CT Scan</option>
+                        <option value="MRI">MRI</option>
+                        <option value="Ultrasound">Ultrasound</option>
+                        <option value="ECG">ECG</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Test Date *
+                      </label>
+                      <Input
+                        type="date"
+                        value={testDate}
+                        onChange={(e) => setTestDate(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Amount (₹) *
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="Enter test amount"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Status *
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as 'Pending' | 'Completed' | 'Cancelled')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Notes
+                      </label>
+                      <Textarea
+                        placeholder="Enter additional notes (optional)"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full min-h-[80px]"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleAddReport}
+                      disabled={isSubmitting || !testType || !amount || !testDate}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Add Test Report
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Patient View Modal - Glass Morphism Design */}
+        {isViewModalOpen && selectedPatient && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseViewModal}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg">
+                      <AvatarImage 
+                        src={selectedPatient.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
+                      />
+                      <AvatarFallback className="bg-blue-100 text-blue-600">
+                        {selectedPatient.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1">
+                      <Badge className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs">
+                        {selectedPatient.status || 'Active'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">{selectedPatient.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-base lg:text-lg mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">
+                        {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Total:
+                      </span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        ₹{(() => {
+                          const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
+                          const total = patientReports.reduce((sum, report) => {
+                            const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+                            return sum + (isNaN(amount) ? 0 : amount);
+                          }, 0);
+                          return total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCloseViewModal}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Body - Glass Morphism Style */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Patient Information - Staff-style Layout */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 lg:p-8 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      Patient Information
+                    </h3>
+                    
+                    {/* First Row - Full Name, Patient ID, Status */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-6">
+                      
+                      {/* Full Name */}
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">FULL NAME</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedPatient.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Patient ID */}
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-green-600 font-bold text-xs sm:text-sm">ID</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">PATIENT ID</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatPatientId(selectedPatient.id)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Activity className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">STATUS</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{selectedPatient.status || 'Active'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                    
+                    {/* Second Row - Total Amount, Phone, Age */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                      
+                      {/* Total Amount */}
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-orange-600 font-bold text-xs sm:text-sm">₹</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">TOTAL AMOUNT</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{(() => {
+                              const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
+                              const total = patientReports.reduce((sum, report) => {
+                                const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+                                return sum + (isNaN(amount) ? 0 : amount);
+                              }, 0);
+                              return total.toLocaleString('en-IN');
+                            })()}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Phone */}
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">PHONE</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedPatient.phone || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Age/Gender */}
+                      <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-green-600 uppercase tracking-wide">AGE/GENDER</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{selectedPatient.age || 'N/A'} / {selectedPatient.gender || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Test Report Records Section - Glass Morphism Design */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 md:mb-6">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <TestTube className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                        </div>
+                        Test Report Records ({filteredReports.filter(r => r.patient_id === selectedPatient.id).length})
+                      </h3>
+                      
+                      {/* Month/Year Selector with Glass Morphism */}
+                      <div className="flex items-center gap-3 mt-4 sm:mt-0">
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                          className="px-3 sm:px-4 py-2 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/80 backdrop-blur-sm"
+                        >
+                          <option value={1}>January</option>
+                          <option value={2}>February</option>
+                          <option value={3}>March</option>
+                          <option value={4}>April</option>
+                          <option value={5}>May</option>
+                          <option value={6}>June</option>
+                          <option value={7}>July</option>
+                          <option value={8}>August</option>
+                          <option value={9}>September</option>
+                          <option value={10}>October</option>
+                          <option value={11}>November</option>
+                          <option value={12}>December</option>
+                        </select>
+                        
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                          className="px-3 sm:px-4 py-2 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/80 backdrop-blur-sm"
+                        >
+                          {Array.from({ length: 5 }, (_, i) => {
+                            const year = new Date().getFullYear() - 2 + i;
+                            return (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {filteredReports.filter(r => r.patient_id === selectedPatient.id).length === 0 ? (
+                      <div className="text-center py-8 sm:py-12">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <TestTube className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 text-lg font-medium mb-2">No test report records found</p>
+                        <p className="text-gray-400 text-sm">
+                          for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Table with Glass Morphism Header */}
+                        <div className="overflow-x-auto rounded-lg border border-blue-100">
+                          <table className="w-full border-collapse bg-white/60 backdrop-blur-sm">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">S No</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Patient ID</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Date</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Test Type</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Amount</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-blue-100">
+                              {filteredReports
+                                .filter(report => report.patient_id === selectedPatient.id)
+                                .map((report, index) => (
+                                  <tr key={report.id} className="hover:bg-white/80 transition-colors">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 font-medium">
+                                      {index + 1}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-blue-600">
+                                      {formatPatientId(report.patient_id)}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900">
+                                      {new Date(report.test_date).toLocaleDateString('en-GB')}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900">
+                                      {report.test_type || 'No test type'}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-green-600">
+                                      ₹{(() => {
+                                        const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+                                        return (isNaN(amount) ? 0 : amount).toLocaleString('en-IN');
+                                      })()}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 w-8 p-0 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                        title="Delete Test Report"
+                                      >
+                                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        
+                        {/* Total Section with Glass Morphism */}
+                        <div className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 backdrop-blur-sm px-4 sm:px-6 py-4 sm:py-6 border-t border-blue-100 rounded-b-lg mt-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Calendar className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <span className="text-base sm:text-lg font-semibold text-gray-900">
+                                Total for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}:
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 font-bold">₹</span>
+                              </div>
+                              <span className="text-xl sm:text-2xl font-bold text-green-600 bg-green-50/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-green-200">
+                                ₹{(() => {
+                                  const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
+                                  const total = patientReports.reduce((sum, report) => {
+                                    const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+                                    return sum + (isNaN(amount) ? 0 : amount);
+                                  }, 0);
+                                  return total.toLocaleString('en-IN');
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TestReportAmountPage;

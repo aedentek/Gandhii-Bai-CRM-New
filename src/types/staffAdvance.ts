@@ -20,12 +20,11 @@ export interface StaffAdvanceFormData {
 }
 
 export interface StaffListItem {
-  id: number;
   staff_id: string;
-  name: string;
+  staff_name: string;
   phone?: string;
   photo?: string;
+  role?: string;
   department?: string;
   status?: string;
-  join_date?: string;
 }

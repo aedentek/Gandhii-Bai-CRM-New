@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Advance CRUD Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .result {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #444;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏥 Staff Advance CRUD Operations Test</h1>
+    <p>Test all staff advance API endpoints to ensure they're working correctly.</p>
+
+    <!-- Get All Staff Advances -->
+    <div class="section">
+        <h2>📋 Get All Staff Advances</h2>
+        <button class="btn" onclick="getAllAdvances()">Get All Advances</button>
+        <div id="get-all-result" class="result"></div>
+    </div>
+
+    <!-- Create Staff Advance -->
+    <div class="section">
+        <h2>➕ Create Staff Advance</h2>
+        <div>
+            <label>Staff ID:</label>
+            <input type="text" id="staff-id" placeholder="STF001" value="STF001">
+        </div>
+        <div>
+            <label>Staff Name:</label>
+            <input type="text" id="staff-name" placeholder="John Smith" value="John Smith">
+        </div>
+        <div>
+            <label>Date:</label>
+            <input type="date" id="date" value="">
+        </div>
+        <div>
+            <label>Amount:</label>
+            <input type="number" id="amount" placeholder="2000" value="1500">
+        </div>
+        <div>
+            <label>Reason:</label>
+            <textarea id="reason" placeholder="Reason for advance (optional)">Medical emergency expenses</textarea>
+        </div>
+        <button class="btn" onclick="createAdvance()">Create Advance</button>
+        <div id="create-result" class="result"></div>
+    </div>
+
+    <!-- Get Staff Advances by Staff ID -->
+    <div class="section">
+        <h2>👥 Get Advances by Staff ID</h2>
+        <div>
+            <label>Staff ID:</label>
+            <input type="text" id="search-staff-id" placeholder="STF001" value="STF001">
+        </div>
+        <button class="btn" onclick="getAdvancesByStaffId()">Get Staff Advances</button>
+        <div id="staff-advances-result" class="result"></div>
+    </div>
+
+    <!-- Get Staff List -->
+    <div class="section">
+        <h2>👥 Get Staff List</h2>
+        <button class="btn" onclick="getStaffList()">Get Staff List</button>
+        <div id="staff-list-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+
+        // Set current date
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        async function getAllAdvances() {
+            try {
+                showResult('get-all-result', 'Loading all staff advances...', true);
+                const response = await fetch(`${API_BASE}/staff-advances`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('get-all-result', `✅ Found ${data.data.length} staff advances:\n${JSON.stringify(data.data, null, 2)}`, true);
+                } else {
+                    showResult('get-all-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('get-all-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        async function createAdvance() {
+            try {
+                const advanceData = {
+                    staff_id: document.getElementById('staff-id').value,
+                    staff_name: document.getElementById('staff-name').value,
+                    date: document.getElementById('date').value,
+                    amount: parseFloat(document.getElementById('amount').value),
+                    reason: document.getElementById('reason').value
+                };
+
+                if (!advanceData.staff_id || !advanceData.staff_name || !advanceData.date || !advanceData.amount) {
+                    showResult('create-result', '❌ Please fill in all required fields', false);
+                    return;
+                }
+
+                showResult('create-result', 'Creating staff advance...', true);
+                const response = await fetch(`${API_BASE}/staff-advances`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(advanceData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('create-result', `✅ Advance created successfully!\n${JSON.stringify(data.data, null, 2)}`, true);
+                    // Clear form
+                    document.getElementById('amount').value = '';
+                    document.getElementById('reason').value = '';
+                } else {
+                    showResult('create-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('create-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        async function getAdvancesByStaffId() {
+            try {
+                const staffId = document.getElementById('search-staff-id').value;
+                if (!staffId) {
+                    showResult('staff-advances-result', '❌ Please enter a staff ID', false);
+                    return;
+                }
+
+                showResult('staff-advances-result', `Getting advances for staff ${staffId}...`, true);
+                const response = await fetch(`${API_BASE}/staff-advances/staff/${staffId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('staff-advances-result', `✅ Found ${data.data.length} advances for staff ${staffId}:\n${JSON.stringify(data.data, null, 2)}`, true);
+                } else {
+                    showResult('staff-advances-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('staff-advances-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        async function getStaffList() {
+            try {
+                showResult('staff-list-result', 'Loading staff list...', true);
+                const response = await fetch(`${API_BASE}/staff-list`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('staff-list-result', `✅ Found ${data.data.length} active staff members:\n${JSON.stringify(data.data, null, 2)}`, true);
+                } else {
+                    showResult('staff-list-result', `❌ Error: ${data.message}`, false);
+                }
+            } catch (error) {
+                showResult('staff-list-result', `❌ Request failed: ${error.message}`, false);
+            }
+        }
+
+        // Run initial test on page load
+        window.onload = function() {
+            console.log('🚀 Staff Advance CRUD Test Page Loaded');
+            console.log('📡 API Base URL:', API_BASE);
+        };
+    </script>
+</body>
+</html>
