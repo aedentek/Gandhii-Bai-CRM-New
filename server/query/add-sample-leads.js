@@ -4,11 +4,13 @@ const path = require('path');
 
 // Database configuration - update these with your Hostinger database credentials
 const dbConfig = {
-  host: 'your-hostinger-host',
-  user: 'your-username',
-  password: 'your-password',
-  database: 'your-database-name',
-  port: 3306
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'healthcare_crm',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
 async function addSampleLeads() {

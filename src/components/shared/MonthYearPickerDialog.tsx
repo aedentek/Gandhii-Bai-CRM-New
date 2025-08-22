@@ -66,7 +66,7 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
                   {months.map((month, idx) => (
-                    <SelectItem key={month} value={idx.toString()}>
+                    <SelectItem key={month} value={(idx + 1).toString()}>
                       {month}
                     </SelectItem>
                   ))}
@@ -101,7 +101,7 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
               <span className="text-sm font-medium text-gray-700">Filter Preview</span>
             </div>
             <p className="text-gray-600 text-sm">
-              Showing {previewText} from <span className="font-semibold text-blue-600">{months[selectedMonth]} {selectedYear}</span>
+              Showing {previewText} from <span className="font-semibold text-blue-600">{months[selectedMonth - 1]} {selectedYear}</span>
             </p>
           </div>
         </div>

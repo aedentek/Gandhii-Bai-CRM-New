@@ -3,6 +3,12 @@ import db from '../db/config.js'; // Assuming you have a db.js file for database
 import multer from 'multer';
 import path  from 'path';
 import fs  from 'fs';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const router = express.Router()
 
 

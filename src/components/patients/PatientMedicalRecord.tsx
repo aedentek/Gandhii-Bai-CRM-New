@@ -10,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from '../../hooks/use-toast';
-import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File, TrendingUp, Clock, Plus, Calendar } from 'lucide-react';
+import { Camera, Mic, Image, Play, Pause, Download, Edit2, Loader2, RefreshCw, RefreshCcw, Trash2, Eye, Square, Upload, FileText, Users, Activity, UserCheck, CalendarDays, Search, X, ChevronLeft, ChevronRight, ExternalLink, File, TrendingUp, Clock, Plus, Calendar } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { Textarea } from '../../components/ui/textarea';
 import { uploadMedicalHistoryFile, uploadPatientHistoryFile } from '../../services/simpleFileUpload';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import { PatientPhoto } from '../../utils/photoUtils';
 
 type AudioRecording = {
   blob: Blob;
@@ -88,14 +89,16 @@ const PatientMedicalRecord: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const currentMonth = new Date().getMonth() + 1; // 1-based for August = 8
+  
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [isMonthYearDialogOpen, setIsMonthYearDialogOpen] = useState(false); // Match Test Report Amount naming
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth); // Also 1-based for consistency
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // View dialog filtering
-  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(new Date().getMonth());
+  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(currentMonth); // 1-based
   const [viewDialogSelectedYear, setViewDialogSelectedYear] = useState(currentYear);
   const [showViewDialogMonthYearDialog, setShowViewDialogMonthYearDialog] = useState(false);
   const [viewDialogFilterMonth, setViewDialogFilterMonth] = useState<number | null>(null);
@@ -171,6 +174,7 @@ const PatientMedicalRecord: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const imageModalCloseButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Camera functionality
   const startCamera = async () => {
@@ -596,7 +600,7 @@ const PatientMedicalRecord: React.FC = () => {
     
     // Reset all filters to current month/year
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
+    const currentMonth = currentDate.getMonth() + 1; // Convert to 1-based: August = 8
     const currentYear = currentDate.getFullYear();
     
     setFilterMonth(currentMonth);
@@ -751,6 +755,28 @@ const PatientMedicalRecord: React.FC = () => {
     refreshData();
   }, []);
 
+  // Handle keyboard events for image modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (viewImageModal.show && e.key === 'Escape') {
+        console.log('🔴 Global Escape key pressed - closing image modal');
+        setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' });
+      }
+    };
+
+    if (viewImageModal.show) {
+      document.addEventListener('keydown', handleKeyDown);
+      // Focus the close button when modal opens
+      setTimeout(() => {
+        if (imageModalCloseButtonRef.current) {
+          imageModalCloseButtonRef.current.focus();
+          console.log('🔵 Image modal close button focused');
+        }
+      }, 100);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [viewImageModal.show]);
+
   // Filtered and paginated data  
   const filteredRecords = useMemo(() => {
     let filtered = records;
@@ -785,7 +811,7 @@ const PatientMedicalRecord: React.FC = () => {
     if (filterMonth !== null && filterYear !== null) {
       filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+        return recordDate.getMonth() === filterMonth - 1 && recordDate.getFullYear() === filterYear; // Convert 1-based filterMonth to 0-based for comparison
       });
     }
 
@@ -831,7 +857,7 @@ const PatientMedicalRecord: React.FC = () => {
     if (viewDialogFilterMonth !== null && viewDialogFilterYear !== null) {
       filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === viewDialogFilterMonth && recordDate.getFullYear() === viewDialogFilterYear;
+        return recordDate.getMonth() === viewDialogFilterMonth - 1 && recordDate.getFullYear() === viewDialogFilterYear; // Convert 1-based viewDialogFilterMonth to 0-based for comparison
       });
     }
     
@@ -1008,10 +1034,17 @@ const PatientMedicalRecord: React.FC = () => {
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!viewRecord?.patientId || !newRecord.date || !newRecord.recordType) {
+    console.log('🔍 Form validation debug:');
+    console.log('   viewRecord?.patientId:', viewRecord?.patientId);
+    console.log('   newRecord.date:', newRecord.date);
+    console.log('   newRecord.recordType:', `"${newRecord.recordType}"`);
+    console.log('   newRecord.recordType?.trim():', `"${newRecord.recordType?.trim()}"`);
+    
+    if (!viewRecord?.patientId || !newRecord.date || !newRecord.recordType?.trim()) {
+      console.log('❌ Validation failed!');
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
+        title: "Missing Information", 
+        description: "Please fill in all required fields (Date and Record Type).",
         variant: "destructive",
       });
       return;
@@ -1148,7 +1181,7 @@ const PatientMedicalRecord: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Medical Records');
     
     const monthYearFilter = filterMonth !== null && filterYear !== null 
-      ? `_${months[filterMonth]}_${filterYear}` 
+      ? `_${months[filterMonth - 1]}_${filterYear}` 
       : '';
     
     XLSX.writeFile(wb, `Patient_Medical_Records${monthYearFilter}.xlsx`);
@@ -1164,17 +1197,74 @@ const PatientMedicalRecord: React.FC = () => {
       
       {/* Image Viewer Modal */}
       {viewImageModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-4"
+          onClick={(e) => {
+            // Close modal when clicking on backdrop
+            console.log('🔵 Backdrop click detected, target:', e.target, 'currentTarget:', e.currentTarget);
+            if (e.target === e.currentTarget) {
+              console.log('🔴 Backdrop clicked - closing image modal');
+              setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' });
+            } else {
+              console.log('🔵 Click was not on backdrop - ignoring');
+            }
+          }}
+          onKeyDown={(e) => {
+            // Close modal on Escape key
+            if (e.key === 'Escape') {
+              console.log('🔴 Escape key pressed on backdrop - closing image modal');
+              setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' });
+            }
+          }}
+          tabIndex={0}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="image-modal-title"
+        >
+          <div 
+            className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden"
+            onClick={(e) => {
+              console.log('🔵 Modal content clicked - stopping propagation');
+              e.stopPropagation();
+            }}
+          >
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">
+              <h3 id="image-modal-title" className="text-lg font-semibold">
                 Medical Record Files ({viewImageModal.currentIndex + 1} of {viewImageModal.images.length})
               </h3>
               <button
-                onClick={() => setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' })}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                ref={imageModalCloseButtonRef}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔴 Close button clicked - closing image modal');
+                  setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' });
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔴 Close button mouse down - preventing default');
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔴 Close button touch start - preventing default');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔴 Close button key pressed - closing image modal');
+                    setViewImageModal({ show: false, images: [], currentIndex: 0, recordId: '' });
+                  }
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-gray-100"
+                title="Close Modal"
+                type="button"
+                tabIndex={0}
+                aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 pointer-events-none" />
               </button>
             </div>
             
@@ -1263,19 +1353,27 @@ const PatientMedicalRecord: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
               <div className="flex gap-2">
-                <ActionButtons.Refresh 
-                  onClick={refreshData}
-                  loading={isLoadingPatients || isLoadingRecords}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('🔄 Manual refresh triggered - refreshing entire page');
+                    window.location.reload();
+                  }}
                   disabled={isLoadingPatients || isLoadingRecords}
-                />
+                  className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${(isLoadingPatients || isLoadingRecords) ? 'animate-spin' : ''}`} />
+                  {/* <span className="hidden sm:inline">Refresh</span> */}
+                </Button>
                 
-                <ActionButtons.MonthYear 
-                  onClick={() => setShowMonthYearDialog(true)}
-                  text={filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                />
+                <Button 
+                  onClick={() => setIsMonthYearDialogOpen(true)}
+                  className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                >
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  {months[selectedMonth - 1]} {selectedYear}
+                </Button>
               </div>
               
 
@@ -1336,21 +1434,21 @@ const PatientMedicalRecord: React.FC = () => {
             <div className="block sm:hidden">
               <Button 
                 type="button"
-                onClick={() => setShowMonthYearDialog(true)}
+                onClick={() => setIsMonthYearDialogOpen(true)}
                 variant="outline"
                 className="crm-month-year-btn w-full"
               >
                 <CalendarDays className="crm-month-year-btn-icon" />
                 <span className="crm-month-year-btn-text">
                   {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
+                    ? `${months[filterMonth - 1]} ${filterYear}`
+                    : `${months[selectedMonth - 1]} ${selectedYear}`
                   }
                 </span>
                 <span className="crm-month-year-btn-text-mobile">
                   {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                    ? `${months[filterMonth - 1].slice(0, 3)} ${filterYear}`
+                    : `${months[selectedMonth - 1].slice(0, 3)} ${selectedYear}`
                   }
                 </span>
               </Button>
@@ -1433,70 +1531,11 @@ const PatientMedicalRecord: React.FC = () => {
                             <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                             <TableCell className="text-center">
                               <div className="flex justify-center items-center">
-                                {(() => {
-                                  // Construct proper photo URL
-                                  let imageUrl = '';
-                                  
-                                  if (patient?.photo) {
-                                    // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                                    if (patient.photo.startsWith('http')) {
-                                      imageUrl = patient.photo;
-                                    } else {
-                                      // Photos are stored in: server/Photos/patient Admission/{patientId}/
-                                      // Database stores: Photos/patient Admission/{patientId}/{filename}
-                                      // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
-                                      if (patient.photo.includes('Photos/patient Admission/')) {
-                                        // Photo path is already in correct format from database
-                                        imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
-                                      } else {
-                                        // Assume it's just filename and build full path
-                                        imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photo}`;
-                                      }
-                                    }
-                                  } else if (patient?.photoUrl) {
-                                    if (patient.photoUrl.startsWith('http')) {
-                                      imageUrl = patient.photoUrl;
-                                    } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
-                                      imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
-                                    } else {
-                                      imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photoUrl}`;
-                                    }
-                                  }
-
-                                  return imageUrl ? (
-                                    <>
-                                      <img
-                                        src={imageUrl}
-                                        alt={`${record.patientName}'s photo`}
-                                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                                        onError={(e) => {
-                                          console.log('❌ Image failed for:', record.patientName);
-                                          console.log('   Failed URL:', imageUrl);
-                                          
-                                          // Show fallback avatar
-                                          const target = e.target as HTMLImageElement;
-                                          target.style.display = 'none';
-                                          const avatarDiv = target.nextElementSibling as HTMLElement;
-                                          if (avatarDiv) avatarDiv.style.display = 'flex';
-                                        }}
-                                        onLoad={() => {
-                                          console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
-                                        }}
-                                      />
-                                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border border-gray-200" style={{display: 'none'}}>
-                                        <span className="text-sm font-semibold text-white">
-                                          {(record.patientName || 'P').charAt(0).toUpperCase()}
-                                        </span>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border border-gray-200">
-                                      <span className="text-sm font-semibold text-white">
-                                        {(record.patientName || 'P').charAt(0).toUpperCase()}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
+                                <PatientPhoto 
+                                  photoPath={patient?.photo} 
+                                  alt={patient?.name || record.patientName}
+                                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover mx-auto border bg-muted"
+                                />
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
@@ -1541,7 +1580,7 @@ const PatientMedicalRecord: React.FC = () => {
                                 >
                                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
-                                <Button
+                                {/* <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
@@ -1558,7 +1597,7 @@ const PatientMedicalRecord: React.FC = () => {
                                   title={record.id.toString().startsWith('patient_') ? 'Add Medical Record' : 'Edit Medical Record'}
                                 >
                                   <FileText className="w-4 h-4" />
-                                </Button>
+                                </Button> */}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1952,19 +1991,26 @@ const PatientMedicalRecord: React.FC = () => {
           </div>
           </DialogContent>
         </Dialog>
-      )
 
-      {/* View Record Dialog */}
+      {/* View Record Dialog - Glass Morphism Design */}
       {viewRecord && (
-        <Dialog open={!!viewRecord} onOpenChange={() => setViewRecord(null)}>
-          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl">
-            {/* Modal Header - Beautiful Design */}
-            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewRecord(null)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl rounded-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-shrink-0">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 rounded-t-xl"></div>
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
                 <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-blue-100 flex items-center justify-center">
-                    <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1978,82 +2024,102 @@ const PatientMedicalRecord: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewRecord(null)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
             </div>
             
-            {/* Modal Body - Beautiful Design */}
-            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
-              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
-                
-                {/* Patient Details Section - Beautiful Card Layout */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                    Patient Information
-                  </h3>
+            {/* Main content with proper scrolling */}
+            <div 
+              className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#60a5fa #dbeafe'
+              }}
+            >
+              {/* Patient Information Cards */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  Patient Information
+                </h3>
+
+                {/* Patient Details Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-blue-700 block">Patient Name</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientName}</p>
+                      </div>
+                    </div>
+                  </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="text-xs sm:text-sm font-medium text-blue-700 block">Patient Name</label>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientName}</p>
-                        </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-purple-700 block">Patient ID</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientId}</p>
                       </div>
                     </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="text-xs sm:text-sm font-medium text-green-700 block">Patient ID</label>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewRecord.patientId}</p>
-                        </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-green-700 block">Joining Date</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900">
+                          {(() => {
+                            const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                            return patient && patient.admissionDate 
+                              ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') 
+                              : 'Not Available';
+                          })()}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="text-xs sm:text-sm font-medium text-purple-700 block">Record Type</label>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 capitalize">{viewRecord.recordType}</p>
-                        </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 rounded-lg border border-orange-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-orange-700 block">Record Date</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900">{format(new Date(viewRecord.date), 'dd/MM/yyyy')}</p>
                       </div>
                     </div>
-                    
-                    <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 rounded-lg border border-orange-200 hover:shadow-md transition-all duration-200">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                          <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="text-xs sm:text-sm font-medium text-orange-700 block">Record Date</label>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900">{format(new Date(viewRecord.date), 'dd/MM/yyyy')}</p>
-                        </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-indigo-50 to-white p-3 sm:p-4 rounded-lg border border-indigo-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                       </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-indigo-50 to-white p-3 sm:p-4 rounded-lg border border-indigo-200 hover:shadow-md transition-all duration-200">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="text-xs sm:text-sm font-medium text-indigo-700 block">Created By</label>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900">{viewRecord.createdBy}</p>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs sm:text-sm font-medium text-indigo-700 block">Created By</label>
+                        <p className="text-sm sm:text-base font-semibold text-gray-900">{viewRecord.createdBy}</p>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
                 {/* Add New Medical Record Form Section */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
@@ -2172,7 +2238,7 @@ const PatientMedicalRecord: React.FC = () => {
                     <div className="flex justify-end pt-4 border-t border-gray-200">
                       <Button
                         type="submit"
-                        disabled={submitting || !newRecord.date || !newRecord.recordType}
+                        disabled={submitting || !newRecord.date || !newRecord.recordType?.trim()}
                         className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? (
@@ -2207,8 +2273,8 @@ const PatientMedicalRecord: React.FC = () => {
                   >
                     <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
-                      ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
-                      : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
+                      ? `${months[viewDialogFilterMonth - 1]} ${viewDialogFilterYear}`
+                      : `${months[viewDialogSelectedMonth - 1]} ${viewDialogSelectedYear}`
                     }
                   </Button>
                 </div>
@@ -2347,8 +2413,7 @@ const PatientMedicalRecord: React.FC = () => {
               </div>
             </div>
           </div>
-          </DialogContent>
-        </Dialog>
+        </div>
       )}
 
 
@@ -2414,41 +2479,51 @@ const PatientMedicalRecord: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Medical Record</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this medical record? This action cannot be undone.
+        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Medical Record</DialogTitle>
+            <DialogDescription className="text-center text-sm sm:text-base">
+              Are you sure you want to delete this medical record?
+              <br />
+              <br />
+              {deleteRecord && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Patient:</strong> {deleteRecord.patientName}</p>
+                    <p><strong>Date:</strong> {format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</p>
+                    <p><strong>Type:</strong> {deleteRecord.recordType}</p>
+                    <p><strong>Description:</strong> {deleteRecord.description || 'No description'}</p>
+                  </div>
+                </div>
+              )}
+              <span className="text-destructive font-medium">⚠️ This will permanently delete:</span>
+              <ul className="text-sm mt-2 text-left">
+                <li>• The complete medical record</li>
+                <li>• All associated files and images</li>
+                <li>• All audio recordings</li>
+                <li>• Medical history entry</li>
+              </ul>
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone.</span>
             </DialogDescription>
           </DialogHeader>
-          
-          {deleteRecord && (
-            <div className="py-4">
-              <div className="space-y-2 text-sm">
-                <p><strong>Patient:</strong> {deleteRecord.patientName}</p>
-                <p><strong>Date:</strong> {format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</p>
-                <p><strong>Type:</strong> {deleteRecord.recordType}</p>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
             <Button 
               variant="outline" 
               onClick={() => {
                 setShowDeleteConfirm(false);
                 setDeleteRecord(null);
               }}
-              className="global-btn global-btn-secondary"
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleDelete}
-              className="global-btn global-btn-danger"
+              className="w-full sm:w-auto"
             >
-              Delete Record
+              Delete Medical Record
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2459,8 +2534,8 @@ const PatientMedicalRecord: React.FC = () => {
 
       {/* Month/Year Picker Dialog */}
       <MonthYearPickerDialog
-        open={showMonthYearDialog}
-        onOpenChange={setShowMonthYearDialog}
+        open={isMonthYearDialogOpen}
+        onOpenChange={setIsMonthYearDialogOpen}
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
         onMonthChange={setSelectedMonth}
@@ -2468,7 +2543,7 @@ const PatientMedicalRecord: React.FC = () => {
         onApply={() => {
           setFilterMonth(selectedMonth);
           setFilterYear(selectedYear);
-          setShowMonthYearDialog(false);
+          setIsMonthYearDialogOpen(false);
           loadData(); // Use loadData instead of refreshData to preserve selected filters
         }}
         title="Select Month & Year"

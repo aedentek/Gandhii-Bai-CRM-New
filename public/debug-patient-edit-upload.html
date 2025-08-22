@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Upload Issue Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; max-width: 1200px; }
+        .test-section { border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 8px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #log { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; height: 300px; overflow-y: auto; white-space: pre-wrap; }
+        .step { margin: 10px 0; }
+        .file-info { background: #fff3cd; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Patient Edit Upload Debug Tool</h1>
+    <p>This tool will help debug why patient photo and document uploads are not saving in the edit form.</p>
+
+    <div class="test-section">
+        <h3>🧪 Test 1: Basic Upload Functionality</h3>
+        <input type="file" id="testFile1" accept="image/*,.pdf">
+        <button onclick="testBasicUpload()">Test Basic Upload</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Test 2: Simulate Edit Form Upload</h3>
+        <p>This simulates the exact process that happens in the edit form:</p>
+        <input type="file" id="testFile2" accept="image/*,.pdf">
+        <input type="text" id="patientId" placeholder="Enter Patient ID (e.g., 1)" value="1">
+        <select id="fieldType">
+            <option value="photo">Photo</option>
+            <option value="patientAadhar">Patient Aadhar</option>
+            <option value="patientPan">Patient PAN</option>
+            <option value="attenderAadhar">Attender Aadhar</option>
+            <option value="attenderPan">Attender PAN</option>
+        </select>
+        <button onclick="testEditFormUpload()">Test Edit Form Upload</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔄 Test 3: End-to-End Update Process</h3>
+        <p>This tests the complete update process including database save:</p>
+        <input type="file" id="testFile3" accept="image/*,.pdf">
+        <input type="text" id="updatePatientId" placeholder="Enter Patient ID (e.g., 1)" value="1">
+        <button onclick="testFullUpdateProcess()">Test Full Update Process</button>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📋 Debug Log</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        async function testBasicUpload() {
+            const fileInput = document.getElementById('testFile1');
+            const resultDiv = document.getElementById('result1');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select a file first</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            log(`Test 1: Basic upload for ${file.name} (${file.size} bytes)`);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('patientId', 'test-patient');
+                formData.append('fieldName', 'photo');
+
+                const response = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                log(`Upload response: ${response.status} ${response.statusText}`);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    log(`✅ Basic upload successful: ${JSON.stringify(result, null, 2)}`);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Basic Upload Success!<br>
+                            File Path: ${result.filePath}<br>
+                            Filename: ${result.filename}
+                        </div>
+                    `;
+
+                    // Test file accessibility
+                    const fileUrl = `http://localhost:4000/${result.filePath}`;
+                    try {
+                        const fileResponse = await fetch(fileUrl);
+                        if (fileResponse.ok) {
+                            log(`✅ File accessible at: ${fileUrl}`);
+                        } else {
+                            log(`❌ File not accessible: ${fileResponse.status}`);
+                        }
+                    } catch (e) {
+                        log(`❌ File access error: ${e.message}`);
+                    }
+
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Basic upload failed: ${errorText}`);
+                    resultDiv.innerHTML = `<div class="error">❌ Upload failed: ${errorText}</div>`;
+                }
+            } catch (error) {
+                log(`❌ Basic upload error: ${error.message}`);
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testEditFormUpload() {
+            const fileInput = document.getElementById('testFile2');
+            const patientIdInput = document.getElementById('patientId');
+            const fieldTypeSelect = document.getElementById('fieldType');
+            const resultDiv = document.getElementById('result2');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select a file first</div>';
+                return;
+            }
+
+            if (!patientIdInput.value) {
+                resultDiv.innerHTML = '<div class="error">Please enter a patient ID</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const patientId = patientIdInput.value;
+            const fieldType = fieldTypeSelect.value;
+
+            log(`Test 2: Edit form upload for patient ${patientId}, field ${fieldType}, file ${file.name}`);
+
+            try {
+                // Step 1: Upload file
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('patientId', patientId);
+                formData.append('fieldName', fieldType);
+
+                log(`Step 1: Uploading file...`);
+                const uploadResponse = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+
+                const uploadResult = await uploadResponse.json();
+                log(`✅ File uploaded: ${uploadResult.filePath}`);
+
+                // Step 2: Get current patient data
+                log(`Step 2: Getting current patient data...`);
+                const patientResponse = await fetch(`/api/patients/${patientId}`);
+                if (!patientResponse.ok) {
+                    throw new Error(`Failed to get patient: ${patientResponse.status}`);
+                }
+
+                const currentPatient = await patientResponse.json();
+                log(`✅ Got patient data: ${currentPatient.name}`);
+
+                // Step 3: Update patient with new file path
+                log(`Step 3: Updating patient with new file path...`);
+                const updateData = {
+                    ...currentPatient,
+                    [fieldType]: uploadResult.filePath
+                };
+
+                const updateResponse = await fetch(`/api/patients/${patientId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (!updateResponse.ok) {
+                    throw new Error(`Update failed: ${updateResponse.status}`);
+                }
+
+                log(`✅ Patient updated successfully`);
+
+                // Step 4: Verify the update
+                log(`Step 4: Verifying the update...`);
+                const verifyResponse = await fetch(`/api/patients/${patientId}`);
+                const updatedPatient = await verifyResponse.json();
+                
+                const newValue = updatedPatient[fieldType];
+                const isUpdated = newValue === uploadResult.filePath;
+
+                log(`Field ${fieldType} after update: ${newValue}`);
+                log(`Expected: ${uploadResult.filePath}`);
+                log(`Match: ${isUpdated ? '✅ YES' : '❌ NO'}`);
+
+                resultDiv.innerHTML = `
+                    <div class="${isUpdated ? 'success' : 'error'}">
+                        ${isUpdated ? '✅' : '❌'} Edit Form Upload ${isUpdated ? 'Success' : 'Failed'}!<br>
+                        Field: ${fieldType}<br>
+                        New Value: ${newValue}<br>
+                        Expected: ${uploadResult.filePath}<br>
+                        Match: ${isUpdated ? 'YES' : 'NO'}
+                    </div>
+                `;
+
+            } catch (error) {
+                log(`❌ Edit form upload error: ${error.message}`);
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testFullUpdateProcess() {
+            const fileInput = document.getElementById('testFile3');
+            const patientIdInput = document.getElementById('updatePatientId');
+            const resultDiv = document.getElementById('result3');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select a file first</div>';
+                return;
+            }
+
+            if (!patientIdInput.value) {
+                resultDiv.innerHTML = '<div class="error">Please enter a patient ID</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const patientId = patientIdInput.value;
+
+            log(`Test 3: Full update process for patient ${patientId}, file ${file.name}`);
+
+            try {
+                // Get original patient data
+                log(`Getting original patient data...`);
+                const originalResponse = await fetch(`/api/patients/${patientId}`);
+                const originalPatient = await originalResponse.json();
+                log(`Original photo: ${originalPatient.photo || 'none'}`);
+
+                // Upload new photo
+                log(`Uploading new photo...`);
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('patientId', patientId);
+                formData.append('fieldName', 'photo');
+
+                const uploadResponse = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const uploadResult = await uploadResponse.json();
+                log(`✅ New photo uploaded: ${uploadResult.filePath}`);
+
+                // Update patient record
+                log(`Updating patient record...`);
+                const updateData = {
+                    ...originalPatient,
+                    photo: uploadResult.filePath
+                };
+
+                const updateResponse = await fetch(`/api/patients/${patientId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                log(`Update response: ${updateResponse.status}`);
+
+                // Verify the change
+                log(`Verifying the change...`);
+                const verifyResponse = await fetch(`/api/patients/${patientId}`);
+                const updatedPatient = await verifyResponse.json();
+                
+                const photoChanged = updatedPatient.photo !== originalPatient.photo;
+                const photoCorrect = updatedPatient.photo === uploadResult.filePath;
+
+                log(`Original photo: ${originalPatient.photo || 'none'}`);
+                log(`Updated photo: ${updatedPatient.photo || 'none'}`);
+                log(`Expected photo: ${uploadResult.filePath}`);
+                log(`Photo changed: ${photoChanged ? '✅ YES' : '❌ NO'}`);
+                log(`Photo correct: ${photoCorrect ? '✅ YES' : '❌ NO'}`);
+
+                // Test photo accessibility
+                if (updatedPatient.photo) {
+                    const photoUrl = updatedPatient.photo.startsWith('http') ? 
+                        updatedPatient.photo : 
+                        `http://localhost:4000/${updatedPatient.photo}`;
+                    
+                    try {
+                        const photoResponse = await fetch(photoUrl);
+                        log(`Photo accessible: ${photoResponse.ok ? '✅ YES' : '❌ NO'} (${photoResponse.status})`);
+                    } catch (e) {
+                        log(`❌ Photo access error: ${e.message}`);
+                    }
+                }
+
+                const success = photoChanged && photoCorrect;
+                resultDiv.innerHTML = `
+                    <div class="${success ? 'success' : 'error'}">
+                        ${success ? '✅' : '❌'} Full Update Process ${success ? 'Success' : 'Failed'}!<br>
+                        Photo Changed: ${photoChanged ? 'YES' : 'NO'}<br>
+                        Photo Correct: ${photoCorrect ? 'YES' : 'NO'}<br>
+                        Original: ${originalPatient.photo || 'none'}<br>
+                        Updated: ${updatedPatient.photo || 'none'}<br>
+                        Expected: ${uploadResult.filePath}
+                    </div>
+                `;
+
+            } catch (error) {
+                log(`❌ Full update process error: ${error.message}`);
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize
+        log('Debug tool loaded. Ready to test patient upload issues.');
+        log('Make sure the backend server is running on port 4000.');
+    </script>
+</body>
+</html>

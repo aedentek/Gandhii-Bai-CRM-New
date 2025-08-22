@@ -11,24 +11,29 @@ const __dirname = path.dirname(__filename);
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const { patientId = 'temp', fieldName = 'general' } = req.body;
+    // At this point in multer processing, req.body might not be fully populated
+    // So we'll use a temporary directory first and move the file later
+    console.log('📁 Using temporary upload directory initially');
+    console.log('📁 req.body at destination time:', req.body);
     
-    // Create patient-specific directory structure: server/Photos/patients/{patientId}
-    const uploadDir = path.join(__dirname, '../Photos/patients', patientId.toString());
+    // Use temp directory initially - we'll move the file to correct location after upload
+    const tempUploadDir = path.join(__dirname, '../Photos/temp');
     
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(tempUploadDir)) {
+      fs.mkdirSync(tempUploadDir, { recursive: true });
+      console.log('✅ Created temp directory:', tempUploadDir);
     }
     
-    cb(null, uploadDir);
+    cb(null, tempUploadDir);
   },
   filename: (req, file, cb) => {
-    const { patientId = 'temp', fieldName = 'general' } = req.body;
+    // Generate temporary filename - we'll rename it after upload when we have full req.body
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
-    const filename = `${fieldName}_${timestamp}${ext}`;
-    cb(null, filename);
+    const tempFilename = `temp_${timestamp}${ext}`;
+    console.log('📝 Generated temporary filename:', tempFilename);
+    cb(null, tempFilename);
   }
 });
 
@@ -71,7 +76,8 @@ router.post('/upload-patient-file', upload.single('file'), async (req, res) => {
       file: req.file ? {
         originalname: req.file.originalname,
         size: req.file.size,
-        mimetype: req.file.mimetype
+        mimetype: req.file.mimetype,
+        path: req.file.path
       } : 'No file'
     });
 
@@ -82,24 +88,63 @@ router.post('/upload-patient-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Return the relative path from server root
-    const relativePath = path.join('Photos', 'patients', req.body.patientId || 'temp', req.file.filename);
+    // Get patient ID and field name from request body (now fully parsed)
+    const patientId = req.body.patientId || 'temp';
+    const fieldName = req.body.fieldName || 'general';
     
-    console.log('✅ File uploaded successfully:', relativePath);
+    console.log('📁 Moving file to patient-specific folder...');
+    console.log('📁 Patient ID:', patientId);
+    console.log('📁 Field Name:', fieldName);
+    
+    // Create patient-specific directory: server/Photos/patient Admission/{PatientId}
+    const patientDir = path.join(__dirname, '../Photos/patient Admission', patientId);
+    
+    if (!fs.existsSync(patientDir)) {
+      fs.mkdirSync(patientDir, { recursive: true });
+      console.log('✅ Created patient directory:', patientDir);
+    }
+    
+    // Generate final filename
+    const timestamp = Date.now();
+    const ext = path.extname(req.file.originalname);
+    const finalFilename = `${fieldName}_${timestamp}${ext}`;
+    
+    // Final file path
+    const finalFilePath = path.join(patientDir, finalFilename);
+    
+    // Move file from temp to patient folder
+    fs.renameSync(req.file.path, finalFilePath);
+    console.log('✅ File moved successfully from temp to:', finalFilePath);
+    
+    // Return the relative path from server root matching your existing structure
+    const relativePath = path.join('Photos', 'patient Admission', patientId, finalFilename);
+    
+    console.log('✅ File uploaded successfully to:', relativePath);
     
     res.json({
       success: true,
       message: 'File uploaded successfully',
       filePath: relativePath,
-      filename: req.file.filename,
+      filename: finalFilename,
       originalName: req.file.originalname,
       size: req.file.size,
-      fieldName: req.body.fieldName || 'general',
-      patientId: req.body.patientId || 'temp'
+      fieldName: fieldName,
+      patientId: patientId
     });
     
   } catch (error) {
     console.error('❌ Upload error:', error);
+    
+    // Clean up temp file if it exists
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('🧹 Cleaned up temp file:', req.file.path);
+      } catch (cleanupError) {
+        console.error('❌ Could not clean up temp file:', cleanupError);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message || 'Upload failed'
@@ -111,16 +156,20 @@ router.post('/upload-patient-file', upload.single('file'), async (req, res) => {
 router.get('/file/:patientId/:filename', (req, res) => {
   try {
     const { patientId, filename } = req.params;
-    const filePath = path.join(__dirname, '../Photos/patients', patientId, filename);
+    const filePath = path.join(__dirname, '../Photos/patient Admission', patientId, filename);
+    
+    console.log('📁 Requesting file:', filePath);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log('❌ File not found:', filePath);
       return res.status(404).json({
         success: false,
         error: 'File not found'
       });
     }
     
+    console.log('✅ Sending file:', filePath);
     // Send the file
     res.sendFile(filePath);
     

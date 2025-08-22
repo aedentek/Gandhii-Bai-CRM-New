@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Quick Upload Test</h2>
+    <input type="file" id="file">
+    <button onclick="testUpload()">Test Upload</button>
+    <div id="result"></div>
+
+    <h3>Test Edit Patient 113</h3>
+    <input type="file" id="editFile">
+    <button onclick="testEditUpload()">Test Edit Upload for Patient 113</button>
+    <div id="editResult"></div>
+
+    <script>
+        async function testUpload() {
+            const fileInput = document.getElementById('file');
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select a file</div>';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('patientId', 'test123');
+                formData.append('fieldName', 'photo');
+
+                const response = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Upload Success!<br>Path: ${result.filePath}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Upload Failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testEditUpload() {
+            const fileInput = document.getElementById('editFile');
+            const resultDiv = document.getElementById('editResult');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select a file</div>';
+                return;
+            }
+
+            try {
+                // Step 1: Upload file
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('patientId', '113');
+                formData.append('fieldName', 'photo');
+
+                const uploadResponse = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const uploadResult = await uploadResponse.json();
+                
+                if (!uploadResponse.ok) {
+                    throw new Error(uploadResult.error || 'Upload failed');
+                }
+
+                // Step 2: Update patient
+                const patientResponse = await fetch('/api/patients/113');
+                const currentPatient = await patientResponse.json();
+                
+                const updateData = {
+                    ...currentPatient,
+                    photo: uploadResult.filePath
+                };
+
+                const updateResponse = await fetch('/api/patients/113', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (updateResponse.ok) {
+                    // Step 3: Verify
+                    const verifyResponse = await fetch('/api/patients/113');
+                    const updatedPatient = await verifyResponse.json();
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Edit Upload Success!<br>
+                            Old Photo: ${currentPatient.photo}<br>
+                            New Photo: ${updatedPatient.photo}<br>
+                            Upload Path: ${uploadResult.filePath}
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Update failed');
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

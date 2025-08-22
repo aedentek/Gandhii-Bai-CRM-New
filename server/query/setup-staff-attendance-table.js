@@ -8,10 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dbConfig = {
-  host: 'srv1424.hstgr.io',
-  user: 'u745362362_crmusername',
-  password: 'Aedentek@123#',
-  database: 'u745362362_crm'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'healthcare_crm',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
 async function setupStaffAttendanceTable() {

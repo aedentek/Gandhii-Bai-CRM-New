@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Edit File Upload Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        #log { background: #f8f9fa; padding: 10px; font-family: monospace; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Patient Edit File Upload Debug</h1>
+    
+    <div class="section">
+        <h3>File Upload Test</h3>
+        <input type="file" id="fileInput" accept="image/*,.pdf">
+        <button onclick="testUpload()">Test Upload</button>
+        <div id="result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>Debug Log</h3>
+        <div id="log"></div>
+        <button onclick="clearLog()">Clear</button>
+    </div>
+
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${time}] ${msg}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<span class="error">Please select a file</span>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            log(`Testing upload: ${file.name} (${file.size} bytes, ${file.type})`);
+            
+            try {
+                // Simulate the same upload logic as PatientList component
+                log('Creating FormData...');
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('patientId', 'test-123');
+                formData.append('fieldName', 'photo');
+
+                log('Sending request to /api/upload-patient-file...');
+                const response = await fetch('/api/upload-patient-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    log(`✅ Upload successful: ${JSON.stringify(result, null, 2)}`);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Upload Success!<br>
+                            Path: ${result.filePath}<br>
+                            File: ${result.filename}
+                        </div>
+                    `;
+
+                    // Test file accessibility
+                    const fileUrl = `http://localhost:4000/${result.filePath}`;
+                    log(`Testing file access: ${fileUrl}`);
+                    
+                    try {
+                        const fileCheck = await fetch(fileUrl);
+                        if (fileCheck.ok) {
+                            log(`✅ File accessible via: ${fileUrl}`);
+                        } else {
+                            log(`❌ File not accessible: ${fileCheck.status}`);
+                        }
+                    } catch (e) {
+                        log(`❌ File access error: ${e.message}`);
+                    }
+
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Upload failed: ${response.status} - ${errorText}`);
+                    resultDiv.innerHTML = `<div class="error">❌ Upload failed: ${errorText}</div>`;
+                }
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        log('Debug page loaded. Ready to test file uploads.');
+    </script>
+</body>
+</html>

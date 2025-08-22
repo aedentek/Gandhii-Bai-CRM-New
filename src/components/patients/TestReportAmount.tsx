@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { 
   FileText, Users, RefreshCw, Download, Plus, Eye, Edit, Trash2, 
-  Calendar, Activity, TestTube, Receipt
+  Calendar, Activity, TestTube, Receipt, User
 } from 'lucide-react';
 import { format } from 'date-fns';
 import LoadingScreen from '@/components/shared/LoadingScreen';
@@ -32,6 +32,8 @@ interface Patient {
   admissionDate: string;
   photo?: string;
   fees?: number;
+  bloodTest?: number;
+  pickupCharge?: number;
   otherFees?: number;
   balance?: number;
 }
@@ -121,6 +123,8 @@ const TestReportAmount: React.FC = () => {
         admissionDate: p.admissionDate || p.admission_date || '',
         photo: p.photo || '',
         fees: Number(p.fees || p.monthlyFees || 0),
+        bloodTest: Number(p.bloodTest || p.blood_test || 0),
+        pickupCharge: Number(p.pickupCharge || p.pickup_charge || 0),
         otherFees: Number(p.otherFees || p.other_fees || 0),
         balance: Number(p.balance || 0)
       }));
@@ -1064,19 +1068,97 @@ const TestReportAmount: React.FC = () => {
           </DialogHeader>
           <div className="space-y-6">
             {viewingPatient && (
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex items-center space-x-4 mb-3">
-                  <PatientPhoto 
-                    photoPath={viewingPatient.photo || ''} 
-                    alt={`${viewingPatient.name}'s photo`}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-gray-200" 
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-900">{viewingPatient.name}</p>
-                    <p className="text-sm text-gray-600">Patient ID: {formatPatientId(viewingPatient.id)}</p>
+              <>
+                {/* Patient Information Container */}
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-800">Patient Information</h4>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <PatientPhoto 
+                      photoPath={viewingPatient.photo || ''} 
+                      alt={`${viewingPatient.name}'s photo`}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200" 
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{viewingPatient.name}</p>
+                      <p className="text-sm text-gray-600">Patient ID: {formatPatientId(viewingPatient.id)}</p>
+                      <p className="text-sm text-gray-600">Age: {viewingPatient.age} • Gender: {viewingPatient.gender}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Other Fees Amount Container */}
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
+                      <Receipt className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-800">Other Fees Amount</h4>
+                    <Badge variant="outline" className="text-xs bg-white border-amber-300 text-amber-700">
+                      From Patient List
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Blood Test Fee */}
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <TestTube className="h-5 w-5 text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-red-600 uppercase tracking-wide">Blood Test</p>
+                            <p className="text-xs text-gray-500">Laboratory charges</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">₹{viewingPatient.bloodTest || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Pickup Charge Fee */}
+                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <Activity className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-green-600 uppercase tracking-wide">Pickup Charge</p>
+                            <p className="text-xs text-gray-500">Transportation fee</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">₹{viewingPatient.pickupCharge || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Total Summary */}
+                  <div className="mt-4 pt-3 border-t border-amber-200">
+                    <div className="bg-white rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 text-sm font-bold">Σ</span>
+                          </div>
+                          <span className="text-sm font-medium text-blue-600">Total Other Fees</span>
+                        </div>
+                        <p className="text-xl font-bold text-blue-600">
+                          ₹{((viewingPatient.bloodTest || 0) + (viewingPatient.pickupCharge || 0)).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
             
             <div>

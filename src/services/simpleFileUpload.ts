@@ -82,7 +82,7 @@ export const uploadCallRecordAudio = async (
 
 export const uploadPatientFile = async (
   file: File, 
-  patientId: string = 'temp', 
+  patientId: string, 
   fieldName: string = 'photo'
 ): Promise<string> => {
   try {
@@ -94,6 +94,11 @@ export const uploadPatientFile = async (
       lastModified: file.lastModified
     });
     console.log('📤 Upload params:', { patientId, fieldName });
+    
+    // Validate patient ID - never allow 'temp' or empty IDs
+    if (!patientId || patientId.trim() === '' || patientId === 'temp') {
+      throw new Error('Invalid patient ID provided. Cannot upload to temp folder.');
+    }
     
     // Validate file
     if (!file) {
@@ -139,17 +144,27 @@ export const uploadPatientFile = async (
     formData.append('file', file);
     formData.append('patientId', patientId);
     formData.append('fieldName', fieldName);
+    
+    console.log('📤 FormData created with:');
+    console.log('  - file:', file.name, '(', file.size, 'bytes )');
+    console.log('  - patientId:', patientId, '(type:', typeof patientId, ')');
+    console.log('  - fieldName:', fieldName);
+    
+    // Debug: Log all FormData entries
+    console.log('📤 FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  - ${key}: [File] ${value.name} (${value.size} bytes)`);
+      } else {
+        console.log(`  - ${key}: ${value} (type: ${typeof value})`);
+      }
+    }
 
     // Use relative URL - proxy will route to backend
     const uploadUrl = '/api/upload-patient-file';
     
     console.log('📤 Sending upload request to backend...');
     console.log('📤 Request URL:', uploadUrl);
-    console.log('📤 FormData contents:', {
-      file: file.name,
-      patientId: patientId,
-      fieldName: fieldName
-    });
     
     // Add timeout and retry logic
     const controller = new AbortController();
@@ -230,20 +245,36 @@ export const getFileUrl = (filePath: string): string => {
     return filePath;
   }
   
-  // Clean the file path and construct the backend URL
-  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  // Clean the file path
+  let cleanPath = filePath.replace(/\\/g, '/'); // Convert backslashes to forward slashes
+  cleanPath = cleanPath.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
+  
+  // Construct the backend URL
+  const baseUrl = 'http://localhost:4000';
   let fullUrl: string;
   
-  if (cleanPath.startsWith('/uploads/')) {
-    // Path already includes /uploads/ (for both patients and medical-history)
-    fullUrl = `http://localhost:4000${cleanPath}`;
+  if (cleanPath.startsWith('Photos/')) {
+    // Photos directory path - add base URL
+    fullUrl = `${baseUrl}/${cleanPath}`;
   } else if (cleanPath.startsWith('/Photos/')) {
-    // Photos directory (Patient History, Patient Medical Records, etc.)
-    fullUrl = `http://localhost:4000${cleanPath}`;
+    // Photos directory path with leading slash
+    fullUrl = `${baseUrl}${cleanPath}`;
+  } else if (cleanPath.startsWith('/uploads/')) {
+    // Uploads directory path
+    fullUrl = `${baseUrl}${cleanPath}`;
+  } else if (cleanPath.startsWith('uploads/')) {
+    // Uploads directory path without leading slash
+    fullUrl = `${baseUrl}/${cleanPath}`;
   } else {
-    // Add the uploads/patients/ prefix for legacy patient files
-    fullUrl = `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/uploads/patients${cleanPath}`;
+    // Add leading slash if not present and construct URL
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = `/${cleanPath}`;
+    }
+    fullUrl = `${baseUrl}${cleanPath}`;
   }
+  
+  // URL encode spaces
+  fullUrl = fullUrl.replace(/\s/g, '%20');
   
   console.log('🔗 Constructed backend URL:', fullUrl);
   return fullUrl;

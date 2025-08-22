@@ -237,7 +237,7 @@ router.get('/doctor/salary-history/:doctorId', async (req, res) => {
   let connection;
   try {
     const { doctorId } = req.params;
-    connection = await mysql.createConnection(dbConfig);
+    connection = await mysql.createConnection(nfig);
     
     const [rows] = await connection.execute(
       'SELECT * FROM doctor_salary_history WHERE doctor_id = ? ORDER BY payment_date DESC',

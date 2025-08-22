@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient CRUD Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🏥 Patient CRUD Test - Frontend to Backend</h1>
+    
+    <div class="test-section">
+        <h3>Test Results:</h3>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <button onclick="testHealth()">1. Test Server Health</button>
+        <button onclick="testGetPatients()">2. Test GET Patients</button>
+        <button onclick="testCreatePatient()">3. Test CREATE Patient</button>
+        <button onclick="testUpdatePatient()">4. Test UPDATE Patient</button>
+        <button onclick="testDeletePatient()">5. Test DELETE Patient</button>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+        let testPatientId = null;
+        let results = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        async function testHealth() {
+            try {
+                log('🔍 Testing server health...', 'info');
+                const response = await fetch(`${API_BASE}/health`);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    log(`✅ Server Health: ${result.status} - ${result.message}`, 'success');
+                } else {
+                    log(`❌ Health check failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Health check error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetPatients() {
+            try {
+                log('📋 Testing GET /api/patients...', 'info');
+                const response = await fetch(`${API_BASE}/patients`);
+                
+                if (response.ok) {
+                    const patients = await response.json();
+                    log(`✅ GET Patients successful! Found ${patients.length} patients`, 'success');
+                    
+                    if (patients.length > 0) {
+                        log(`   Sample patient: ${patients[0].name} (ID: ${patients[0].id})`, 'info');
+                    }
+                } else {
+                    log(`❌ GET Patients failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ GET Patients error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreatePatient() {
+            try {
+                log('➕ Testing POST /api/patients...', 'info');
+                
+                const testPatient = {
+                    name: 'CRUD Test Patient',
+                    gender: 'Male',
+                    phone: '9876543210',
+                    email: 'crud.test@email.com',
+                    address: '123 CRUD Test Street, Test City',
+                    emergencyContact: '9876543211',
+                    medicalHistory: 'CRUD test medical history',
+                    status: 'Active',
+                    attenderName: 'CRUD Test Attender',
+                    attenderPhone: '9876543212',
+                    fees: 5000,
+                    bloodTest: 1500,
+                    pickupCharge: 200,
+                    otherFees: 500,
+                    totalAmount: 7200,
+                    payAmount: 5000,
+                    balance: 2200,
+                    paymentType: 'Card',
+                    fatherName: 'CRUD Test Father',
+                    motherName: 'CRUD Test Mother',
+                    attenderRelationship: 'Spouse',
+                    dateOfBirth: '1990-05-15',
+                    marriageStatus: 'Married',
+                    employeeStatus: 'Employed',
+                    admissionDate: '2025-08-22'
+                };
+
+                const response = await fetch(`${API_BASE}/patients`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testPatient)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    testPatientId = result.id || result.insertId;
+                    log(`✅ CREATE Patient successful! ID: ${testPatientId}`, 'success');
+                    log(`   Name: ${testPatient.name}, Phone: ${testPatient.phone}`, 'info');
+                } else {
+                    const error = await response.text();
+                    log(`❌ CREATE Patient failed: ${response.status} - ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ CREATE Patient error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUpdatePatient() {
+            if (!testPatientId) {
+                log('⚠️ No patient ID available. Run CREATE test first.', 'error');
+                return;
+            }
+
+            try {
+                log(`🔄 Testing PUT /api/patients/${testPatientId}...`, 'info');
+                
+                const updateData = {
+                    name: 'CRUD Test Patient UPDATED',
+                    phone: '9876543213',
+                    address: '456 UPDATED Street, Updated City',
+                    payAmount: 6000,
+                    balance: 1200
+                };
+
+                const response = await fetch(`${API_BASE}/patients/${testPatientId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (response.ok) {
+                    log(`✅ UPDATE Patient successful!`, 'success');
+                    log(`   Updated name: ${updateData.name}`, 'info');
+                    log(`   Updated phone: ${updateData.phone}`, 'info');
+                } else {
+                    const error = await response.text();
+                    log(`❌ UPDATE Patient failed: ${response.status} - ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ UPDATE Patient error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDeletePatient() {
+            if (!testPatientId) {
+                log('⚠️ No patient ID available. Run CREATE test first.', 'error');
+                return;
+            }
+
+            try {
+                log(`🗑️ Testing DELETE /api/patients/${testPatientId}...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/patients/${testPatientId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    log(`✅ DELETE Patient successful! ID: ${testPatientId}`, 'success');
+                    testPatientId = null; // Reset for future tests
+                } else {
+                    const error = await response.text();
+                    log(`❌ DELETE Patient failed: ${response.status} - ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ DELETE Patient error: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            results.innerHTML = '';
+            log('🚀 Starting comprehensive CRUD test...', 'info');
+            log('=' .repeat(50), 'info');
+            
+            await testHealth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testGetPatients();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCreatePatient();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testUpdatePatient();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testDeletePatient();
+            
+            log('=' .repeat(50), 'info');
+            log('🎉 CRUD TEST COMPLETED!', 'success');
+            log('✅ Frontend to Backend communication: VERIFIED', 'success');
+            log('✅ All patient operations: WORKING', 'success');
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

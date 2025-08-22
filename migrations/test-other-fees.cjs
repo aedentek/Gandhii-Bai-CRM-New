@@ -2,11 +2,13 @@ const mysql = require('mysql2/promise');
 
 // Database configuration
 const dbConfig = {
-  host: 'srv1639.hstgr.io',
-  user: 'u745362362_crmusername',
-  password: 'Aedentek@123#',
-  database: 'u745362362_crm',
-  connectTimeout: 60000,
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'healthcare_crm',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
 async function testOtherFeesImplementation() {

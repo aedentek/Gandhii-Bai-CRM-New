@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, X } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, RefreshCcw, UserCheck, Activity, TrendingUp, Clock, X, Camera, Calendar, CreditCard, Heart, Shield, User, Phone, MapPin, Contact } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
@@ -89,6 +89,24 @@ const parseDateFromInput = (dateString: string): Date | null => {
     console.warn('Error parsing date from input:', dateString, error);
     return null;
   }
+};
+
+// Utility function to calculate age from date of birth
+const calculateAge = (dateOfBirth: Date | null): number => {
+  if (!dateOfBirth) return 0;
+  
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // If birthday hasn't occurred this year yet, subtract 1 from age
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return Math.max(0, age); // Ensure age is never negative
 };
 
 interface Patient {
@@ -223,6 +241,52 @@ const PatientList: React.FC = () => {
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  // State for tracking preview URLs to avoid memory leaks
+  const [previewUrls, setPreviewUrls] = useState<{[key: string]: string}>({});
+  
+  // State to force photo refresh after updates
+  const [photoRefreshTrigger, setPhotoRefreshTrigger] = useState(0);
+  
+  // Cleanup preview URLs when component unmounts or files change
+  useEffect(() => {
+    return () => {
+      // Cleanup all preview URLs on unmount
+      Object.values(previewUrls).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [previewUrls]);
+  
+  // Helper function to get or create preview URL
+  const getPreviewUrl = (file: File, key: string): string => {
+    if (previewUrls[key]) {
+      return previewUrls[key];
+    }
+    
+    const url = URL.createObjectURL(file);
+    setPreviewUrls(prev => ({ ...prev, [key]: url }));
+    return url;
+  };
+  
+  // File size validation function (5MB limit) for edit form
+  const validateEditFileSize = (file: File | null): boolean => {
+    if (!file) return true; // Allow null files
+    
+    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB in bytes
+    
+    if (file.size > maxSizeInBytes) {
+      toast({
+        title: "File Too Large",
+        description: `File size must be less than 5MB. Current file size: ${(file.size / (1024 * 1024)).toFixed(2)}MB`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   // Document upload state for edit form
   const [editDocuments, setEditDocuments] = useState({
     photo: null as File | null,
@@ -443,6 +507,10 @@ const PatientList: React.FC = () => {
       
       // Debug: Log document data for each patient
       parsedPatients.forEach(patient => {
+        if (patient.photo) {
+          console.log(`📸 Patient ${patient.name} (${patient.id}) photo:`, patient.photo);
+          console.log(`📸 Constructed URL:`, getPatientPhotoUrl(patient.photo));
+        }
         if (patient.patientAadhar || patient.patientPan || patient.attenderAadhar || patient.attenderPan) {
           console.log(`📄 Patient ${patient.name} documents:`, {
             patientAadhar: patient.patientAadhar,
@@ -507,10 +575,31 @@ const PatientList: React.FC = () => {
 
   // Handle document file upload in edit form
   const handleEditFileUpload = (field: keyof typeof editDocuments, file: File | null) => {
-    setEditDocuments(prev => ({
-      ...prev,
-      [field]: file
-    }));
+    console.log('🔄 handleEditFileUpload called:', { field, file: file ? { name: file.name, size: file.size } : null });
+    
+    // Validate file size before processing
+    if (!validateEditFileSize(file)) {
+      console.log('❌ File size validation failed');
+      return; // Don't update state if file is too large
+    }
+
+    console.log('✅ File size validation passed, updating editDocuments state');
+    setEditDocuments(prev => {
+      const newState = {
+        ...prev,
+        [field]: file
+      };
+      console.log('📋 Updated editDocuments state:', newState);
+      return newState;
+    });
+
+    if (file) {
+      console.log('📎 File selected successfully:', file.name);
+      toast({
+        title: "File Selected",
+        description: `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) selected successfully`,
+      });
+    }
   };
 
   const handleEdit = (patient: Patient) => {
@@ -527,7 +616,181 @@ const PatientList: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editPatient) return;
+    
     try {
+      // Comprehensive validation for edit form (mirroring AddPatient validation)
+      
+      // Validate required fields
+      if (!editPatient.name?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Patient name is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editPatient.age || editPatient.age <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Valid age is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editPatient.gender?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Gender is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editPatient.phone?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Phone number is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Phone number validation - should be exactly 10 digits
+      const phoneNumber = editPatient.phone.replace(/\D/g, '');
+      if (phoneNumber.length !== 10) {
+        toast({
+          title: "Validation Error",
+          description: "Phone number must be exactly 10 digits.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editPatient.address?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Address is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editPatient.emergencyContact?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Emergency contact is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Emergency contact validation - should be exactly 10 digits
+      const emergencyNumber = editPatient.emergencyContact.replace(/\D/g, '');
+      if (emergencyNumber.length !== 10) {
+        toast({
+          title: "Validation Error",
+          description: "Emergency contact must be exactly 10 digits.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Attender phone validation (if provided)
+      if (editPatient.attenderPhone?.trim()) {
+        const attenderNumber = editPatient.attenderPhone.replace(/\D/g, '');
+        if (attenderNumber.length !== 10) {
+          toast({
+            title: "Validation Error",
+            description: "Attender phone number must be exactly 10 digits.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Email validation (if provided)
+      if (editPatient.email?.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(editPatient.email)) {
+          toast({
+            title: "Validation Error",
+            description: "Please enter a valid email address.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Date validation
+      if (!editPatient.admissionDate) {
+        toast({
+          title: "Validation Error",
+          description: "Admission date is required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate admission date is not in the future
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // Set to end of today
+      if (editPatient.admissionDate > today) {
+        toast({
+          title: "Validation Error",
+          description: "Admission date cannot be in the future.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate date of birth (if provided)
+      if (editPatient.dateOfBirth) {
+        if (editPatient.dateOfBirth > today) {
+          toast({
+            title: "Validation Error",
+            description: "Date of birth cannot be in the future.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Since age is now auto-calculated from date of birth, no validation needed for age mismatch
+
+      // File size validation for any new uploads
+      const filesToValidate = [
+        { file: editDocuments.photo, name: 'Photo' },
+        { file: editDocuments.patientAadhar, name: 'Patient Aadhar' },
+        { file: editDocuments.patientPan, name: 'Patient PAN' },
+        { file: editDocuments.attenderAadhar, name: 'Attender Aadhar' },
+        { file: editDocuments.attenderPan, name: 'Attender PAN' }
+      ];
+
+      for (const { file, name } of filesToValidate) {
+        if (!validateEditFileSize(file)) {
+          toast({
+            title: "File Validation Error",
+            description: `${name} file is too large. Please select a file under 5MB.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      console.log('✅ All validations passed. Proceeding with patient update...');
+
+      // Log current editDocuments state for debugging
+      console.log('🔄 Starting file uploads...');
+      console.log('📋 Current editDocuments state:', {
+        photo: editDocuments.photo ? { name: editDocuments.photo.name, size: editDocuments.photo.size } : null,
+        patientAadhar: editDocuments.patientAadhar ? { name: editDocuments.patientAadhar.name, size: editDocuments.patientAadhar.size } : null,
+        patientPan: editDocuments.patientPan ? { name: editDocuments.patientPan.name, size: editDocuments.patientPan.size } : null,
+        attenderAadhar: editDocuments.attenderAadhar ? { name: editDocuments.attenderAadhar.name, size: editDocuments.attenderAadhar.size } : null,
+        attenderPan: editDocuments.attenderPan ? { name: editDocuments.attenderPan.name, size: editDocuments.attenderPan.size } : null
+      });
+
       // Process any new uploaded files to server
       let updatedPhoto = editPatient.photo;
       let updatedPatientAadhar = editPatient.patientAadhar;
@@ -535,22 +798,85 @@ const PatientList: React.FC = () => {
       let updatedAttenderAadhar = editPatient.attenderAadhar;
       let updatedAttenderPan = editPatient.attenderPan;
 
-      // Upload new files to server and get file paths
+          // Upload new files to server and get file paths
       if (editDocuments.photo) {
         try {
           console.log('🖼️ Uploading photo:', editDocuments.photo.name);
-          updatedPhoto = await uploadPatientFile(editDocuments.photo, editPatient.id, 'photo');
+          console.log('🖼️ Patient ID for upload:', editPatient.id);
+          console.log('🖼️ Patient originalId for upload:', editPatient.originalId);
+          console.log('🖼️ Patient object keys:', Object.keys(editPatient));
+          console.log('🖼️ Full patient object:', {
+            id: editPatient.id,
+            originalId: editPatient.originalId,
+            name: editPatient.name
+          });
+          
+          // Use the formatted patient ID (P0001) for folder creation - this should match existing folder structure
+          const patientIdForUpload = editPatient.id; // This should be P0001 format
+          console.log('🖼️ Using patient ID for folder:', patientIdForUpload);
+          console.log('🖼️ Patient ID type:', typeof patientIdForUpload);
+          console.log('🖼️ Patient ID string conversion:', patientIdForUpload.toString());
+          
+          // Validate that we have a proper patient ID (not temp)
+          if (!patientIdForUpload || patientIdForUpload === 'temp' || patientIdForUpload.toString().trim() === '') {
+            console.error('❌ Invalid patient ID detected:', patientIdForUpload);
+            throw new Error('Cannot upload photo: Invalid patient ID. Please refresh the page and try again.');
+          }
+          
+          console.log('🚀 About to call uploadPatientFile with:');
+          console.log('  - file:', editDocuments.photo.name);
+          console.log('  - patientId:', patientIdForUpload.toString());
+          console.log('  - fieldName: photo');
+          
+          updatedPhoto = await uploadPatientFile(editDocuments.photo, patientIdForUpload.toString(), 'photo');
           console.log('✅ Photo uploaded successfully:', updatedPhoto);
+          
+          // Check if photo was saved to temp folder (indicates ID issue)
+          if (updatedPhoto && updatedPhoto.includes('/temp/')) {
+            console.error('❌ Photo was saved to temp folder - patient ID issue detected!');
+            console.error('❌ Patient ID used:', patientIdForUpload);
+            console.error('❌ Photo path:', updatedPhoto);
+            throw new Error('Photo upload failed: saved to temp folder instead of patient folder. Please check patient ID.');
+          }
+          
+          // Validate that the photo path is in the correct format
+          if (updatedPhoto && !updatedPhoto.startsWith('Photos/')) {
+            console.warn('⚠️ Photo path does not start with Photos/, correcting format...');
+            console.warn('⚠️ Original path:', updatedPhoto);
+            // Ensure path starts with Photos/
+            if (updatedPhoto.startsWith('/')) {
+              updatedPhoto = `Photos${updatedPhoto}`;
+            } else {
+              updatedPhoto = `Photos/${updatedPhoto}`;
+            }
+            console.log('✅ Corrected photo path:', updatedPhoto);
+          }
+          
+          // Verify photo URL can be constructed properly
+          const testUrl = getPatientPhotoUrl(updatedPhoto);
+          console.log('🔗 Testing photo URL construction:', testUrl);
+          
+          // Force immediate photo refresh
+          console.log('🔄 Forcing immediate photo refresh after upload...');
+          setPhotoRefreshTrigger(prev => prev + 1);
+          
           // Delete old photo if it exists and is a server file
           if (editPatient.photo && !editPatient.photo.startsWith('data:') && editPatient.photo !== updatedPhoto) {
             try {
+              console.log('🗑️ Attempting to delete old photo:', editPatient.photo);
               await deletePatientFile(editPatient.photo);
+              console.log('🗑️ Old photo deleted successfully');
             } catch (error) {
               console.log('Could not delete old photo:', error);
             }
           }
         } catch (error) {
           console.error('❌ Photo upload failed:', error);
+          toast({
+            title: "Photo Upload Failed",
+            description: `Failed to upload photo: ${error.message}`,
+            variant: "destructive",
+          });
           throw new Error(`Photo upload failed: ${error.message}`);
         }
       }
@@ -658,7 +984,37 @@ const PatientList: React.FC = () => {
       }
       
       console.log('Submitting patient data:', updateData);
+      console.log('📸 Final file paths being saved:');
+      console.log('  - Photo:', updatedPhoto);
+      console.log('  - Patient Aadhar:', updatedPatientAadhar);
+      console.log('  - Patient PAN:', updatedPatientPan);
+      console.log('  - Attender Aadhar:', updatedAttenderAadhar);
+      console.log('  - Attender PAN:', updatedAttenderPan);
+      
+      // Validate photo path before saving
+      if (updatedPhoto && updatedPhoto !== editPatient.photo) {
+        console.log('🔍 Photo path changed, verifying new path:', updatedPhoto);
+        console.log('🔍 Previous photo path:', editPatient.photo);
+        
+        // Double-check photo URL construction works
+        const verifyUrl = getPatientPhotoUrl(updatedPhoto);
+        console.log('🔗 Verification URL:', verifyUrl);
+        
+        if (!verifyUrl || verifyUrl === '') {
+          console.error('❌ Photo URL construction failed for path:', updatedPhoto);
+          throw new Error('Photo path validation failed - unable to construct valid URL');
+        }
+      }
+      
+      console.log('💾 Saving patient data to database...');
       await DatabaseService.updatePatient(editPatient.originalId, updateData);
+      console.log('✅ Patient data successfully updated in database');
+      
+      // Verify the photo was saved correctly by logging the final data
+      if (updatedPhoto) {
+        console.log('📸 Final verification - photo path saved:', updatedPhoto);
+        console.log('📸 Final verification - photo URL:', getPatientPhotoUrl(updatedPhoto));
+      }
       
       // Update the editPatient state with new images for immediate preview
       const updatedEditPatient = {
@@ -670,16 +1026,61 @@ const PatientList: React.FC = () => {
         attenderPan: updatedAttenderPan
       };
       
+      console.log('📋 Updated patient data for state update:', {
+        id: updatedEditPatient.id,
+        photo: updatedPhoto,
+        patientAadhar: updatedPatientAadhar,
+        patientPan: updatedPatientPan,
+        attenderAadhar: updatedAttenderAadhar,
+        attenderPan: updatedAttenderPan
+      });
+      
       // Update local state
-      const updatedPatients = patients.map(p =>
-        p.id === editPatient.id ? updatedEditPatient : p
-      );
+      const updatedPatients = patients.map(p => {
+        if (p.id === editPatient.id) {
+          console.log(`📝 Updating patient ${p.id} in local state with new file paths`);
+          const updatedPatient = {
+            ...updatedEditPatient,
+            photo: updatedPhoto || '', // Ensure photo path is properly set
+          };
+          console.log(`📸 Updated patient photo path: ${updatedPatient.photo}`);
+          return updatedPatient;
+        }
+        return p;
+      });
+      
+      console.log('📊 Updated patients array length:', updatedPatients.length);
       setPatients(updatedPatients);
+      console.log('✅ Local state updated with new file paths');
+      
+      // Additional photo refresh to ensure table updates
+      console.log('📸 Triggering additional photo refresh for table...');
+      setPhotoRefreshTrigger(prev => prev + 1);
+      
+      // Force a re-render to ensure UI updates
+      console.log('🔄 Forcing component re-render...');
+      
+      // Additional verification: Log the updated patient data
+      const verifiedPatient = updatedPatients.find(p => p.id === editPatient.id);
+      if (verifiedPatient) {
+        console.log('🔍 Verified updated patient in state:', {
+          id: verifiedPatient.id,
+          name: verifiedPatient.name,
+          photo: verifiedPatient.photo,
+          patientAadhar: verifiedPatient.patientAadhar,
+          patientPan: verifiedPatient.patientPan,
+          attenderAadhar: verifiedPatient.attenderAadhar,
+          attenderPan: verifiedPatient.attenderPan
+        });
+      }
       
       // Sync payment data to patient_payments table
       await syncPaymentDataToDatabase(updatedEditPatient);
       
+      console.log('💾 Setting editPatient to null to close form');
       setEditPatient(null);
+      
+      console.log('🗂️ Resetting editDocuments state');
       setEditDocuments({
         photo: null,
         patientAadhar: null,
@@ -687,9 +1088,101 @@ const PatientList: React.FC = () => {
         attenderAadhar: null,
         attenderPan: null
       });
+      
+      // Cleanup preview URLs
+      Object.values(previewUrls).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      setPreviewUrls({});
+      
+      // Trigger photo refresh first
+      console.log('🔄 Triggering photo refresh...');
+      setPhotoRefreshTrigger(prev => prev + 1);
+      
+      // Force immediate table re-render with new photo path
+      if (updatedPhoto && updatedPhoto !== editPatient.photo) {
+        console.log('🖼️ Photo changed, forcing immediate table refresh...');
+        console.log('🖼️ New photo path in state update:', updatedPhoto);
+        
+        // Construct test URL to verify it works
+        const testPhotoUrl = getPatientPhotoUrl(updatedPhoto);
+        console.log('🔗 Test photo URL for immediate display:', testPhotoUrl);
+      }
+      
+      // Force browser to clear all cached images immediately with more aggressive cache busting
+      console.log('🔄 Forcing image cache refresh...');
+      const allImages = document.querySelectorAll('img');
+      allImages.forEach(img => {
+        if (img.src && img.src.includes('localhost:4000')) {
+          // Create a completely new URL with timestamp and random parameters
+          const url = new URL(img.src.split('?')[0]); // Remove existing parameters
+          url.searchParams.set('t', Date.now().toString());
+          url.searchParams.set('r', Math.random().toString(36).substring(7));
+          url.searchParams.set('updated', 'true');
+          url.searchParams.set('cache_bust', Date.now().toString());
+          img.src = url.toString();
+          
+          // Force immediate reload by toggling src
+          const originalSrc = img.src;
+          img.src = '';
+          setTimeout(() => {
+            img.src = originalSrc;
+          }, 100);
+        }
+      });
+      
+      // Clear browser cache for patient images specifically
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map(cacheName => 
+              caches.delete(cacheName)
+            )
+          );
+          console.log('🗑️ Browser caches cleared');
+        } catch (error) {
+          console.log('Could not clear browser cache:', error);
+        }
+      }
+      
+      // Reload patient data from server to ensure UI is up to date
+      console.log('🔄 Reloading patient data from server...');
+      await loadPatients();
+      
+      // Additional forced refresh after a delay to ensure new photo loads
+      setTimeout(async () => {
+        console.log('🔄 Final refresh to ensure photo appears...');
+        setPhotoRefreshTrigger(prev => prev + 1);
+        
+        // Force refresh of the specific updated patient's photo
+        const updatedPatientImages = document.querySelectorAll(`img[alt*="${updatedEditPatient.name}"]`);
+        updatedPatientImages.forEach(img => {
+          const imgElement = img as HTMLImageElement;
+          if (imgElement.src && imgElement.src.includes('localhost:4000')) {
+            const url = new URL(imgElement.src.split('?')[0]);
+            url.searchParams.set('final_refresh', Date.now().toString());
+            url.searchParams.set('patient_updated', updatedEditPatient.id);
+            imgElement.src = url.toString();
+          }
+        });
+        
+        await loadPatients();
+      }, 1000); // Increased delay to 1 second
+      
+      // One more refresh after 2 seconds as final fallback
+      setTimeout(() => {
+        console.log('🔄 Ultimate fallback refresh...');
+        setPhotoRefreshTrigger(prev => prev + 1);
+      }, 2000);
+      
+      console.log('✅ Edit form closed and state reset');
+      
       toast({
         title: "Patient Updated",
-        description: "Patient information has been successfully updated.",
+        description: `Patient information has been successfully updated.${updatedPhoto && updatedPhoto !== editPatient.photo ? ' Profile photo updated.' : ''}`,
       });
     } catch (error) {
       console.error('Error updating patient:', error);
@@ -923,15 +1416,20 @@ const PatientList: React.FC = () => {
               </div>
             </div>
           
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <ActionButtons.Refresh
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
-                  console.log('🔄 Manual refresh triggered');
-                  loadPatients();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
-                loading={loading}
                 disabled={loading}
-              />
+                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
+                {/* <span className="hidden sm:inline">Refresh</span> */}
+              </Button>
               <Button 
                 onClick={exportToCSV}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
@@ -1150,6 +1648,7 @@ const PatientList: React.FC = () => {
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
                       <PatientPhoto 
+                        key={`${patient.id}-${patient.photo}-${photoRefreshTrigger}`}
                         photoPath={patient.photo} 
                         alt={patient.name}
                         className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover mx-auto border bg-muted"
@@ -1348,6 +1847,7 @@ const PatientList: React.FC = () => {
                 {/* Avatar Section */}
                 <div className="relative flex-shrink-0">
                   <PatientPhoto 
+                    key={`view-${viewPatient.id}-${viewPatient.photo}-${photoRefreshTrigger}`}
                     photoPath={viewPatient.photo} 
                     alt={viewPatient.name}
                     className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg"
@@ -1689,7 +2189,7 @@ const PatientList: React.FC = () => {
                   </div>
 
                   {/* Debug Information */}
-                  <div className="mb-3 sm:mb-4 md:mb-6 p-2 sm:p-3 md:p-4 bg-yellow-50/80 backdrop-blur-sm border border-yellow-200/50 rounded-lg sm:rounded-xl">
+                  {/* <div className="mb-3 sm:mb-4 md:mb-6 p-2 sm:p-3 md:p-4 bg-yellow-50/80 backdrop-blur-sm border border-yellow-200/50 rounded-lg sm:rounded-xl">
                     <div className="flex items-center gap-2 mb-2 sm:mb-3">
                       <span className="text-yellow-600 text-xs sm:text-sm">🔍</span>
                       <strong className="text-xs sm:text-sm font-medium text-yellow-800">Debug Information</strong>
@@ -1718,7 +2218,7 @@ const PatientList: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                     {/* Patient Documents */}
@@ -1917,256 +2417,520 @@ const PatientList: React.FC = () => {
       {/* Edit Patient Dialog */}
       {editPatient && (
         <Dialog open={!!editPatient} onOpenChange={() => setEditPatient(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] w-[95vw] sm:w-full overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Edit Patient - {editPatient.id}</DialogTitle>
-              <DialogDescription className="text-sm sm:text-base">Update patient information</DialogDescription>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Edit2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-gray-900">
+                    Edit Patient - {editPatient.id}
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600 mt-1">
+                    Update patient information and medical details
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editPatient.name}
-                  onChange={(e) => setEditPatient({...editPatient, name: e.target.value})}
-                />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveEdit();
+              }}
+              className="space-y-6 p-3 sm:p-4 md:p-6"
+            >
+              {/* Personal Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-4 w-4 text-blue-600" />
+                  </div>
+                  Personal Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700">Patient Name <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="edit-name"
+                      value={editPatient.name}
+                      onChange={(e) => setEditPatient({...editPatient, name: e.target.value})}
+                      placeholder="Enter patient name"
+                      className="mt-1"
+                      required
+                    />
+                  </div>
+                  {/* Age field is now hidden and auto-calculated from date of birth */}
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-gender" className="text-sm font-medium text-gray-700">Gender <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={editPatient.gender}
+                      onValueChange={(value) => setEditPatient({...editPatient, gender: value})}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700">Status</Label>
+                    <Select
+                      value={editPatient.status}
+                      onValueChange={(value) => setEditPatient({...editPatient, status: value})}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                        <SelectItem value="Critical">Critical</SelectItem>
+                        <SelectItem value="Discharged">Discharged</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Admission Date moved to Important Dates section */}
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-dob" className="text-sm font-medium text-gray-700">Date of Birth</Label>
+                    <Input
+                      id="edit-dob"
+                      type="date"
+                      value={editPatient ? (formatDateForInput(editPatient.dateOfBirth) || '') : ''}
+                      onChange={(e) => {
+                        if (editPatient) {
+                          const date = e.target.value ? parseDateFromInput(e.target.value) : null;
+                          const calculatedAge = calculateAge(date);
+                          setEditPatient({ 
+                            ...editPatient, 
+                            dateOfBirth: date,
+                            age: calculatedAge
+                          });
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-age">Age</Label>
-                <Input
-                  id="edit-age"
-                  type="number"
-                  value={editPatient.age}
-                  onChange={(e) => setEditPatient({...editPatient, age: parseInt(e.target.value)})}
-                />
+
+              {/* Contact Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Phone className="h-4 w-4 text-green-600" />
+                  </div>
+                  Contact Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone" className="text-sm font-medium text-gray-700">Phone Number <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="edit-phone"
+                      value={editPatient.phone}
+                      onChange={(e) => {
+                        // Phone number validation - only allow 10 digits
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        if (numericValue.length <= 10) {
+                          setEditPatient({...editPatient, phone: numericValue});
+                        }
+                      }}
+                      placeholder="10-digit mobile number"
+                      className="mt-1"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email" className="text-sm font-medium text-gray-700">Email Address</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editPatient.email}
+                      onChange={(e) => setEditPatient({...editPatient, email: e.target.value})}
+                      placeholder="Enter email address"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-emergency" className="text-sm font-medium text-gray-700">Emergency Contact <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="edit-emergency"
+                      value={editPatient.emergencyContact}
+                      onChange={(e) => {
+                        // Emergency contact validation - only allow 10 digits
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        if (numericValue.length <= 10) {
+                          setEditPatient({...editPatient, emergencyContact: numericValue});
+                        }
+                      }}
+                      placeholder="10-digit emergency contact number"
+                      className="mt-1"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-address" className="text-sm font-medium text-gray-700">Address <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    id="edit-address"
+                    value={editPatient.address}
+                    onChange={(e) => setEditPatient({...editPatient, address: e.target.value})}
+                    placeholder="Enter complete address"
+                    className="mt-1"
+                    rows={3}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-gender">Gender</Label>
-                <Select
-                  value={editPatient.gender}
-                  onValueChange={(value) => setEditPatient({...editPatient, gender: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              {/* Family Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Heart className="h-4 w-4 text-purple-600" />
+                  </div>
+                  Family Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-father-name" className="text-sm font-medium text-gray-700">Father's Name</Label>
+                    <Input
+                      id="edit-father-name"
+                      value={editPatient.fatherName || ''}
+                      onChange={(e) => setEditPatient({...editPatient, fatherName: e.target.value})}
+                      placeholder="Enter father's name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-mother-name" className="text-sm font-medium text-gray-700">Mother's Name</Label>
+                    <Input
+                      id="edit-mother-name"
+                      value={editPatient.motherName || ''}
+                      onChange={(e) => setEditPatient({...editPatient, motherName: e.target.value})}
+                      placeholder="Enter mother's name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-marriage-status" className="text-sm font-medium text-gray-700">Marriage Status</Label>
+                    <Select
+                      value={editPatient.marriageStatus || ''}
+                      onValueChange={(value) => setEditPatient({...editPatient, marriageStatus: value})}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Married">Married</SelectItem>
+                        <SelectItem value="Divorced">Divorced</SelectItem>
+                        <SelectItem value="Widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-employee-status" className="text-sm font-medium text-gray-700">Employee Status</Label>
+                    <Select
+                      value={editPatient.employeeStatus || ''}
+                      onValueChange={(value) => setEditPatient({...editPatient, employeeStatus: value})}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Employee">Employee</SelectItem>
+                        <SelectItem value="Non-Employee">Non-Employee</SelectItem>
+                        <SelectItem value="Retired">Retired</SelectItem>
+                        <SelectItem value="Student">Student</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone</Label>
-                <Input
-                  id="edit-phone"
-                  value={editPatient.phone}
-                  onChange={(e) => setEditPatient({...editPatient, phone: e.target.value})}
-                />
+
+              {/* Attender Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <UserCheck className="h-4 w-4 text-orange-600" />
+                  </div>
+                  Attender Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-attender-name" className="text-sm font-medium text-gray-700">Attender Name</Label>
+                    <Input
+                      id="edit-attender-name"
+                      value={editPatient.attenderName}
+                      onChange={(e) => setEditPatient({...editPatient, attenderName: e.target.value})}
+                      placeholder="Enter attender name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-attender-phone" className="text-sm font-medium text-gray-700">Attender Phone</Label>
+                    <Input
+                      id="edit-attender-phone"
+                      value={editPatient.attenderPhone}
+                      onChange={(e) => {
+                        // Attender phone validation - only allow 10 digits
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        if (numericValue.length <= 10) {
+                          setEditPatient({...editPatient, attenderPhone: numericValue});
+                        }
+                      }}
+                      placeholder="10-digit attender phone number"
+                      className="mt-1"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-attender-relationship" className="text-sm font-medium text-gray-700">Attender Relationship</Label>
+                    <Input
+                      id="edit-attender-relationship"
+                      value={editPatient.attenderRelationship || ''}
+                      onChange={(e) => setEditPatient({...editPatient, attenderRelationship: e.target.value})}
+                      placeholder="e.g., Father, Mother, Spouse"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editPatient.email}
-                  onChange={(e) => setEditPatient({...editPatient, email: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-emergency">Emergency Contact</Label>
-                <Input
-                  id="edit-emergency"
-                  value={editPatient.emergencyContact}
-                  onChange={(e) => setEditPatient({...editPatient, emergencyContact: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2 col-span-1 sm:col-span-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Textarea
-                  id="edit-address"
-                  value={editPatient.address}
-                  onChange={(e) => setEditPatient({...editPatient, address: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={editPatient.status}
-                  onValueChange={(value) => setEditPatient({...editPatient, status: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                    <SelectItem value="Discharged">Discharged</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-attender-name">Attender Name</Label>
-                <Input
-                  id="edit-attender-name"
-                  value={editPatient.attenderName}
-                  onChange={(e) => setEditPatient({...editPatient, attenderName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-attender-phone">Attender Phone</Label>
-                <Input
-                  id="edit-attender-phone"
-                  value={editPatient.attenderPhone}
-                  onChange={(e) => setEditPatient({...editPatient, attenderPhone: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-attender-relationship">Attender Relationship</Label>
-                <Input
-                  id="edit-attender-relationship"
-                  value={editPatient.attenderRelationship || ''}
-                  onChange={(e) => setEditPatient({...editPatient, attenderRelationship: e.target.value})}
-                />
-              </div>
+
+              {/* Main Form Grid Container */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2 col-span-1 sm:col-span-2 flex justify-center">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-muted border">
-                  {editPatient.photo && editPatient.photo.trim() !== '' ? (
-                    <img 
-                      src={editPatient.photo.startsWith('data:') ? editPatient.photo : getPatientPhotoUrl(editPatient.photo)} 
-                      alt={editPatient.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        ((e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement).style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
+                  {(() => {
+                    // Show preview of newly selected photo if available, otherwise show existing photo
+                    if (editDocuments.photo) {
+                      // Show preview of newly selected file
+                      const previewUrl = getPreviewUrl(editDocuments.photo, 'main-photo-preview');
+                      return (
+                        <img 
+                          src={previewUrl}
+                          alt={`${editPatient.name} - New Photo Preview`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            ((e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                      );
+                    } else if (editPatient.photo && editPatient.photo.trim() !== '') {
+                      // Show existing photo from database
+                      return (
+                        <img 
+                          src={editPatient.photo.startsWith('data:') ? editPatient.photo : getPatientPhotoUrl(editPatient.photo)} 
+                          alt={editPatient.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            ((e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
                   <div 
-                    className={`w-full h-full flex items-center justify-center text-muted-foreground text-2xl font-medium ${editPatient.photo && editPatient.photo.trim() !== '' ? 'hidden' : 'flex'}`}
+                    className={`w-full h-full flex items-center justify-center text-muted-foreground text-2xl font-medium ${(editDocuments.photo || (editPatient.photo && editPatient.photo.trim() !== '')) ? 'hidden' : 'flex'}`}
                   >
                     {editPatient.name.charAt(0).toUpperCase()}
                   </div>
                 </div>
               </div>
               
-              <div className="space-y-2 col-span-1 sm:col-span-2">
-                <Label htmlFor="edit-photo-upload">Update Profile Photo</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="edit-photo-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleEditFileUpload('photo', e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                  <Label
-                    htmlFor="edit-photo-upload"
-                    className="flex items-center space-x-2 cursor-pointer bg-muted hover:bg-muted/80 px-3 py-2 rounded-md border border-input transition-colors text-sm"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>{editDocuments.photo ? editDocuments.photo.name : 'Choose new photo'}</span>
-                  </Label>
-                  {editDocuments.photo && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditFileUpload('photo', null)}
+              {/* Profile Photo Section */}
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 rounded-lg">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Profile Photo</h3>
+                    <p className="text-sm text-gray-600">Update patient profile picture</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="edit-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleEditFileUpload('photo', e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    <Label
+                      htmlFor="edit-photo-upload"
+                      className={`flex items-center space-x-2 cursor-pointer px-4 py-2 rounded-md border transition-colors text-sm shadow-sm ${
+                        editDocuments.photo 
+                          ? 'bg-green-50 hover:bg-green-100 border-green-300 text-green-700' 
+                          : 'bg-white hover:bg-gray-50 border-gray-300'
+                      }`}
                     >
-                      Remove
-                    </Button>
-                  )}
+                      <Upload className="w-4 h-4" />
+                      <span>
+                        {editDocuments.photo 
+                          ? `✓ ${editDocuments.photo.name}` 
+                          : 'Choose new photo'
+                        }
+                      </span>
+                    </Label>
+                    {editDocuments.photo && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditFileUpload('photo', null)}
+                        className="bg-white hover:bg-gray-50"
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Photo Status Indicator */}
+                {editDocuments.photo && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-xs text-green-700 flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      New photo selected - will be saved when you update the patient
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Dates Information Section */}
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-6 rounded-lg border border-green-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-2 rounded-lg">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Important Dates</h3>
+                    <p className="text-sm text-gray-600">Admission and birth date information</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-admission-date" className="text-sm font-medium text-gray-700">
+                      Admission Date<span className="text-red-500"> *</span>
+                    </Label>
+                    <Input
+                      id="edit-admission-date"
+                      type="date"
+                      required
+                      value={editPatient ? (formatDateForInput(editPatient.admissionDate) || '') : ''}
+                      onChange={(e) => {
+                        if (editPatient) {
+                          const date = e.target.value ? parseDateFromInput(e.target.value) : null;
+                          setEditPatient({ ...editPatient, admissionDate: date });
+                        }
+                      }}
+                      className="bg-white border-gray-300"
+                    />
+                  </div>
+                  {/* Date of Birth removed from here as it's already in Personal Information section */}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-admission-date">Admission Date<span className="text-destructive"> *</span></Label>
-                <Input
-                  id="edit-admission-date"
-                  type="date"
-                  required
-                  value={editPatient ? (formatDateForInput(editPatient.admissionDate) || '') : ''}
-                  onChange={(e) => {
-                    if (editPatient) {
-                      const date = e.target.value ? parseDateFromInput(e.target.value) : null;
-                      setEditPatient({ ...editPatient, admissionDate: date });
-                    }
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-dob">Date of Birth</Label>
-                <Input
-                  id="edit-dob"
-                  type="date"
-                  value={editPatient ? (formatDateForInput(editPatient.dateOfBirth) || '') : ''}
-                  onChange={(e) => {
-                    if (editPatient) {
-                      const date = e.target.value ? parseDateFromInput(e.target.value) : null;
-                      setEditPatient({ ...editPatient, dateOfBirth: date });
-                    }
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-father-name">Father's Name</Label>
-                <Input
-                  id="edit-father-name"
-                  value={editPatient.fatherName || ''}
-                  onChange={(e) => setEditPatient({...editPatient, fatherName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-mother-name">Mother's Name</Label>
-                <Input
-                  id="edit-mother-name"
-                  value={editPatient.motherName || ''}
-                  onChange={(e) => setEditPatient({...editPatient, motherName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-marriage-status">Marriage Status</Label>
-                <Select
-                  value={editPatient.marriageStatus || ''}
-                  onValueChange={(value) => setEditPatient({...editPatient, marriageStatus: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Single">Single</SelectItem>
-                    <SelectItem value="Married">Married</SelectItem>
-                    <SelectItem value="Divorced">Divorced</SelectItem>
-                    <SelectItem value="Widowed">Widowed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-employee-status">Employee Status</Label>
-                <Select
-                  value={editPatient.employeeStatus || ''}
-                  onValueChange={(value) => setEditPatient({...editPatient, employeeStatus: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Employee">Employee</SelectItem>
-                    <SelectItem value="Non-Employee">Non-Employee</SelectItem>
-                    <SelectItem value="Retired">Retired</SelectItem>
-                    <SelectItem value="Student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Payment Information */}
-              <div className="col-span-1 sm:col-span-2">
-                <h3 className="text-base sm:text-lg font-semibold mb-3 text-foreground">Payment Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+
+              {/* Extended Family Information Section */}
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-purple-50 to-violet-50 p-4 sm:p-6 rounded-lg border border-purple-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-violet-600 text-white p-2 rounded-lg">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Extended Family & Status</h3>
+                    <p className="text-sm text-gray-600">Parents details and employment status</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-fees">Fees</Label>
+                    <Label htmlFor="edit-father-name" className="text-sm font-medium text-gray-700">Father's Name</Label>
+                    <Input
+                      id="edit-father-name"
+                      value={editPatient.fatherName || ''}
+                      onChange={(e) => setEditPatient({...editPatient, fatherName: e.target.value})}
+                      className="bg-white border-gray-300"
+                      placeholder="Enter father's name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-mother-name" className="text-sm font-medium text-gray-700">Mother's Name</Label>
+                    <Input
+                      id="edit-mother-name"
+                      value={editPatient.motherName || ''}
+                      onChange={(e) => setEditPatient({...editPatient, motherName: e.target.value})}
+                      className="bg-white border-gray-300"
+                      placeholder="Enter mother's name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-marriage-status" className="text-sm font-medium text-gray-700">Marriage Status</Label>
+                    <Select
+                      value={editPatient.marriageStatus || ''}
+                      onValueChange={(value) => setEditPatient({...editPatient, marriageStatus: value})}
+                    >
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Married">Married</SelectItem>
+                        <SelectItem value="Divorced">Divorced</SelectItem>
+                        <SelectItem value="Widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-employee-status" className="text-sm font-medium text-gray-700">Employee Status</Label>
+                    <Select
+                      value={editPatient.employeeStatus || ''}
+                      onValueChange={(value) => setEditPatient({...editPatient, employeeStatus: value})}
+                    >
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Employee">Employee</SelectItem>
+                        <SelectItem value="Non-Employee">Non-Employee</SelectItem>
+                        <SelectItem value="Retired">Retired</SelectItem>
+                        <SelectItem value="Student">Student</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information Section */}
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 sm:p-6 rounded-lg border border-amber-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-amber-500 to-yellow-600 text-white p-2 rounded-lg">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Payment Information</h3>
+                    <p className="text-sm text-gray-600">Fees, charges and payment details</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-fees" className="text-sm font-medium text-gray-700">Fees</Label>
                     <Input
                       id="edit-fees"
                       type="number"
@@ -2185,10 +2949,12 @@ const PatientList: React.FC = () => {
                           balance
                         });
                       }}
+                      className="bg-white border-gray-300"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-blood-test">Blood Test</Label>
+                    <Label htmlFor="edit-blood-test" className="text-sm font-medium text-gray-700">Blood Test</Label>
                     <Input
                       id="edit-blood-test"
                       type="number"
@@ -2207,10 +2973,12 @@ const PatientList: React.FC = () => {
                           balance
                         });
                       }}
+                      className="bg-white border-gray-300"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-pickup-charge">Pickup Charge</Label>
+                    <Label htmlFor="edit-pickup-charge" className="text-sm font-medium text-gray-700">Pickup Charge</Label>
                     <Input
                       id="edit-pickup-charge"
                       type="number"
@@ -2229,20 +2997,22 @@ const PatientList: React.FC = () => {
                           balance
                         });
                       }}
+                      className="bg-white border-gray-300"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-total-amount">Total Amount</Label>
+                    <Label htmlFor="edit-total-amount" className="text-sm font-medium text-gray-700">Total Amount</Label>
                     <Input
                       id="edit-total-amount"
                       type="number"
                       value={editPatient.totalAmount || 0}
                       disabled
-                      className="bg-muted"
+                      className="bg-gray-100 border-gray-300 text-gray-600"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-pay-amount">Pay Amount</Label>
+                    <Label htmlFor="edit-pay-amount" className="text-sm font-medium text-gray-700">Pay Amount</Label>
                     <Input
                       id="edit-pay-amount"
                       type="number"
@@ -2257,25 +3027,27 @@ const PatientList: React.FC = () => {
                           balance
                         });
                       }}
+                      className="bg-white border-gray-300"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-balance">Balance</Label>
+                    <Label htmlFor="edit-balance" className="text-sm font-medium text-gray-700">Balance</Label>
                     <Input
                       id="edit-balance"
                       type="number"
                       value={editPatient.balance || 0}
                       disabled
-                      className="bg-muted"
+                      className="bg-gray-100 border-gray-300 text-gray-600"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-payment-type">Payment Type</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="edit-payment-type" className="text-sm font-medium text-gray-700">Payment Type</Label>
                     <Select
                       value={editPatient.paymentType || ''}
                       onValueChange={(value) => setEditPatient({...editPatient, paymentType: value})}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white border-gray-300">
                         <SelectValue placeholder="Select payment type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2289,19 +3061,43 @@ const PatientList: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
-              <div className="space-y-2 col-span-1 sm:col-span-2">
-                <Label htmlFor="edit-medical-history">Medical History</Label>
-                <Textarea
-                  id="edit-medical-history"
-                  value={editPatient.medicalHistory}
-                  onChange={(e) => setEditPatient({...editPatient, medicalHistory: e.target.value})}
-                />
+
+              {/* Medical History Section */}
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-rose-50 to-pink-50 p-4 sm:p-6 rounded-lg border border-rose-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-rose-500 to-pink-600 text-white p-2 rounded-lg">
+                    <Heart className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Medical History</h3>
+                    <p className="text-sm text-gray-600">Patient's medical background and conditions</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-medical-history" className="text-sm font-medium text-gray-700">Medical History Details</Label>
+                  <Textarea
+                    id="edit-medical-history"
+                    value={editPatient.medicalHistory}
+                    onChange={(e) => setEditPatient({...editPatient, medicalHistory: e.target.value})}
+                    className="bg-white border-gray-300 min-h-[100px]"
+                    placeholder="Enter patient's medical history, allergies, previous treatments, etc."
+                  />
+                </div>
               </div>
               
               {/* Patient Documents Section */}
-              <div className="space-y-4 col-span-1 sm:col-span-2 border-t pt-4">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900">Patient Documents</h3>
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-indigo-50 to-blue-50 p-4 sm:p-6 rounded-lg border border-indigo-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white p-2 rounded-lg">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Patient Documents</h3>
+                    <p className="text-sm text-gray-600">Upload patient identification documents</p>
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FileUploadField
                     label="Patient Aadhar Card"
@@ -2321,8 +3117,17 @@ const PatientList: React.FC = () => {
               </div>
 
               {/* Attender Documents Section */}
-              <div className="space-y-4 col-span-1 sm:col-span-2 border-t pt-4">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900">Attender Documents</h3>
+              <div className="col-span-1 sm:col-span-2 bg-gradient-to-r from-teal-50 to-cyan-50 p-4 sm:p-6 rounded-lg border border-teal-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white p-2 rounded-lg">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Attender Documents</h3>
+                    <p className="text-sm text-gray-600">Upload attender identification documents</p>
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FileUploadField
                     label="Attender Aadhar Card"
@@ -2340,13 +3145,25 @@ const PatientList: React.FC = () => {
                   />
                 </div>
               </div>
-            </div>
+              </div> {/* Close Main Form Grid Container */}
+              
+           
+            </form>
             
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setEditPatient(null)} className="w-full sm:w-auto">
+            <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditPatient(null)} 
+                className="w-full sm:w-auto order-2 sm:order-1 bg-white hover:bg-gray-50 border-gray-300"
+              >
+                <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} className="bg-gradient-medical w-full sm:w-auto">
+              <Button 
+                onClick={handleSaveEdit} 
+                className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md"
+              >
+                <UserCheck className="w-4 h-4 mr-2" />
                 Save Changes
               </Button>
             </DialogFooter>

@@ -6,12 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatabaseService } from '@/services/databaseService';
 import { TestReportAmountAPI } from '@/services/testReportAmountAPI';
 import { TestReportAmount } from '@/types/testReportAmount';
 import { patientsAPI } from '@/utils/api';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { toast } from 'sonner';
+import '@/styles/global-crm-design.css';
 import {
   Search,
   Eye,
@@ -44,6 +46,10 @@ interface Patient {
   age?: number;
   gender?: string;
   status?: string;
+  bloodTest?: number;
+  pickupCharge?: number;
+  otherFees?: number;
+  admissionDate?: string;
 }
 
 const TestReportAmountPage: React.FC = () => {
@@ -55,7 +61,7 @@ const TestReportAmountPage: React.FC = () => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const currentMonth = new Date().getMonth();
+  const currentMonth = new Date().getMonth(); // 0-based: August = 7
   const currentYear = new Date().getFullYear();
   
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -64,7 +70,7 @@ const TestReportAmountPage: React.FC = () => {
   const [testReports, setTestReports] = useState<TestReportAmount[]>([]);
   const [filteredReports, setFilteredReports] = useState<TestReportAmount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth + 1);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth + 1); // Convert to 1-based: August becomes 8
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isMonthYearDialogOpen, setIsMonthYearDialogOpen] = useState(false);
 
@@ -73,6 +79,10 @@ const TestReportAmountPage: React.FC = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete modal states
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteReport, setDeleteReport] = useState<TestReportAmount | null>(null);
 
   // Form states
   const [testType, setTestType] = useState('');
@@ -88,7 +98,7 @@ const TestReportAmountPage: React.FC = () => {
 
   useEffect(() => {
     filterPatients();
-  }, [patients, searchTerm]);
+  }, [patients, searchTerm, selectedMonth, selectedYear]);
 
   useEffect(() => {
     filterReports();
@@ -151,10 +161,20 @@ const TestReportAmountPage: React.FC = () => {
         photo: patient.photo || '',
         age: patient.age || 0,
         gender: patient.gender || '',
-        status: patient.status || 'Active'
+        status: patient.status || 'Active',
+        bloodTest: Number(patient.bloodTest || patient.blood_test || 0),
+        pickupCharge: Number(patient.pickupCharge || patient.pickup_charge || 0),
+        otherFees: Number(patient.otherFees || patient.other_fees || 0),
+        admissionDate: patient.admissionDate || patient.admission_date || ''
       }));
       
       console.log('🎯 Formatted patients:', formattedPatients);
+      console.log('💰 Patient financial data:', formattedPatients.map(p => ({
+        name: p.name,
+        bloodTest: p.bloodTest,
+        otherFees: p.otherFees,
+        total: (p.bloodTest || 0) + (p.otherFees || 0)
+      })));
       
       const sortedPatients = sortPatientsById(formattedPatients);
       setPatients(sortedPatients);
@@ -192,6 +212,12 @@ const TestReportAmountPage: React.FC = () => {
 
   const filterPatients = () => {
     let filtered = [...patients];
+
+    // Filter by selected month and year based on admission date
+    filtered = filtered.filter(patient => {
+      const admissionDate = new Date(patient.admissionDate);
+      return admissionDate.getMonth() + 1 === selectedMonth && admissionDate.getFullYear() === selectedYear;
+    });
 
     if (searchTerm) {
       filtered = filtered.filter(patient =>
@@ -302,16 +328,56 @@ const TestReportAmountPage: React.FC = () => {
     }
   };
 
-  // Stats calculations
-  const totalPatients = patients.length;
-  const activePatients = patients.filter(p => p.status === 'Active').length;
+  const handleDeleteTestReport = (report: TestReportAmount) => {
+    setDeleteReport(report);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteReport) return;
+
+    try {
+      console.log('🗑️ Deleting test report:', deleteReport.id);
+      
+      const result = await TestReportAmountAPI.delete(deleteReport.id);
+      
+      if (result.success) {
+        // Remove from local state to update UI immediately
+        setTestReports(prev => prev.filter(report => report.id !== deleteReport.id));
+        setFilteredReports(prev => prev.filter(report => report.id !== deleteReport.id));
+        
+        setShowDeleteConfirm(false);
+        setDeleteReport(null);
+        
+        toast('Success!', {
+          description: 'Test report deleted successfully',
+        });
+        
+        console.log('✅ Test report deleted successfully');
+      } else {
+        throw new Error(result.message || 'Failed to delete test report');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting test report:', error);
+      toast('Error', {
+        description: `Failed to delete test report: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  };
+
+  // Stats calculations - using filteredPatients to reflect selected month/year
+  const totalPatients = filteredPatients.length;
+  const activePatients = filteredPatients.filter(p => p.status === 'Active').length;
   const totalReports = filteredReports.length;
   const pendingReports = filteredReports.filter(r => r.status === 'Pending').length;
   
-  // Fixed totalAmount calculation with proper number conversion and formatting
-  const totalAmount = filteredReports.reduce((sum, report) => {
-    const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
-    return sum + (isNaN(amount) ? 0 : amount);
+  // Calculate Total Amount from patient test-related fees (bloodTest + otherFees)
+  // This matches the ₹6,999.91 shown in patient details instead of separate test_reports table
+  const totalAmount = filteredPatients.reduce((sum, patient) => {
+    const bloodTest = typeof patient.bloodTest === 'number' ? patient.bloodTest : parseFloat(String(patient.bloodTest || 0));
+    const otherFees = typeof patient.otherFees === 'number' ? patient.otherFees : parseFloat(String(patient.otherFees || 0));
+    const testRelatedAmount = bloodTest + otherFees;
+    return sum + (isNaN(testRelatedAmount) ? 0 : testRelatedAmount);
   }, 0);
 
   // Debug logging
@@ -322,16 +388,26 @@ const TestReportAmountPage: React.FC = () => {
     isLoading,
     patientsArrayLength: patients.length,
     filteredReportsLength: filteredReports.length,
-    totalAmount,
-    filteredReports: filteredReports.map(r => ({ id: r.id, amount: r.amount, type: typeof r.amount }))
+    totalAmount: `₹${totalAmount.toFixed(2)}`,
+    calculationMethod: 'Patient bloodTest + otherFees',
+    patientBreakdown: filteredPatients.map(p => {
+      const bloodTest = typeof p.bloodTest === 'number' ? p.bloodTest : parseFloat(String(p.bloodTest || 0));
+      const otherFees = typeof p.otherFees === 'number' ? p.otherFees : parseFloat(String(p.otherFees || 0));
+      return { 
+        name: p.name, 
+        bloodTest: bloodTest, 
+        otherFees: otherFees, 
+        testTotal: (bloodTest + otherFees).toFixed(2)
+      };
+    })
   });
 
   return (
     <div className="crm-page-bg">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
         <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="crm-header-icon">
                 <TestTube className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
@@ -349,17 +425,18 @@ const TestReportAmountPage: React.FC = () => {
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 {months[selectedMonth - 1]} {selectedYear}
               </Button>
-              <Button 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
-                  console.log('🔄 Manual refresh triggered');
-                  loadPatients();
-                  loadTestReports();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
                 disabled={isLoading}
-                className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {/* <span className="hidden sm:inline">Refresh</span> */}
               </Button>
               {/* <Button 
                 onClick={async () => {
@@ -627,7 +704,7 @@ const TestReportAmountPage: React.FC = () => {
                                 className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Add Test Report"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Edit className="h-3 w-3" />
                                 <span className="sr-only">Add Report</span>
                               </Button>
                             </div>
@@ -845,11 +922,26 @@ const TestReportAmountPage: React.FC = () => {
                       <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
                         ₹{(() => {
                           const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
-                          const total = patientReports.reduce((sum, report) => {
+                          const testReportTotal = patientReports.reduce((sum, report) => {
                             const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
                             return sum + (isNaN(amount) ? 0 : amount);
                           }, 0);
-                          return total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          
+                          // Check if current selected month/year matches patient's joining month/year
+                          let otherFeesTotal = 0;
+                          if (selectedPatient.admissionDate) {
+                            const admissionDate = new Date(selectedPatient.admissionDate);
+                            const admissionMonth = admissionDate.getMonth() + 1; // getMonth() returns 0-11
+                            const admissionYear = admissionDate.getFullYear();
+                            
+                            // Only add Other Fees Amount if current month/year matches admission month/year
+                            if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                              otherFeesTotal = (selectedPatient.bloodTest || 0) + (selectedPatient.pickupCharge || 0);
+                            }
+                          }
+                          
+                          const grandTotal = testReportTotal + otherFeesTotal;
+                          return grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         })()}
                       </span>
                     </div>
@@ -922,25 +1014,26 @@ const TestReportAmountPage: React.FC = () => {
                       
                     </div>
                     
-                    {/* Second Row - Total Amount, Phone, Age */}
+                    {/* Second Row - Joining Date, Phone, Age */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                       
-                      {/* Total Amount */}
+                      {/* Joining Date */}
                       <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-orange-600 font-bold text-xs sm:text-sm">₹</span>
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">TOTAL AMOUNT</div>
-                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{(() => {
-                              const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
-                              const total = patientReports.reduce((sum, report) => {
-                                const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
-                                return sum + (isNaN(amount) ? 0 : amount);
-                              }, 0);
-                              return total.toLocaleString('en-IN');
-                            })()}</p>
+                            <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">JOINING DATE</div>
+                            <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                              {selectedPatient.admissionDate ? 
+                                new Date(selectedPatient.admissionDate).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: '2-digit', 
+                                  year: 'numeric'
+                                }) : 'N/A'
+                              }
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -971,6 +1064,126 @@ const TestReportAmountPage: React.FC = () => {
                         </div>
                       </div>
                       
+                    </div>
+                  </div>
+
+                  {/* Other Fees Amount Container */}
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-amber-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 md:mb-6">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                          <IndianRupee className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
+                        </div>
+                        Other Fees Amount
+                        <Badge variant="outline" className="text-xs bg-white border-amber-300 text-amber-700">
+                          From Patient List
+                        </Badge>
+                      </h3>
+                      
+                      {/* Month/Year Display - matches Test Report Records style */}
+                      <div className="flex items-center gap-3 mt-4 sm:mt-0">
+                        <div className="px-3 sm:px-4 py-2 border border-amber-200 rounded-lg text-sm bg-white/80 backdrop-blur-sm">
+                          {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {/* Blood Test Fee */}
+                      <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center">
+                              <TestTube className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                            </div>
+                            <div>
+                              <p className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Blood Test</p>
+                              <p className="text-xs text-gray-500">Laboratory charges</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-base sm:text-lg font-bold text-gray-900">
+                              ₹{(() => {
+                                // Only show blood test fee for joining month
+                                if (selectedPatient.admissionDate) {
+                                  const admissionDate = new Date(selectedPatient.admissionDate);
+                                  const admissionMonth = admissionDate.getMonth() + 1;
+                                  const admissionYear = admissionDate.getFullYear();
+                                  
+                                  if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                                    return selectedPatient.bloodTest || 0;
+                                  }
+                                }
+                                return 0;
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Pickup Charge Fee */}
+                      <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center">
+                              <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Pickup Charge</p>
+                              <p className="text-xs text-gray-500">Transportation fee</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-base sm:text-lg font-bold text-gray-900">
+                              ₹{(() => {
+                                // Only show pickup charge for joining month
+                                if (selectedPatient.admissionDate) {
+                                  const admissionDate = new Date(selectedPatient.admissionDate);
+                                  const admissionMonth = admissionDate.getMonth() + 1;
+                                  const admissionYear = admissionDate.getFullYear();
+                                  
+                                  if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                                    return selectedPatient.pickupCharge || 0;
+                                  }
+                                }
+                                return 0;
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Total Summary - Only for Selected Month */}
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-amber-200">
+                      <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 text-sm sm:text-base font-bold">Σ</span>
+                            </div>
+                            <span className="text-sm sm:text-base font-medium text-blue-600">
+                              Total for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <p className="text-lg sm:text-xl font-bold text-blue-600">
+                            ₹{(() => {
+                              // Only show fees for the joining month
+                              if (selectedPatient.admissionDate) {
+                                const admissionDate = new Date(selectedPatient.admissionDate);
+                                const admissionMonth = admissionDate.getMonth() + 1;
+                                const admissionYear = admissionDate.getFullYear();
+                                
+                                // Only show fees if current month/year matches admission month/year
+                                if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                                  return ((selectedPatient.bloodTest || 0) + (selectedPatient.pickupCharge || 0)).toLocaleString();
+                                }
+                              }
+                              return "0";
+                            })()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1023,15 +1236,58 @@ const TestReportAmountPage: React.FC = () => {
                     </div>
                     
                     {filteredReports.filter(r => r.patient_id === selectedPatient.id).length === 0 ? (
-                      <div className="text-center py-8 sm:py-12">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <TestTube className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
+                      <>
+                        <div className="text-center py-8 sm:py-12">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <TestTube className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 text-lg font-medium mb-2">No test report records found</p>
+                          <p className="text-gray-400 text-sm">
+                            for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </p>
                         </div>
-                        <p className="text-gray-500 text-lg font-medium mb-2">No test report records found</p>
-                        <p className="text-gray-400 text-sm">
-                          for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </p>
-                      </div>
+                        
+                        {/* Total Section - Show even when no test reports, to display Other Fees Amount */}
+                        <div className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 backdrop-blur-sm px-4 sm:px-6 py-4 sm:py-6 border-t border-blue-100 rounded-b-lg mt-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Calendar className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <span className="text-base sm:text-lg font-semibold text-gray-900">
+                                Total for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}:
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 font-bold">₹</span>
+                              </div>
+                              <span className="text-xl sm:text-2xl font-bold text-green-600 bg-green-50/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-green-200">
+                                ₹{(() => {
+                                  // No test reports, so testReportTotal = 0
+                                  const testReportTotal = 0;
+                                  
+                                  // Check if current selected month/year matches patient's joining month/year
+                                  let otherFeesTotal = 0;
+                                  if (selectedPatient.admissionDate) {
+                                    const admissionDate = new Date(selectedPatient.admissionDate);
+                                    const admissionMonth = admissionDate.getMonth() + 1; // getMonth() returns 0-11
+                                    const admissionYear = admissionDate.getFullYear();
+                                    
+                                    // Only add Other Fees Amount if current month/year matches admission month/year
+                                    if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                                      otherFeesTotal = (selectedPatient.bloodTest || 0) + (selectedPatient.pickupCharge || 0);
+                                    }
+                                  }
+                                  
+                                  const grandTotal = testReportTotal + otherFeesTotal;
+                                  return grandTotal.toLocaleString('en-IN');
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     ) : (
                       <>
                         {/* Table with Glass Morphism Header */}
@@ -1039,11 +1295,11 @@ const TestReportAmountPage: React.FC = () => {
                           <table className="w-full border-collapse bg-white/60 backdrop-blur-sm">
                             <thead>
                               <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
-                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">S No</th>
-                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Patient ID</th>
-                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Date</th>
-                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Test Type</th>
-                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">Amount</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">S No</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Patient ID</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Date</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Test Type</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Amount</th>
                                 <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold">Actions</th>
                               </tr>
                             </thead>
@@ -1052,19 +1308,19 @@ const TestReportAmountPage: React.FC = () => {
                                 .filter(report => report.patient_id === selectedPatient.id)
                                 .map((report, index) => (
                                   <tr key={report.id} className="hover:bg-white/80 transition-colors">
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 font-medium">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 font-medium text-center">
                                       {index + 1}
                                     </td>
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-blue-600">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-blue-600 text-center">
                                       {formatPatientId(report.patient_id)}
                                     </td>
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 text-center">
                                       {new Date(report.test_date).toLocaleDateString('en-GB')}
                                     </td>
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 text-center">
                                       {report.test_type || 'No test type'}
                                     </td>
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-green-600">
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-green-600 text-center">
                                       ₹{(() => {
                                         const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
                                         return (isNaN(amount) ? 0 : amount).toLocaleString('en-IN');
@@ -1074,10 +1330,11 @@ const TestReportAmountPage: React.FC = () => {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="h-8 w-8 p-0 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                        className="action-btn-lead action-btn-delete h-8 w-8 p-0"
                                         title="Delete Test Report"
+                                        onClick={() => handleDeleteTestReport(report)}
                                       >
-                                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                       </Button>
                                     </td>
                                   </tr>
@@ -1104,11 +1361,26 @@ const TestReportAmountPage: React.FC = () => {
                               <span className="text-xl sm:text-2xl font-bold text-green-600 bg-green-50/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-green-200">
                                 ₹{(() => {
                                   const patientReports = filteredReports.filter(report => report.patient_id === selectedPatient.id);
-                                  const total = patientReports.reduce((sum, report) => {
+                                  const testReportTotal = patientReports.reduce((sum, report) => {
                                     const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
                                     return sum + (isNaN(amount) ? 0 : amount);
                                   }, 0);
-                                  return total.toLocaleString('en-IN');
+                                  
+                                  // Check if current selected month/year matches patient's joining month/year
+                                  let otherFeesTotal = 0;
+                                  if (selectedPatient.admissionDate) {
+                                    const admissionDate = new Date(selectedPatient.admissionDate);
+                                    const admissionMonth = admissionDate.getMonth() + 1; // getMonth() returns 0-11
+                                    const admissionYear = admissionDate.getFullYear();
+                                    
+                                    // Only add Other Fees Amount if current month/year matches admission month/year
+                                    if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+                                      otherFeesTotal = (selectedPatient.bloodTest || 0) + (selectedPatient.pickupCharge || 0);
+                                    }
+                                  }
+                                  
+                                  const grandTotal = testReportTotal + otherFeesTotal;
+                                  return grandTotal.toLocaleString('en-IN');
                                 })()}
                               </span>
                             </div>
@@ -1123,6 +1395,49 @@ const TestReportAmountPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog - PatientList Style */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Test Report</DialogTitle>
+            <DialogDescription className="text-center text-sm sm:text-base">
+              Are you sure you want to delete this test report?
+              <br />
+              <br />
+              {deleteReport && (
+                <div className="bg-gray-50 p-3 rounded-lg text-left space-y-1">
+                  <p><strong>Patient ID:</strong> PAT{String(deleteReport.patient_id).padStart(3, '0')}</p>
+                  <p><strong>Test Type:</strong> {deleteReport.test_type}</p>
+                  <p><strong>Date:</strong> {new Date(deleteReport.test_date).toLocaleDateString('en-GB')}</p>
+                  <p><strong>Amount:</strong> ₹{(() => {
+                    const amount = typeof deleteReport.amount === 'string' ? parseFloat(deleteReport.amount) : deleteReport.amount;
+                    return (isNaN(amount) ? 0 : amount).toLocaleString('en-IN');
+                  })()}</p>
+                </div>
+              )}
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)} 
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete} 
+              className="w-full sm:w-auto"
+            >
+              Delete Test Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

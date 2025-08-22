@@ -40,24 +40,37 @@ const convertDateFormat = (dateStr) => {
 // Configure multer for patient file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    // Log what we receive in req.body during destination phase
+    console.log('📁 [PATIENTS.JS] Destination phase - req.body:', req.body);
+    
     const { patientId = 'temp' } = req.body;
+    console.log('📁 [PATIENTS.JS] Extracted patientId:', patientId);
+    
     // Create patient-specific directory: server/Photos/patient Admission/{patientId}
     const uploadPath = path.join(__dirname, '../Photos/patient Admission', patientId.toString());
+    console.log('📁 [PATIENTS.JS] Creating directory:', uploadPath);
     
     // Create directory if it doesn't exist
     fsPromises.mkdir(uploadPath, { recursive: true }).then(() => {
+      console.log('✅ [PATIENTS.JS] Directory created successfully:', uploadPath);
       cb(null, uploadPath);
     }).catch(err => {
-      console.error('Error creating directory:', err);
+      console.error('❌ [PATIENTS.JS] Error creating directory:', err);
       cb(err);
     });
   },
   filename: function (req, file, cb) {
-    const { fieldName = 'general' } = req.body;
+    // Use a temporary filename first, we'll rename it later
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
-    const filename = `${fieldName}_${timestamp}${ext}`;
-    cb(null, filename);
+    const tempFilename = `temp_${timestamp}${ext}`;
+    
+    console.log('📁 Generating temporary filename:', {
+      originalName: file.originalname,
+      tempFilename: tempFilename
+    });
+    
+    cb(null, tempFilename);
   }
 });
 
@@ -79,13 +92,17 @@ const upload = multer({
 // Upload endpoint for patient files
 router.post('/upload-patient-file', upload.single('file'), async (req, res) => {
   try {
-    console.log('📤 Upload request received:', {
+    console.log('📤 [PATIENTS.JS] Upload request received:', {
       patientId: req.body.patientId,
       fieldName: req.body.fieldName,
+      'typeof patientId': typeof req.body.patientId,
+      'patientId length': req.body.patientId ? req.body.patientId.length : 'null',
       file: req.file ? {
         originalname: req.file.originalname,
         size: req.file.size,
-        mimetype: req.file.mimetype
+        mimetype: req.file.mimetype,
+        path: req.file.path,
+        filename: req.file.filename
       } : 'No file'
     });
 
@@ -96,20 +113,80 @@ router.post('/upload-patient-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Return the relative path from server root
-    const relativePath = path.join('Photos', 'patient Admission', req.body.patientId || 'temp', req.file.filename);
+    const { patientId, fieldName } = req.body;
     
-    console.log('✅ File uploaded successfully:', relativePath);
+    if (!patientId || !fieldName) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing patientId or fieldName' 
+      });
+    }
+
+    // Generate new filename with fieldName prefix
+    const timestamp = Date.now();
+    const extension = path.extname(req.file.originalname);
+    const newFilename = `${fieldName}_${timestamp}${extension}`;
+    
+    // Create patient-specific directory
+    const serverDir = path.dirname(__filename);
+    const patientDir = path.join(serverDir, '..', 'Photos', 'patient Admission', patientId);
+    
+    console.log('📁 [PATIENTS.JS] Creating patient directory:', patientDir);
+    
+    // Ensure patient directory exists
+    if (!fs.existsSync(patientDir)) {
+      fs.mkdirSync(patientDir, { recursive: true });
+      console.log('✅ [PATIENTS.JS] Patient directory created:', patientDir);
+    }
+    
+    // Move file from temp to patient folder
+    const tempFilePath = req.file.path; // Current temp location
+    const finalFilePath = path.join(patientDir, newFilename);
+    
+    console.log('🚚 [PATIENTS.JS] Moving file:', {
+      from: tempFilePath,
+      to: finalFilePath,
+      patientId,
+      fieldName
+    });
+
+    // Move the file from temp to patient folder
+    fs.renameSync(tempFilePath, finalFilePath);
+    console.log('✅ [PATIENTS.JS] File moved successfully to patient folder');
+
+    // Verify file exists in patient folder
+    console.log('🔍 [PATIENTS.JS] Verifying file in patient folder:', finalFilePath);
+    const fileExists = fs.existsSync(finalFilePath);
+    
+    if (fileExists) {
+      const stats = fs.statSync(finalFilePath);
+      console.log('✅ [PATIENTS.JS] File verified in patient folder:', {
+        path: finalFilePath,
+        size: stats.size,
+        exists: true
+      });
+    } else {
+      console.log('❌ [PATIENTS.JS] File not found in patient folder');
+      return res.status(500).json({
+        success: false,
+        error: 'File upload failed - file not found after move'
+      });
+    }
+
+    // Return the relative path for storage in database
+    const relativePath = path.join('Photos', 'patient Admission', patientId, newFilename).replace(/\\/g, '/');
+    
+    console.log('✅ [PATIENTS.JS] File uploaded successfully to patient folder:', relativePath);
     
     res.json({
       success: true,
       message: 'File uploaded successfully',
       filePath: relativePath,
-      filename: req.file.filename,
+      filename: newFilename,
       originalName: req.file.originalname,
       size: req.file.size,
-      fieldName: req.body.fieldName || 'general',
-      patientId: req.body.patientId || 'temp'
+      fieldName: fieldName,
+      patientId: patientId
     });
     
   } catch (error) {
@@ -371,22 +448,7 @@ router.put('/patient-attendance/:id/status', async (req, res) => {
 });
 
 
-router.post('/upload-patient-file', upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-    res.json({ 
-      message: 'File uploaded successfully', 
-      filename: req.file.filename,
-      filePath: req.file.path,
-      url: `/uploads/patients/${req.file.filename}`
-    });
-  } catch (err) {
-    console.error('Error uploading file:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// Removed duplicate upload-patient-file route - keeping the main one at line 86
 
 
 
@@ -587,6 +649,10 @@ router.post('/patients', async (req, res) => {
   }
   
   try {
+    // FIRST: Check if patients table is empty and reset AUTO_INCREMENT if needed
+    console.log('🔄 Checking AUTO_INCREMENT status before creating patient...');
+    await checkAndResetAutoIncrement();
+    
     // First, get the next ID to generate the patient_id
     const [maxIdResult] = await db.query('SELECT MAX(id) as maxId FROM patients');
     const nextId = (maxIdResult[0].maxId || 0) + 1;
@@ -1855,49 +1921,7 @@ router.get('/health', (req, res) => {
 });
 
 
-// File upload endpoint for patient documents
-router.post('/upload-patient-file', (req, res) => {
-  console.log('📤 File upload request received');
-  
-  // Use multer with error handling
-  upload.single('file')(req, res, function (err) {
-    if (err) {
-      console.error('❌ Multer error:', err.message);
-      return res.status(400).json({ 
-        error: 'File upload error', 
-        details: err.message 
-      });
-    }
-    
-    console.log('📄 Request body:', req.body);
-    console.log('📎 Request file:', req.file ? { 
-      fieldname: req.file.fieldname,
-      originalname: req.file.originalname, 
-      mimetype: req.file.mimetype,
-      size: req.file.size 
-    } : 'No file');
-    
-    try {
-      if (!req.file) {
-        console.log('❌ No file in request');
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
-
-      const filePath = `/uploads/patients/${req.file.filename}`;
-      console.log('✅ File uploaded successfully:', filePath);
-      
-      res.json({
-        success: true,
-        filePath: filePath,
-        filename: req.file.filename,
-        originalName: req.file.originalname
-      });
-    } catch (error) {
-      console.error('❌ Error processing upload:', error);
-      res.status(500).json({ error: 'File upload processing failed' });
-    }
-  });
-});
+// Removed duplicate upload-patient-file route - keeping the main one at line 86
 
 // Patient History File Upload endpoint
 router.post('/upload-medical-history-file', (req, res) => {
@@ -2058,6 +2082,93 @@ router.post('/upload-patient-history-file', (req, res) => {
       res.status(500).json({ error: 'Patient history file upload processing failed' });
     }
   });
+});
+
+// ===================================
+// AUTO_INCREMENT RESET FUNCTION
+// ===================================
+
+/**
+ * Reset the AUTO_INCREMENT counter for patients table to 1
+ * This should be called when all patients are deleted to ensure 
+ * new patients start from ID 1 instead of continuing from previous highest ID
+ */
+async function resetPatientsAutoIncrement() {
+  try {
+    console.log('🔄 Resetting patients table AUTO_INCREMENT to 1...');
+    
+    // Reset AUTO_INCREMENT to 1
+    await db.query('ALTER TABLE patients AUTO_INCREMENT = 1');
+    
+    console.log('✅ Patients table AUTO_INCREMENT reset to 1 successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error resetting patients AUTO_INCREMENT:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if patients table is empty and reset AUTO_INCREMENT if needed
+ */
+async function checkAndResetAutoIncrement() {
+  try {
+    // Check if table is empty
+    const [rows] = await db.query('SELECT COUNT(*) as count FROM patients');
+    const patientCount = rows[0].count;
+    
+    console.log(`📊 Current patient count: ${patientCount}`);
+    
+    if (patientCount === 0) {
+      console.log('📋 Patients table is empty, resetting AUTO_INCREMENT...');
+      await resetPatientsAutoIncrement();
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('❌ Error checking patient count:', error);
+    throw error;
+  }
+}
+
+// ===================================
+// RESET ENDPOINT (for manual reset)
+// ===================================
+
+/**
+ * Manual endpoint to reset AUTO_INCREMENT 
+ * GET /api/patients/reset-auto-increment
+ */
+router.get('/reset-auto-increment', async (req, res) => {
+  try {
+    console.log('🔄 Manual AUTO_INCREMENT reset requested');
+    
+    const wasReset = await checkAndResetAutoIncrement();
+    
+    if (wasReset) {
+      res.json({
+        success: true,
+        message: 'AUTO_INCREMENT reset to 1 successfully',
+        resetPerformed: true
+      });
+    } else {
+      const [rows] = await db.query('SELECT COUNT(*) as count FROM patients');
+      res.json({
+        success: true,
+        message: `AUTO_INCREMENT not reset - table contains ${rows[0].count} patients`,
+        resetPerformed: false,
+        patientCount: rows[0].count
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error in manual AUTO_INCREMENT reset:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset AUTO_INCREMENT',
+      details: error.message
+    });
+  }
 });
 
 export default router;

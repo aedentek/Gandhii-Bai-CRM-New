@@ -26,6 +26,7 @@ import staffAdvance from './api/staff-advance.js';
 import doctorSalary from './api/doctor-salary.js';
 import staffSalary from './api/staff-salary.js';
 // import uploads from './routes/uploads.js';
+import uploads from './routes/uploads.js';
 import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +79,8 @@ app.use('/api', medicine);
 app.use('/api', leads); 
 app.use('/api', users);
 app.use('/api', grocery);
+app.use('/api', uploads); // MOVED BEFORE PATIENTS TO TAKE PRIORITY
+console.log('📁 Uploads middleware registered at /api');
 app.use('/api', patients);
 app.use('/api', staff);
 app.use('/api', management);
@@ -97,6 +100,7 @@ console.log('🧪 Test Reports middleware registered at /api');
 console.log('👨‍⚕️ Staff Advance middleware registered at /api');
 console.log('💰 Doctor Salary middleware registered at /api');
 console.log('💼 Staff Salary middleware registered at /api');
+// Fallback route to serve index.html for SPA routing (must be last)
 // app.use('/api', uploads);
 
 // Fallback to index.html for SPA (must be after all routes)

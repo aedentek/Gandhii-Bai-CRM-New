@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Photo URL Fix Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background: #e8f5e8; border-color: #4caf50; }
+        .error { background: #ffeaea; border-color: #f44336; }
+        img { max-width: 200px; height: auto; margin: 10px 0; }
+        .path { font-family: monospace; background: #f5f5f5; padding: 5px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Photo URL Fix Test</h1>
+    <p>Testing if duplicated Photos/Photos/ paths are now handled correctly.</p>
+
+    <div id="test-results"></div>
+
+    <script>
+        // Simulate the fixed getPatientPhotoUrl function
+        function getPatientPhotoUrl(photoPath) {
+            console.log('🔍 Processing photo path:', photoPath);
+            
+            if (!photoPath || photoPath.trim() === '' || photoPath === 'null') {
+                return '';
+            }
+            
+            if (photoPath.startsWith('data:') || photoPath.startsWith('http')) {
+                return photoPath;
+            }
+            
+            // Clean the path
+            let cleanPath = photoPath.replace(/\\/g, '/');
+            cleanPath = cleanPath.replace(/\/+/g, '/');
+            
+            // Fix duplicated Photos/ prefix issue
+            if (cleanPath.includes('Photos/Photos/')) {
+                console.log('⚠️ Detected duplicated Photos/ prefix in path:', cleanPath);
+                cleanPath = cleanPath.replace('Photos/Photos/', 'Photos/');
+                console.log('✅ Fixed duplicated Photos/ prefix to:', cleanPath);
+            }
+            
+            // Ensure path starts with Photos/
+            if (!cleanPath.startsWith('Photos/') && !cleanPath.startsWith('/Photos/')) {
+                if (cleanPath.startsWith('/')) {
+                    cleanPath = `Photos${cleanPath}`;
+                } else {
+                    cleanPath = `Photos/${cleanPath}`;
+                }
+            }
+            
+            // Construct full URL
+            const baseUrl = 'http://localhost:4000';
+            let fullUrl;
+            
+            if (cleanPath.startsWith('Photos/')) {
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(7);
+                const cacheBuster = `?t=${timestamp}&r=${random}`;
+                fullUrl = `${baseUrl}/${cleanPath.replace(/\s/g, '%20')}${cacheBuster}`;
+            }
+            
+            console.log('🔗 Final URL:', fullUrl);
+            return fullUrl;
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                name: 'Duplicated Photos/ prefix (the issue)',
+                input: 'Photos/Photos/patient Admission/P0001/photo_1755889951397.webp',
+                expectedResult: 'Should fix duplication and create working URL'
+            },
+            {
+                name: 'Correct Photos/ prefix', 
+                input: 'Photos/patient Admission/P0001/photo_1755889951397.webp',
+                expectedResult: 'Should work normally'
+            },
+            {
+                name: 'No Photos/ prefix',
+                input: 'patient Admission/P0001/photo_1755889951397.webp', 
+                expectedResult: 'Should add Photos/ prefix'
+            }
+        ];
+
+        function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            let html = '';
+
+            testCases.forEach((test, index) => {
+                console.log(`\n=== Test ${index + 1}: ${test.name} ===`);
+                
+                const result = getPatientPhotoUrl(test.input);
+                const isFixed = test.input.includes('Photos/Photos/') ? !result.includes('Photos/Photos/') : true;
+                const hasCorrectBase = result.includes('http://localhost:4000/Photos/patient%20Admission/');
+                const success = isFixed && hasCorrectBase;
+
+                html += `
+                    <div class="test-case ${success ? 'success' : 'error'}">
+                        <h3>${success ? '✅' : '❌'} Test ${index + 1}: ${test.name}</h3>
+                        <div class="path"><strong>Input:</strong> ${test.input}</div>
+                        <div class="path"><strong>Output:</strong> ${result}</div>
+                        <div><strong>Expected:</strong> ${test.expectedResult}</div>
+                        <div><strong>Status:</strong> ${success ? 'PASSED' : 'FAILED'}</div>
+                        ${success ? '<div style="color: green;">✅ Photo URL should now work correctly!</div>' : '<div style="color: red;">❌ URL still has issues</div>'}
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Run tests when page loads
+        window.onload = runTests;
+    </script>
+</body>
+</html>

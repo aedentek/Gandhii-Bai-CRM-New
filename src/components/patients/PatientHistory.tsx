@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import { getFileUrl, uploadMedicalHistoryFile } from '@/services/simpleFileUpload';
+import { PatientPhoto } from '@/utils/photoUtils';
 
 interface DocumentWithData {
   name: string;
@@ -168,7 +169,8 @@ const PatientHistory: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     doctor: '',
     recordType: '',
-    description: ''
+    description: '',
+    audioFiles: [] as File[]
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -1184,7 +1186,8 @@ const PatientHistory: React.FC = () => {
         date: new Date().toISOString().split('T')[0],
         doctor: '',
         recordType: '',
-        description: ''
+        description: '',
+        audioFiles: []
       });
       setSelectedFiles([]);
       setAudioRecording(null);
@@ -1570,30 +1573,7 @@ const PatientHistory: React.FC = () => {
                 className="pl-10"
               />
             </div>
-            
-
-
-            {/* Month & Year Selector */}
-            <Button
-              type="button"
-              variant="outline"
-              className="crm-month-year-btn"
-              onClick={() => setShowMonthYearDialog(true)}
-            >
-              <Calendar className="crm-month-year-btn-icon" />
-              <span className="crm-month-year-btn-text">
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth]} ${filterYear}`
-                  : `${months[selectedMonth]} ${selectedYear}`
-                }
-              </span>
-              <span className="crm-month-year-btn-text-mobile">
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                  : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                }
-              </span>
-            </Button>
+          
           </div>
         </div>
 
@@ -1654,63 +1634,14 @@ const PatientHistory: React.FC = () => {
                       <div className="flex justify-center items-center">
                         {(() => {
                           const patient = patients.find(p => String(p.id) === String(record.patientId));
-                          const formattedPatientId = formatPatientId(record.patientId);
                           
-                          // Construct proper photo URL
-                          let imageUrl = '';
-                          
-                          if (patient?.photo) {
-                            // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                            if (patient.photo.startsWith('http')) {
-                              imageUrl = patient.photo;
-                            } else {
-                              // Photos are stored in: server/Photos/patient Admission/{patientId}/
-                              // Database stores: Photos/patient Admission/{patientId}/{filename}
-                              // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
-                              if (patient.photo.includes('Photos/patient Admission/')) {
-                                // Photo path is already in correct format from database
-                                imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
-                              } else {
-                                // Assume it's just filename and build full path using formatted Patient ID
-                                imageUrl = `/Photos/patient%20Admission/${formattedPatientId}/${patient.photo}`;
-                              }
-                            }
-                          } else if (patient?.photoUrl) {
-                            if (patient.photoUrl.startsWith('http')) {
-                              imageUrl = patient.photoUrl;
-                            } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
-                              imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
-                            } else {
-                              imageUrl = `/Photos/patient%20Admission/${formattedPatientId}/${patient.photoUrl}`;
-                            }
-                          }
-
-                          return imageUrl ? (
-                            <>
-                              <img
-                                src={imageUrl}
-                                alt={`${record.patientName}'s photo`}
-                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                                onError={(e) => {
-                                  console.log('❌ Image failed for:', record.patientName);
-                                  console.log('   Failed URL:', imageUrl);
-                                  
-                                  // Show fallback avatar
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const avatarDiv = target.nextElementSibling as HTMLElement;
-                                  if (avatarDiv) avatarDiv.style.display = 'flex';
-                                }}
-                                onLoad={() => {
-                                  console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
-                                }}
-                              />
-                              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border border-gray-200" style={{display: 'none'}}>
-                                <span className="text-sm font-semibold text-white">
-                                  {(record.patientName || 'P').charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            </>
+                          return patient?.photo ? (
+                            <PatientPhoto 
+                              key={`${record.patientId}-${patient.photo}`}
+                              photoPath={patient.photo} 
+                              alt={record.patientName}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                            />
                           ) : (
                             <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border border-gray-200">
                               <span className="text-sm font-semibold text-white">
@@ -2098,99 +2029,44 @@ const PatientHistory: React.FC = () => {
               />
             </div>
 
-            {/* Audio Recording Section */}
+            {/* Audio Upload Section */}
             <div className="space-y-2">
-              <Label>Audio Recording</Label>
-              <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                <div className="flex items-center space-x-2">
-                  {isRecording ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={stopRecording}
-                    >
-                      <Square className="w-4 h-4 mr-2" />
-                      Stop ({formatDuration(recordingTime)})
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={startRecording}
-                    >
-                      <Mic className="w-4 h-4 mr-2" />
-                      Record
-                    </Button>
-                  )}
-                </div>
-                
-                {audioRecording && (
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => playAudio(audioRecording.url, 'preview')}
-                    >
-                      {playingAudio === 'preview' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        // Cycle through speed options: 0.5x, 1x, 1.25x, 1.5x, 2x
-                        const speeds = [0.5, 1, 1.25, 1.5, 2];
-                        const currentIndex = speeds.indexOf(playbackSpeed);
-                        const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-                        setPlaybackSpeed(nextSpeed);
-                        // Update current audio if playing
-                        if (audioRef.current && playingAudio === 'preview') {
-                          audioRef.current.playbackRate = nextSpeed;
-                        }
-                      }}
-                      title={`Playback Speed: ${playbackSpeed}x`}
-                    >
-                      <span className="text-xs font-mono">{playbackSpeed}x</span>
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Duration: {formatDuration(audioRecording.duration)}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setAudioRecording(null)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              
-              {/* Audio File Upload */}
-              <div className="mt-2">
-                <Label>Or Upload Audio Files (Multiple files supported, up to 500MB each)</Label>
+              <Label className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-blue-600" />
+                Upload Audio Files <span className="text-muted-foreground">(Optional)</span>
+              </Label>
+              <div className="border-2 border-dashed border-blue-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                 <Input
                   type="file"
                   accept="audio/*"
                   multiple
                   onChange={(e) => handleAudioFileUpload(e.target.files)}
+                  className="mb-2"
                 />
+                <p className="text-sm text-muted-foreground mb-2">
+                  Select multiple audio files (MP3, WAV, etc.) - up to 500MB each
+                </p>
                 {formData.audioFiles.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    <Label className="text-sm font-medium">Uploaded Audio Files ({formData.audioFiles.length}):</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-blue-700">Uploaded Audio Files ({formData.audioFiles.length}):</Label>
                     {formData.audioFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded border">
                         <div className="flex items-center space-x-2">
-                          <File className="w-4 h-4" />
-                          <span className="text-sm">{file.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                          <Volume2 className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">{file.name}</span>
+                          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB
                           </span>
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeAudioFile(index)}
+                          onClick={() => {
+                            const updatedFiles = formData.audioFiles.filter((_, i) => i !== index);
+                            setFormData({...formData, audioFiles: updatedFiles});
+                          }}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -2381,19 +2257,34 @@ const PatientHistory: React.FC = () => {
           onClick={() => setViewRecord(null)}
         >
           <div 
-            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header - Glass Morphism Style */}
-            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-shrink-0">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
                 <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                    </div>
-                  </div>
+                  {(() => {
+                    const patient = patients.find(p => String(p.id) === String(viewRecord.patientId));
+                    
+                    return patient?.photo ? (
+                      <PatientPhoto 
+                        key={`${viewRecord.patientId}-${patient.photo}`}
+                        photoPath={patient.photo} 
+                        alt={viewRecord.patientName}
+                        className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm sm:text-base md:text-lg lg:text-xl">
+                            {(viewRecord.patientName || 'P').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
@@ -2418,7 +2309,7 @@ const PatientHistory: React.FC = () => {
             </div>
             
             {/* Main content with scrolling enabled */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style={{scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe'}}>
               {/* Patient Information Cards */}
               <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
                 <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
@@ -2574,47 +2465,52 @@ const PatientHistory: React.FC = () => {
                     />
                   </div>
 
-                  {/* Audio Recording Section */}
+                  {/* Audio Upload Section */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <Mic className="h-4 w-4 text-blue-600" />
-                      Audio Recording
+                      <Volume2 className="h-4 w-4 text-blue-600" />
+                      Upload Audio Files <span className="text-gray-500">(Optional)</span>
                     </Label>
-                    <div className="bg-white/90 backdrop-blur-sm border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center gap-4">
-                        {!isRecording ? (
-                          <Button
-                            type="button"
-                            onClick={startRecording}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                          >
-                            <Mic className="w-4 h-4" />
-                            Record
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            onClick={stopRecording}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                          >
-                            <Square className="w-4 h-4" />
-                            Stop ({formatTime(recordingTime)})
-                          </Button>
-                        )}
-                        
-                        {audioRecording && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Volume2 className="w-4 h-4" />
-                            <span>Audio recorded ({formatTime(audioRecording.duration)})</span>
-                            <audio controls src={audioRecording.url} className="h-8" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {isRecording && (
-                        <div className="mt-2 text-sm text-blue-600 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                          Recording in progress... {formatTime(recordingTime)}
+                    <div className="bg-white/90 backdrop-blur-sm border-2 border-dashed border-blue-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                      <Input
+                        type="file"
+                        accept="audio/*"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setNewRecord({...newRecord, audioFiles: [...newRecord.audioFiles, ...files]});
+                        }}
+                        className="mb-2 bg-white/80 border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                      />
+                      <p className="text-xs text-gray-500 mb-2">
+                        Select multiple audio files (MP3, WAV, etc.) - up to 500MB each
+                      </p>
+                      {newRecord.audioFiles?.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-blue-700">Uploaded Audio Files ({newRecord.audioFiles.length}):</Label>
+                          {newRecord.audioFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded border">
+                              <div className="flex items-center space-x-2">
+                                <Volume2 className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-medium">{file.name}</span>
+                                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                  {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                </span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updatedFiles = newRecord.audioFiles?.filter((_, i) => i !== index) || [];
+                                  setNewRecord({...newRecord, audioFiles: updatedFiles});
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
