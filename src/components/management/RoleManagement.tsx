@@ -34,7 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Shield, Users, Settings, UserCheck, UserCog, Plus, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Lock, TrendingUp, Clock, X, Package, Tag, DollarSign, BarChart3, History } from 'lucide-react';
+import { Search, Shield, Users, Settings, UserCheck, UserCog, Plus, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Lock, TrendingUp, Clock, X, Package, Tag, DollarSign, BarChart3, History, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Helper to format any date string as DD/MM/YYYY
@@ -133,8 +133,10 @@ const RoleManagement: React.FC = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [viewRole, setViewRole] = useState<Role | null>(null);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -199,6 +201,12 @@ const RoleManagement: React.FC = () => {
       status: role.status || 'active',
     });
     setEditModalOpen(true);
+  };
+
+  // Delete role functions
+  const handleDeleteClick = (role: Role) => {
+    setRoleToDelete(role);
+    setShowDeleteDialog(true);
   };
 
   const handleAddRole = async () => {
@@ -294,22 +302,25 @@ const RoleManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteRole = async (roleId: string, roleName: string) => {
-    if (!window.confirm(`Are you sure you want to delete the role "${roleName}"?`)) return;
-    
+  const handleDeleteRole = async () => {
+    if (!roleToDelete) return;
+
     try {
       setSubmitting(true);
-      const res = await fetch(`http://localhost:4000/api/roles/${roleId}`, { 
-        method: 'DELETE' 
+      const res = await fetch(`http://localhost:4000/api/roles/${roleToDelete.id}`, {
+        method: 'DELETE'
       });
-      
+
       if (!res.ok) throw new Error('Failed to delete role');
-      
+
       toast({
         title: "Success",
         description: "Role deleted successfully"
       });
-      
+
+      // Close dialog and refresh data
+      setShowDeleteDialog(false);
+      setRoleToDelete(null);
       handleRefresh();
     } catch (error) {
       console.error('Error deleting role:', error);
@@ -440,7 +451,6 @@ const RoleManagement: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management</h1>
-                <p className="text-sm text-gray-600 mt-1">Manage user roles and permissions</p>
               </div>
             </div>
           
@@ -678,7 +688,7 @@ const RoleManagement: React.FC = () => {
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => handleDeleteRole(role.id, role.name)}
+                          onClick={() => handleDeleteClick(role)}
                           className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Role"
                         >
@@ -756,17 +766,17 @@ const RoleManagement: React.FC = () => {
 
         {/* Add Role Dialog */}
         <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Plus className="h-5 w-5 text-blue-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     Add New Role
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     Create a new user role with specific permissions
                   </DialogDescription>
                 </div>
@@ -778,13 +788,16 @@ const RoleManagement: React.FC = () => {
                 e.preventDefault();
                 handleAddRole();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="roleName" className="text-sm font-medium text-gray-700">Role Name *</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="roleName" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Role Name <span className="text-red-500">*</span>
+                  </Label>
                   <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
-                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select role name" />
                     </SelectTrigger>
                     <SelectContent>
@@ -796,10 +809,13 @@ const RoleManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="roleStatus" className="text-sm font-medium text-gray-700">Status</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="roleStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData({...formData, status: value})}>
-                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -810,20 +826,26 @@ const RoleManagement: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="roleDescription" className="text-sm font-medium text-gray-700">Description</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="roleDescription" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Description
+                </Label>
                 <Input
                   id="roleDescription"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="Enter role description"
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="editpopup form crm-edit-form-input"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Permissions</Label>
-                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4">
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Permissions
+                </Label>
+                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4 bg-gray-50/50">
                   {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
                     <div key={category} className="space-y-2">
                       <h4 className="font-medium text-gray-800 text-sm border-b pb-1">{category}</h4>
@@ -842,10 +864,10 @@ const RoleManagement: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500">Selected: {formData.permissions.length} permissions</p>
+                <p className="text-xs text-gray-500 mt-2">Selected: {formData.permissions.length} permissions</p>
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -854,14 +876,15 @@ const RoleManagement: React.FC = () => {
                     setFormData({ name: '', description: '', permissions: [], status: 'active' });
                   }}
                   disabled={submitting}
-                  className="w-full sm:w-auto"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto global-btn"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -869,7 +892,10 @@ const RoleManagement: React.FC = () => {
                       Adding...
                     </>
                   ) : (
-                    'Add Role'
+                    <>
+                      <Shield className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Add Role
+                    </>
                   )}
                 </Button>
               </DialogFooter>
@@ -1080,17 +1106,17 @@ const RoleManagement: React.FC = () => {
 
         {/* Edit Role Dialog */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Pencil className="h-5 w-5 text-blue-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Pencil className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     Edit Role
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     Update role information and permissions
                   </DialogDescription>
                 </div>
@@ -1102,13 +1128,16 @@ const RoleManagement: React.FC = () => {
                 e.preventDefault();
                 handleUpdateRole();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editRoleName" className="text-sm font-medium text-gray-700">Role Name *</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editRoleName" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Role Name <span className="text-red-500">*</span>
+                  </Label>
                   <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
-                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select role name" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1120,10 +1149,13 @@ const RoleManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editRoleStatus" className="text-sm font-medium text-gray-700">Status</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editRoleStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData({...formData, status: value})}>
-                    <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1134,20 +1166,26 @@ const RoleManagement: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="editRoleDescription" className="text-sm font-medium text-gray-700">Description</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="editRoleDescription" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Description
+                </Label>
                 <Input
                   id="editRoleDescription"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="Enter role description"
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="editpopup form crm-edit-form-input"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Permissions</Label>
-                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4">
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Permissions
+                </Label>
+                <div className="max-h-80 overflow-y-auto border rounded-lg p-3 space-y-4 bg-gray-50/50">
                   {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
                     <div key={category} className="space-y-2">
                       <h4 className="font-medium text-gray-800 text-sm border-b pb-1">{category}</h4>
@@ -1166,10 +1204,10 @@ const RoleManagement: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500">Selected: {formData.permissions.length} permissions</p>
+                <p className="text-xs text-gray-500 mt-2">Selected: {formData.permissions.length} permissions</p>
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -1179,14 +1217,15 @@ const RoleManagement: React.FC = () => {
                     setFormData({ name: '', description: '', permissions: [], status: 'active' });
                   }}
                   disabled={submitting}
-                  className="w-full sm:w-auto"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto global-btn"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -1194,11 +1233,92 @@ const RoleManagement: React.FC = () => {
                       Updating...
                     </>
                   ) : (
-                    'Update Role'
+                    <>
+                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Update Role
+                    </>
                   )}
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog - Lead Categories Design */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Role
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this role? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            {roleToDelete && (
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{roleToDelete.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{roleToDelete.description || 'No description'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Permissions: {roleToDelete.permissions.length}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Status: {roleToDelete.status || 'active'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setRoleToDelete(null);
+                }}
+                disabled={submitting}
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleDeleteRole}
+                disabled={submitting}
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Delete Role
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

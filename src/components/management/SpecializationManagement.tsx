@@ -374,7 +374,7 @@ const SpecializationManagement: React.FC = () => {
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                              <Button variant="outline" size="sm" className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>

@@ -2439,17 +2439,17 @@ const PatientList: React.FC = () => {
       {/* Edit Patient Dialog */}
       {editPatient && (
         <Dialog open={!!editPatient} onOpenChange={() => setEditPatient(null)}>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+          <DialogContent className="editpopup form dialog-content sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="editpopup form dialog-header relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Edit2 className="h-5 w-5 text-blue-600" />
+                <div className="editpopup form dialog-header icon-container p-2 bg-blue-100 rounded-lg">
+                  <Edit2 className="editpopup form dialog-header icon h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                  <DialogTitle className="editpopup form dialog-title text-xl font-bold text-gray-900">
                     Edit Patient - {editPatient.id}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description text-gray-600 mt-1">
                     Update patient information and medical details
                   </DialogDescription>
                 </div>
@@ -2461,39 +2461,39 @@ const PatientList: React.FC = () => {
                 e.preventDefault();
                 handleSaveEdit();
               }}
-              className="space-y-6 p-3 sm:p-4 md:p-6"
+              className="editpopup form form-container space-y-6 p-3 sm:p-4 md:p-6"
             >
               {/* Personal Information Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+              <div className="editpopup form form-section space-y-4">
+                <h3 className="editpopup form form-section-title text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="editpopup form form-section-icon personal w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Users className="h-4 w-4 text-blue-600" />
                   </div>
                   Personal Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700">Patient Name <span className="text-destructive">*</span></Label>
+                <div className="editpopup form form-grid grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="editpopup form form-field space-y-2">
+                    <Label htmlFor="edit-name" className="editpopup form form-label text-sm font-medium text-gray-700">Patient Name <span className="editpopup form form-required text-destructive">*</span></Label>
                     <Input
                       id="edit-name"
                       value={editPatient.name}
                       onChange={(e) => setEditPatient({...editPatient, name: e.target.value})}
                       placeholder="Enter patient name"
-                      className="mt-1"
+                      className="editpopup form form-input mt-1 border-primary/30 focus:border-primary"
                       required
                     />
                   </div>
                   {/* Age field is now hidden and auto-calculated from date of birth */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-gender" className="text-sm font-medium text-gray-700">Gender <span className="text-destructive">*</span></Label>
+                  <div className="editpopup form form-field space-y-2">
+                    <Label htmlFor="edit-gender" className="editpopup form form-label text-sm font-medium text-gray-700">Gender <span className="editpopup form form-required text-destructive">*</span></Label>
                     <Select
                       value={editPatient.gender}
                       onValueChange={(value) => setEditPatient({...editPatient, gender: value})}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="editpopup form form-select-trigger mt-1 border-primary/30 focus:border-primary">
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="editpopup form form-select-content bg-background border shadow-lg z-50">
                         <SelectItem value="Male">Male</SelectItem>
                         <SelectItem value="Female">Female</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
@@ -2506,10 +2506,10 @@ const PatientList: React.FC = () => {
                       value={editPatient.status}
                       onValueChange={(value) => setEditPatient({...editPatient, status: value})}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 border-primary/30 focus:border-primary">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-50">
                         <SelectItem value="Active">Active</SelectItem>
                         <SelectItem value="Inactive">Inactive</SelectItem>
                         <SelectItem value="Critical">Critical</SelectItem>
@@ -2535,21 +2535,21 @@ const PatientList: React.FC = () => {
                           });
                         }
                       }}
-                      className="mt-1"
+                      className="mt-1 border-primary/30 focus:border-primary"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Contact Information Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+              <div className="editpopup form form-section space-y-4">
+                <h3 className="editpopup form form-section-title text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="editpopup form form-section-icon contact w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
                     <Phone className="h-4 w-4 text-green-600" />
                   </div>
                   Contact Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="editpopup form form-grid grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-phone" className="text-sm font-medium text-gray-700">Phone Number <span className="text-destructive">*</span></Label>
                     <Input
@@ -2592,7 +2592,7 @@ const PatientList: React.FC = () => {
                         }
                       }}
                       placeholder="10-digit emergency contact number"
-                      className="mt-1"
+                      className="mt-1 border-primary/30 focus:border-primary"
                       maxLength={10}
                       required
                     />
@@ -2605,7 +2605,7 @@ const PatientList: React.FC = () => {
                     value={editPatient.address}
                     onChange={(e) => setEditPatient({...editPatient, address: e.target.value})}
                     placeholder="Enter complete address"
-                    className="mt-1"
+                    className="mt-1 border-primary/30 focus:border-primary"
                     rows={3}
                     required
                   />
@@ -2628,7 +2628,7 @@ const PatientList: React.FC = () => {
                       value={editPatient.fatherName || ''}
                       onChange={(e) => setEditPatient({...editPatient, fatherName: e.target.value})}
                       placeholder="Enter father's name"
-                      className="mt-1"
+                      className="mt-1 border-primary/30 focus:border-primary"
                     />
                   </div>
                   <div className="space-y-2">
@@ -2638,7 +2638,7 @@ const PatientList: React.FC = () => {
                       value={editPatient.motherName || ''}
                       onChange={(e) => setEditPatient({...editPatient, motherName: e.target.value})}
                       placeholder="Enter mother's name"
-                      className="mt-1"
+                      className="mt-1 border-primary/30 focus:border-primary"
                     />
                   </div>
                   <div className="space-y-2">
@@ -2647,10 +2647,10 @@ const PatientList: React.FC = () => {
                       value={editPatient.marriageStatus || ''}
                       onValueChange={(value) => setEditPatient({...editPatient, marriageStatus: value})}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 border-primary/30 focus:border-primary">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-50">
                         <SelectItem value="Single">Single</SelectItem>
                         <SelectItem value="Married">Married</SelectItem>
                         <SelectItem value="Divorced">Divorced</SelectItem>
@@ -2664,10 +2664,10 @@ const PatientList: React.FC = () => {
                       value={editPatient.employeeStatus || ''}
                       onValueChange={(value) => setEditPatient({...editPatient, employeeStatus: value})}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 border-primary/30 focus:border-primary">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-50">
                         <SelectItem value="Employee">Employee</SelectItem>
                         <SelectItem value="Non-Employee">Non-Employee</SelectItem>
                         <SelectItem value="Retired">Retired</SelectItem>
@@ -3172,20 +3172,22 @@ const PatientList: React.FC = () => {
            
             </form>
             
-            <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
+                type="button"
                 variant="outline" 
                 onClick={() => setEditPatient(null)} 
-                className="w-full sm:w-auto order-2 sm:order-1 bg-white hover:bg-gray-50 border-gray-300"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
-                <X className="w-4 h-4 mr-2" />
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
+                type="button"
                 onClick={handleSaveEdit} 
-                className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md"
+                className="editpopup form footer-button-save w-full sm:w-auto global-btn"
               >
-                <UserCheck className="w-4 h-4 mr-2" />
+                <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Save Changes
               </Button>
             </DialogFooter>
@@ -3195,28 +3197,69 @@ const PatientList: React.FC = () => {
 
       {/* Delete Confirmation Dialog - Centered */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Patient</DialogTitle>
-            <DialogDescription className="text-center text-sm sm:text-base">
-              Are you sure you want to delete patient <strong>{deletePatient?.name}</strong> (ID: {deletePatient?.id})?
-              <br />
-              <br />
-              <span className="text-destructive font-medium">⚠️ This will also permanently delete:</span>
-              <ul className="text-sm mt-2 text-left">
-                <li>• All patient attendance records</li>
-                <li>• All patient history records</li>
-                <li>• All patient payment records</li>
-              </ul>
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Patient
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this patient? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="w-full sm:w-auto">
+          
+          {deletePatient && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deletePatient.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Contact className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">ID: {deletePatient.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deletePatient.phone || 'N/A'}</span>
+                </div>
+              </div>
+              
+              <div className="mt-3 p-3 bg-red-50 rounded border border-red-200">
+                <div className="text-sm text-red-800">
+                  <p className="font-medium mb-2">⚠️ This will also permanently delete:</p>
+                  <ul className="text-xs space-y-1">
+                    <li>• All patient attendance records</li>
+                    <li>• All patient history records</li>
+                    <li>• All patient payment records</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} className="w-full sm:w-auto">
+            <Button 
+              type="button" 
+              onClick={confirmDelete}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Delete Patient
             </Button>
           </DialogFooter>

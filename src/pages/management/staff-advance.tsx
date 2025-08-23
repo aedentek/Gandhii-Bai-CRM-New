@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { DatabaseService } from '@/services/databaseService';
 import { StaffAdvanceAPI } from '@/services/staffAdvanceAPI';
@@ -95,6 +97,10 @@ const StaffAdvancePage: React.FC = () => {
   const [isStaffAdvanceModalOpen, setIsStaffAdvanceModalOpen] = useState(false);
   const [editAdvanceData, setEditAdvanceData] = useState<StaffAdvance | null>(null);
   const [staffList, setStaffList] = useState<any[]>([]);
+  
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [advanceToDelete, setAdvanceToDelete] = useState<StaffAdvance | null>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -344,15 +350,22 @@ const StaffAdvancePage: React.FC = () => {
     setIsStaffAdvanceModalOpen(true);
   };
 
-  // Handle Delete Advance
-  const handleDeleteAdvance = async (advanceId: number) => {
-    if (!window.confirm('Are you sure you want to delete this advance record?')) {
-      return;
-    }
+  // Handle Delete Advance - Show confirmation dialog
+  const handleDeleteClick = (advance: StaffAdvance) => {
+    setAdvanceToDelete(advance);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteAdvance = async () => {
+    if (!advanceToDelete) return;
 
     try {
-      await StaffAdvanceAPI.delete(advanceId);
+      await StaffAdvanceAPI.delete(advanceToDelete.id);
       toast.success('Advance record deleted successfully');
+      
+      // Close dialog and reset state
+      setShowDeleteDialog(false);
+      setAdvanceToDelete(null);
       
       // Reload advances for the current view
       if (selectedStaff) {
@@ -469,16 +482,7 @@ const StaffAdvancePage: React.FC = () => {
                 text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
                 onClick={() => setShowMonthYearDialog(true)}
               />
-              
-              <Button
-                size="sm"
-                onClick={() => setIsStaffAdvanceModalOpen(true)}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3 bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Add Advance</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
+
             </div>
           </div>
         </div>
@@ -1037,7 +1041,7 @@ const StaffAdvancePage: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <button
-                                    onClick={() => handleDeleteAdvance(advance.id)}
+                                    onClick={() => handleDeleteClick(advance)}
                                     className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
                                     title="Delete advance record"
                                   >
@@ -1127,6 +1131,75 @@ const StaffAdvancePage: React.FC = () => {
           description="Filter staff advances by specific month and year"
           previewText="advances"
         />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Staff Advance
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this staff advance? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            {advanceToDelete && (
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{advanceToDelete.staff_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Amount: ₹{advanceToDelete.amount}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Date: {new Date(advanceToDelete.date).toLocaleDateString()}</span>
+                  </div>
+                  {advanceToDelete.reason && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">Reason: {advanceToDelete.reason}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setAdvanceToDelete(null);
+                }}
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleDeleteAdvance}
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Delete Advance
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>

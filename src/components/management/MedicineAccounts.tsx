@@ -1098,17 +1098,17 @@ const MedicineAccounts: React.FC = () => {
 
         {/* Edit Transaction Dialog */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+          <DialogContent className="editpopup form crm-modal-container sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="editpopup form crm-modal-header">
+              <div className="editpopup form crm-modal-header-content">
+                <div className="editpopup form crm-modal-icon">
                   <Pencil className="h-5 w-5 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form crm-modal-title-section">
+                  <DialogTitle className="editpopup form crm-modal-title">
                     Edit Transaction
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form crm-modal-description">
                     Update payment details and settlement information
                   </DialogDescription>
                 </div>
@@ -1120,22 +1120,29 @@ const MedicineAccounts: React.FC = () => {
                 e.preventDefault();
                 handleEditSave();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editDate" className="text-sm font-medium text-gray-700">Date</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editDate" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Date
+                  </Label>
                   <Input
                     id="editDate"
                     type="date"
                     value={editDate}
                     onChange={e => setEditDate(e.target.value)}
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editPaymentType" className="text-sm font-medium text-gray-700">Payment Type</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editPaymentType" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Payment Type
+                  </Label>
                   <Select value={editPaymentType} onValueChange={setEditPaymentType}>
-                    <SelectTrigger>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select payment type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1147,11 +1154,14 @@ const MedicineAccounts: React.FC = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editStatus" className="text-sm font-medium text-gray-700">Status</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={editStatus} onValueChange={value => setEditStatus(value as 'pending' | 'completed' | 'cancelled')}>
-                    <SelectTrigger>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1161,21 +1171,27 @@ const MedicineAccounts: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editPurchaseAmount" className="text-sm font-medium text-gray-700">Purchase Amount</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editPurchaseAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Purchase Amount
+                  </Label>
                   <Input 
                     id="editPurchaseAmount"
                     type="text" 
                     value={editPurchaseAmount} 
                     readOnly 
-                    className="bg-gray-50"
+                    className="editpopup form crm-edit-form-input bg-gray-50"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editAmountPayment" className="text-sm font-medium text-gray-700">Amount Payment</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editAmountPayment" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Amount Payment
+                  </Label>
                   <Input
                     id="editAmountPayment"
                     type="number"
@@ -1184,47 +1200,55 @@ const MedicineAccounts: React.FC = () => {
                     value={editAmountPayment}
                     onChange={handleAmountPaymentChange}
                     placeholder="Enter new payment amount"
+                    className="editpopup form crm-edit-form-input"
                   />
-                  <span className="text-xs text-muted-foreground">Enter the amount you want to pay now.</span>
+                  <span className="text-xs text-muted-foreground mt-1">Enter the amount you want to pay now.</span>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editSettlementAmount" className="text-sm font-medium text-gray-700">Settlement Amount</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editSettlementAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Settlement Amount
+                  </Label>
                   <Input
                     id="editSettlementAmount"
                     type="text"
                     value={editSettlementAmount}
                     readOnly
-                    className="bg-gray-50"
+                    className="editpopup form crm-edit-form-input bg-gray-50"
                   />
-                  <span className="text-xs text-muted-foreground">Total paid so far (including this payment).</span>
+                  <span className="text-xs text-muted-foreground mt-1">Total paid so far (including this payment).</span>
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="editBalanceAmount" className="text-sm font-medium text-gray-700">Balance Amount</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="editBalanceAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Balance Amount
+                </Label>
                 <Input 
                   id="editBalanceAmount"
                   type="text" 
                   value={editBalanceAmount} 
                   readOnly 
-                  className="bg-gray-50"
+                  className="editpopup form crm-edit-form-input bg-gray-50"
                 />
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setEditModalOpen(false)}
                   disabled={submitting}
-                  className="w-full sm:w-auto"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto global-btn global-btn-primary"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -1232,7 +1256,10 @@ const MedicineAccounts: React.FC = () => {
                       Saving...
                     </>
                   ) : (
-                    'Save Changes'
+                    <>
+                      <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Save Changes
+                    </>
                   )}
                 </Button>
               </DialogFooter>

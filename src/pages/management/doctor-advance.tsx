@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { DatabaseService } from '@/services/databaseService';
 import { DoctorAdvanceAPI } from '@/services/doctorAdvanceAPI';
@@ -80,6 +80,11 @@ const DoctorAdvancePage: React.FC = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [doctorAdvances, setDoctorAdvances] = useState<DoctorAdvance[]>([]);
   const [filteredAdvances, setFilteredAdvances] = useState<DoctorAdvance[]>([]);
+  
+  // Delete confirmation dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [advanceToDelete, setAdvanceToDelete] = useState<DoctorAdvance | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   
   // Month/Year filter states
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -221,6 +226,18 @@ const DoctorAdvancePage: React.FC = () => {
     }
   }, [allAdvances, filterMonth, filterYear, currentMonth, currentYear]);
 
+  // Utility function to get doctor photo URL
+  const getDoctorPhotoUrl = (photoPath: string) => {
+    if (!photoPath) return '/api/placeholder/40/40';
+    
+    // Handle both old and new path formats
+    if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
+      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
+    }
+    
+    return `http://localhost:4000/${photoPath}`;
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -348,13 +365,17 @@ const DoctorAdvancePage: React.FC = () => {
     setFilteredAdvances([]);
   };
 
-  const handleDeleteAdvance = async (advanceId: number) => {
-    if (!confirm('Are you sure you want to delete this advance record?')) {
-      return;
-    }
+  const handleDeleteAdvance = (advance: DoctorAdvance) => {
+    setAdvanceToDelete(advance);
+    setShowDeleteDialog(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!advanceToDelete) return;
+
+    setSubmitting(true);
     try {
-      await DoctorAdvanceAPI.delete(advanceId);
+      await DoctorAdvanceAPI.delete(advanceToDelete.id);
       toast.success('Advance record deleted successfully');
       
       // Reload advances for current doctor
@@ -370,9 +391,14 @@ const DoctorAdvancePage: React.FC = () => {
       } catch (reloadError) {
         console.error('Error reloading advances:', reloadError);
       }
+      
+      setShowDeleteDialog(false);
+      setAdvanceToDelete(null);
     } catch (error) {
       console.error('Error deleting advance:', error);
       toast.error('Failed to delete advance record');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -674,14 +700,17 @@ const DoctorAdvancePage: React.FC = () => {
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
                             <div className="flex justify-center">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage 
-                                  src={doctor.photo ? `http://localhost:4000${doctor.photo}` : undefined} 
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-100 ring-2 ring-blue-100">
+                                <img
+                                  src={getDoctorPhotoUrl(doctor.photo)}
+                                  alt={doctor.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/api/placeholder/40/40';
+                                  }}
                                 />
-                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                                  {doctor.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">
@@ -739,14 +768,17 @@ const DoctorAdvancePage: React.FC = () => {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage 
-                        src={selectedDoctor.photo ? `http://localhost:4000${selectedDoctor.photo}` : undefined} 
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 ring-2 ring-blue-100">
+                      <img
+                        src={getDoctorPhotoUrl(selectedDoctor.photo)}
+                        alt={selectedDoctor.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/api/placeholder/40/40';
+                        }}
                       />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {selectedDoctor.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
+                    </div>
                     <div>
                       <h2 className="text-xl font-semibold text-slate-800">
                         Add Advance - Dr. {selectedDoctor.name}
@@ -849,14 +881,17 @@ const DoctorAdvancePage: React.FC = () => {
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
                   <div className="relative flex-shrink-0">
-                    <Avatar className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg">
-                      <AvatarImage 
-                        src={selectedDoctor.photo ? `http://localhost:4000${selectedDoctor.photo}` : undefined} 
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden bg-gray-100 ring-2 sm:ring-4 ring-white shadow-lg">
+                      <img
+                        src={getDoctorPhotoUrl(selectedDoctor.photo)}
+                        alt={selectedDoctor.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/api/placeholder/40/40';
+                        }}
                       />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {selectedDoctor.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
+                    </div>
                     <div className="absolute -bottom-1 -right-1">
                       <Badge className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs">
                         Active
@@ -1085,7 +1120,7 @@ const DoctorAdvancePage: React.FC = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleDeleteAdvance(advance.id!)}
+                                      onClick={() => handleDeleteAdvance(advance)}
                                       className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                       title="Delete advance record"
                                     >
@@ -1141,6 +1176,82 @@ const DoctorAdvancePage: React.FC = () => {
           description="Filter doctor advances by specific month and year"
           previewText="advances"
         />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Advance Record
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this advance record? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            {advanceToDelete && (
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <IndianRupee className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">₹{advanceToDelete.amount}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{new Date(advanceToDelete.date).toLocaleDateString()}</span>
+                  </div>
+                  {advanceToDelete.reason && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">{advanceToDelete.reason}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setAdvanceToDelete(null);
+                }}
+                disabled={submitting}
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleDeleteConfirm}
+                disabled={submitting}
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Delete Advance Record
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>

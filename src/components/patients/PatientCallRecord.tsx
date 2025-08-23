@@ -767,8 +767,15 @@ const PatientCallRecord: React.FC = () => {
   };
 
   const handleDeleteFromViewPopup = async (record: CallRecord) => {
-    if (confirm('Are you sure you want to delete this call record?')) {
-      await handleDelete(record);
+    setDeleteRecord(record);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteRecord) {
+      await handleDelete(deleteRecord);
+      setShowDeleteConfirm(false);
+      setDeleteRecord(null);
       // Refresh the viewed patient records
       setRefreshCounter(prev => prev + 1);
     }
@@ -1864,6 +1871,73 @@ const PatientCallRecord: React.FC = () => {
               setShowViewDialogMonthYearDialog(false);
             }}>
               Apply Filter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Call Record
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this call record? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {deleteRecord && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteRecord.patientName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.description || 'No description'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Duration: {deleteRecord.audioRecording?.duration ? `${Math.round(deleteRecord.audioRecording.duration)}s` : 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteRecord(null);
+              }}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={confirmDelete}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Delete Call Record
             </Button>
           </DialogFooter>
         </DialogContent>

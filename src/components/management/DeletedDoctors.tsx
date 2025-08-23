@@ -7,7 +7,7 @@ import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Trash2, RotateCcw, Search, Eye, Users, Calendar, Filter, Activity, Download, RefreshCw, Clock } from 'lucide-react';
+import { Trash2, RotateCcw, Search, Eye, Users, Calendar, Filter, Activity, Download, RefreshCw, Clock, UserCheck, Stethoscope, Phone, Mail, Building, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
@@ -374,56 +374,125 @@ const DeletedDoctors: React.FC = () => {
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Doctor Details - {doctor.name}</DialogTitle>
-                                  <DialogDescription>
-                                    Complete information for deleted doctor {doctor.id}
-                                  </DialogDescription>
+                              <DialogContent className="crm-modal-container">
+                                <DialogHeader className="editpopup form dialog-header">
+                                  <div className="editpopup form icon-title-container">
+                                    <div className="editpopup form dialog-icon">
+                                      <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                                    </div>
+                                    <div className="editpopup form title-description">
+                                      <DialogTitle className="editpopup form dialog-title">
+                                        Doctor Details - {doctor.name}
+                                      </DialogTitle>
+                                      <DialogDescription className="editpopup form dialog-description">
+                                        Complete information for deleted doctor {doctor.id}
+                                      </DialogDescription>
+                                    </div>
+                                  </div>
                                 </DialogHeader>
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <label className="text-sm font-medium">Name:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.name}</p>
+                                
+                                <div className="editpopup form crm-edit-form-content">
+                                  <div className="editpopup form crm-edit-form-grid">
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <UserCheck className="h-4 w-4" />
+                                        Name
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.name}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Specialization:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.specialization || 'N/A'}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Stethoscope className="h-4 w-4" />
+                                        Specialization
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.specialization || 'N/A'}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Phone:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.phone}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Phone className="h-4 w-4" />
+                                        Phone
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.phone}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Email:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.email || 'N/A'}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Mail className="h-4 w-4" />
+                                        Email
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.email || 'N/A'}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Department:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.department || 'N/A'}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Building className="h-4 w-4" />
+                                        Department
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.department || 'N/A'}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Joining Date:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.joinDate || doctor.join_date ? formatDate(doctor.joinDate || doctor.join_date!) : 'N/A'}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        Joining Date
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.joinDate || doctor.join_date ? formatDate(doctor.joinDate || doctor.join_date!) : 'N/A'}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Deleted Date:</label>
-                                      <p className="text-sm text-muted-foreground">{formatDate(doctor.deletedAt)}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <Trash2 className="h-4 w-4" />
+                                        Deleted Date
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{formatDate(doctor.deletedAt)}</span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="text-sm font-medium">Deleted By:</label>
-                                      <p className="text-sm text-muted-foreground">{doctor.deletedBy}</p>
+                                    
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <UserCheck className="h-4 w-4" />
+                                        Deleted By
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border">
+                                        <span className="text-gray-900">{doctor.deletedBy}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                  <div>
-                                    <label className="text-sm font-medium">Address:</label>
-                                    <p className="text-sm text-muted-foreground">{doctor.address || 'N/A'}</p>
+                                  
+                                  <div className="editpopup form crm-edit-form-group">
+                                    <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                      <MapPin className="h-4 w-4" />
+                                      Address
+                                    </Label>
+                                    <div className="p-3 bg-gray-50 rounded-lg border">
+                                      <span className="text-gray-900">{doctor.address || 'N/A'}</span>
+                                    </div>
                                   </div>
+                                  
                                   {doctor.photo && (
-                                    <div>
-                                      <label className="text-sm font-medium">Photo:</label>
-                                      <img src={doctor.photo} alt={doctor.name} className="w-24 h-24 rounded-full object-cover mt-2" />
+                                    <div className="editpopup form crm-edit-form-group">
+                                      <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                                        <UserCheck className="h-4 w-4" />
+                                        Photo
+                                      </Label>
+                                      <div className="p-3 bg-gray-50 rounded-lg border flex justify-center">
+                                        <img src={doctor.photo} alt={doctor.name} className="w-24 h-24 rounded-full object-cover border-2 border-gray-200" />
+                                      </div>
                                     </div>
                                   )}
                                 </div>

@@ -1898,7 +1898,7 @@ const PatientHistory: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(record)}
-                            className="action-btn-lead action-btn-delete"
+                            className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                             title="Delete Record"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2271,7 +2271,7 @@ const PatientHistory: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeDocument(index)}
-                        className="action-btn-lead action-btn-delete"
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -2912,7 +2912,7 @@ const PatientHistory: React.FC = () => {
                                   variant="ghost"
                                   onClick={() => handleDeleteFromViewPopup(record)}
                                   title="Delete Medical Record"
-                                  className="action-btn-lead action-btn-delete"
+                                  className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 >
                                   <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
@@ -3284,29 +3284,62 @@ const PatientHistory: React.FC = () => {
 
       {/* Delete Confirmation Dialog - Centered */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive">Delete Medical Record</DialogTitle>
-            <DialogDescription className="text-center">
-              Are you sure you want to delete this medical record?
-              <br />
-              <strong>{deleteRecord?.title}</strong>
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Medical Record
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this medical record? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="justify-center space-x-4">
+          
+          {deleteRecord && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteRecord.title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.patientName || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.date || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.category || 'Medical Record'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
             <Button 
+              type="button" 
               variant="outline" 
               onClick={() => setShowDeleteConfirm(false)}
-              className="global-btn global-btn-secondary"
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
             <Button 
+              type="button" 
               onClick={confirmDelete}
-              className="global-btn global-btn-danger"
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Delete Record
             </Button>
           </DialogFooter>

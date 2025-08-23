@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, User, UserCheck, Shield, Lock, Activity, X } from 'lucide-react';
 import { usersAPI, rolesAPI } from '@/utils/api';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import '@/styles/global-crm-design.css';
 
 interface User {
   id: string;
@@ -64,6 +65,8 @@ const UserManagement: React.FC = () => {
   }, []);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     username: '',
@@ -194,18 +197,25 @@ const UserManagement: React.FC = () => {
     setShowAddDialog(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const res = await fetch(`http://localhost:4001/api/management-users/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete user');
-        
-        // Refresh the users list from backend to ensure immediate display
-        await fetchUsers();
-        toast({ title: 'User Deleted', description: 'User account deleted successfully' });
-      } catch (err) {
-        toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
-      }
+  const handleDelete = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      const res = await fetch(`http://localhost:4001/api/management-users/${userToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete user');
+      
+      // Refresh the users list from backend to ensure immediate display
+      await fetchUsers();
+      toast({ title: 'User Deleted', description: 'User account deleted successfully' });
+      setShowDeleteDialog(false);
+      setUserToDelete(null);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
     }
   };
 
@@ -289,7 +299,7 @@ const UserManagement: React.FC = () => {
                         <Button size="sm" variant="outline" onClick={() => handleEdit(user)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDelete(user.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleDelete(user)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -303,25 +313,52 @@ const UserManagement: React.FC = () => {
       </Card>
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'Add User'}</DialogTitle>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <User className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title">
+                  {editingUser ? 'Edit User' : 'Add User'}
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  {editingUser ? 'Update user information and permissions' : 'Create a new user account with role'}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">User Name *</Label>
+          
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+            className="editpopup form crm-edit-form-content"
+          >
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="username" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                User Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="username"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 placeholder="Enter user name"
-                className="border-primary/30 focus:border-primary"
+                className="editpopup form crm-edit-form-input"
+                required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="role" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Role <span className="text-red-500">*</span>
+              </Label>
               <Select value={formData.role} onValueChange={val => setFormData({ ...formData, role: val })}>
-                <SelectTrigger className="border-primary/30 focus:border-primary">
+                <SelectTrigger className="editpopup form crm-edit-form-select">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
@@ -331,32 +368,46 @@ const UserManagement: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="password" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Password <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="Enter password"
-                className="border-primary/30 focus:border-primary"
+                className="editpopup form crm-edit-form-input"
+                required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password *</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="confirm-password" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Confirm Password <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="confirm-password"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 placeholder="Re-enter password"
-                className="border-primary/30 focus:border-primary"
+                className="editpopup form crm-edit-form-input"
+                required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Status
+              </Label>
               <Select value={formData.status} onValueChange={val => setFormData({ ...formData, status: val as 'Active' | 'Inactive' })}>
-                <SelectTrigger className="border-primary/30 focus:border-primary">
+                <SelectTrigger className="editpopup form crm-edit-form-select">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
@@ -365,13 +416,88 @@ const UserManagement: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowAddDialog(false)}
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+              >
+                <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                {editingUser ? 'Update User' : 'Add User'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete User
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this user? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {userToDelete && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{userToDelete.username}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{userToDelete.role}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Status: {userToDelete.status}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">ID: {userToDelete.id}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
-              {editingUser ? 'Update User' : 'Add User'}
+            <Button 
+              type="button" 
+              onClick={confirmDelete}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Delete User
             </Button>
           </DialogFooter>
         </DialogContent>

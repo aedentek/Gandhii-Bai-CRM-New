@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock, X, ShoppingCart, DollarSign, Tag, Building, FileText, Package2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GeneralProduct {
@@ -963,17 +963,17 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Add/Edit Product Dialog */}
         <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  {editingProduct ? <Edit2 className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-blue-600" />}
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     {editingProduct ? 'Edit Product' : 'Add New Product'}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     {editingProduct ? 'Update product information' : 'Enter the details for the new general product'}
                   </DialogDescription>
                 </div>
@@ -985,24 +985,30 @@ const handleRefresh = React.useCallback(() => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">Product Name *</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Product Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="Enter product name"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category" className="text-sm font-medium text-gray-700">Category *</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="category" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Category <span className="text-red-500">*</span>
+                  </Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1020,10 +1026,13 @@ const handleRefresh = React.useCallback(() => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supplier" className="text-sm font-medium text-gray-700">Supplier *</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="supplier" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Supplier <span className="text-red-500">*</span>
+                  </Label>
                   <Select value={formData.supplier} onValueChange={(value) => setFormData({...formData, supplier: value})}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select supplier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1041,8 +1050,11 @@ const handleRefresh = React.useCallback(() => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price" className="text-sm font-medium text-gray-700">Price *</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="price" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Price <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="price"
                     type="number"
@@ -1050,48 +1062,57 @@ const handleRefresh = React.useCallback(() => {
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                     placeholder="Enter price"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quantity" className="text-sm font-medium text-gray-700">Quantity *</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="quantity" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package2 className="h-4 w-4" />
+                    Quantity <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="quantity"
                     type="number"
                     value={formData.quantity}
                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                     placeholder="Enter quantity"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="purchaseDate" className="text-sm font-medium text-gray-700">Purchase Date *</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="purchaseDate" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Purchase Date <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="purchaseDate"
                     type="date"
                     value={formData.purchaseDate}
                     onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
                     placeholder="Select purchase date"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="description" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Description
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="Enter product description (optional)"
-                  className="mt-1"
+                  className="editpopup form crm-edit-form-textarea"
                   rows={3}
                 />
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -1108,15 +1129,16 @@ const handleRefresh = React.useCallback(() => {
                       purchaseDate: new Date().toISOString().split('T')[0],
                     });
                   }}
-                  className="w-full sm:w-auto bg-white hover:bg-gray-50 border-gray-300 text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="global-btn w-full sm:w-auto"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
+                  <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   {editingProduct ? 'Update Product' : 'Add Product'}
                 </Button>
               </DialogFooter>
@@ -1126,33 +1148,75 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-            <DialogHeader className="text-center">
-              <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Product</DialogTitle>
-              <DialogDescription className="text-center text-sm sm:text-base">
-                Are you sure you want to delete product <strong>{productToDelete?.name}</strong>?
-                <br />
-                <br />
-                <span className="text-destructive font-medium">This action cannot be undone.</span>
-              </DialogDescription>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Product
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this product? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
-            <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            
+            {productToDelete && (
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{productToDelete.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Category: {productToDelete.category}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Supplier: {productToDelete.supplier}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Price: ₹{productToDelete.price.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package2 className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Quantity: {productToDelete.quantity}</span>
+                  </div>
+                  {productToDelete.description && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">{productToDelete.description}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
+                type="button" 
                 variant="outline" 
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setProductToDelete(null);
                 }}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
-                variant="destructive" 
+                type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
@@ -1160,7 +1224,10 @@ const handleRefresh = React.useCallback(() => {
                     Deleting...
                   </>
                 ) : (
-                  'Delete Product'
+                  <>
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Delete Product
+                  </>
                 )}
               </Button>
             </DialogFooter>

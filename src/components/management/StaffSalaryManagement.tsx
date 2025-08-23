@@ -1094,7 +1094,7 @@ const SalaryPayment: React.FC = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleDeletePayment(payment)}
-                                  className="h-8 w-8 p-0 border-red-200 text-red-600 hover:bg-red-50"
+                                  className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                   title="Delete Payment"
                                 >
                                   <Trash2 className="h-3 w-3" />

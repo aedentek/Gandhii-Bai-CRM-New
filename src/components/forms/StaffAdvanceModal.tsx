@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StaffAdvanceFormData, StaffListItem, StaffAdvance } from '@/types/staffAdvance';
 import { StaffAdvanceAPI } from '@/services/staffAdvanceAPI';
 import { toast } from 'sonner';
-import { Calendar, DollarSign, FileText, User } from 'lucide-react';
+import { Calendar, DollarSign, FileText, User, X, Save, Plus, Edit } from 'lucide-react';
+import '@/styles/global-modal-design.css';
 
 interface StaffAdvanceModalProps {
   isOpen: boolean;
@@ -113,41 +114,51 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            {editData ? 'Edit Staff Advance' : 'Add Staff Advance'}
+      <DialogContent className="editpopup form crm-modal-container sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="editpopup form crm-modal-header">
+          <DialogTitle className="editpopup form crm-modal-title text-xl font-semibold text-slate-800 flex items-center gap-2">
+            {editData ? (
+              <>
+                <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                Edit Staff Advance
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                Add Staff Advance
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Staff Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="staff" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Select Staff *
-            </Label>
-            <Select 
-              value={formData.staff_id} 
-              onValueChange={handleStaffChange}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a staff member" />
-              </SelectTrigger>
-              <SelectContent>
-                {staff.map((staffMember) => (
-                  <SelectItem key={staffMember.staff_id} value={staffMember.staff_id}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{staffMember.staff_name}</span>
-                      <span className="text-xs text-gray-500">({staffMember.staff_id})</span>
-                      {staffMember.role && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">
-                          {staffMember.role}
-                        </span>
-                      )}
-                    </div>
+        <form onSubmit={handleSubmit} className="editpopup form crm-edit-form">
+          <div className="editpopup form crm-edit-form-grid">
+            {/* Staff Selection */}
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="staff" className="editpopup form crm-edit-form-label required flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Select Staff
+              </Label>
+              <Select 
+                value={formData.staff_id} 
+                onValueChange={handleStaffChange}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger className="editpopup form crm-edit-form-select">
+                  <SelectValue placeholder="Choose a staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((staffMember) => (
+                    <SelectItem key={staffMember.staff_id} value={staffMember.staff_id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{staffMember.staff_name}</span>
+                        <span className="text-xs text-gray-500">({staffMember.staff_id})</span>
+                        {staffMember.role && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">
+                            {staffMember.role}
+                          </span>
+                        )}
+                      </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -155,10 +166,10 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
           </div>
 
           {/* Date */}
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <div className="editpopup form crm-edit-form-group">
+            <Label htmlFor="date" className="editpopup form crm-edit-form-label required flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Date *
+              Date
             </Label>
             <Input
               id="date"
@@ -167,14 +178,15 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
               onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
               disabled={isSubmitting}
               required
+              className="editpopup form crm-edit-form-input"
             />
           </div>
 
           {/* Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="amount" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <div className="editpopup form crm-edit-form-group">
+            <Label htmlFor="amount" className="editpopup form crm-edit-form-label required flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Amount (₹) *
+              Amount (₹)
             </Label>
             <Input
               id="amount"
@@ -186,14 +198,15 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
               step="0.01"
               disabled={isSubmitting}
               required
+              className="editpopup form crm-edit-form-input"
             />
           </div>
 
           {/* Reason */}
-          <div className="space-y-2">
-            <Label htmlFor="reason" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <div className="editpopup form crm-edit-form-group">
+            <Label htmlFor="reason" className="editpopup form crm-edit-form-label flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Reason
+              Reason (Optional)
             </Label>
             <Textarea
               id="reason"
@@ -202,35 +215,42 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
               placeholder="Enter reason for advance (optional)"
               rows={3}
               disabled={isSubmitting}
+              className="editpopup form crm-edit-form-textarea"
             />
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !formData.staff_id || !formData.date || !formData.amount}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {editData ? 'Updating...' : 'Creating...'}
-                </>
-              ) : (
-                editData ? 'Update Advance' : 'Create Advance'
-              )}
-            </Button>
           </div>
         </form>
+
+        <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+          >
+            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || !formData.staff_id || !formData.date || !formData.amount}
+            className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+            onClick={handleSubmit}
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {editData ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              <>
+                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                {editData ? 'Update Advance' : 'Create Advance'}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -132,8 +132,8 @@ const DoctorManagement: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
-  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [filterMonth, setFilterMonth] = useState<number | null>(null); // Start with no filter
+  const [filterYear, setFilterYear] = useState<number | null>(null); // Start with no filter
 
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -984,86 +984,140 @@ const DoctorManagement: React.FC = () => {
 
         {/* Edit Doctor Modal */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <Edit2 className="w-5 h-5 text-green-600" />
-                <span>Edit Doctor</span>
-              </DialogTitle>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Edit2 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
+                    Edit Doctor
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Update doctor information and details
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-name">Name *</Label>
+            
+            <form onSubmit={handleEditSubmit} className="editpopup form crm-edit-form-content">
+              <div className="editpopup form crm-edit-form-grid">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Doctor Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="edit-name"
                     value={editFormData.name}
                     onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    placeholder="Enter doctor's full name"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-email">Email *</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-email" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="edit-email"
                     type="email"
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                    placeholder="Enter email address"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-phone">Phone *</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-phone" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="edit-phone"
                     value={editFormData.phone}
                     onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                    placeholder="Enter phone number"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-specialization">Specialization *</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-specialization" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Stethoscope className="h-4 w-4" />
+                    Specialization <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="edit-specialization"
                     value={editFormData.specialization}
                     onChange={(e) => setEditFormData({...editFormData, specialization: e.target.value})}
+                    placeholder="Enter specialization"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-department">Department</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-department" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Department
+                  </Label>
                   <Input
                     id="edit-department"
                     value={editFormData.department}
                     onChange={(e) => setEditFormData({...editFormData, department: e.target.value})}
+                    placeholder="Enter department"
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-join-date">Join Date</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-join-date" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Join Date
+                  </Label>
                   <Input
                     id="edit-join-date"
                     type="date"
                     value={editFormData.join_date}
                     onChange={(e) => setEditFormData({...editFormData, join_date: e.target.value})}
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-salary">Salary</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-salary" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Salary
+                  </Label>
                   <Input
                     id="edit-salary"
                     type="number"
                     value={editFormData.salary}
                     onChange={(e) => setEditFormData({...editFormData, salary: e.target.value})}
+                    placeholder="Enter salary amount"
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-status">Status</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="edit-status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select 
                     value={editFormData.status} 
                     onValueChange={(value) => setEditFormData({...editFormData, status: value})}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
@@ -1072,20 +1126,37 @@ const DoctorManagement: React.FC = () => {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label htmlFor="edit-address">Address</Label>
+              
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="edit-address" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Address
+                </Label>
                 <Textarea
                   id="edit-address"
                   value={editFormData.address}
                   onChange={(e) => setEditFormData({...editFormData, address: e.target.value})}
+                  placeholder="Enter complete address"
                   rows={3}
+                  className="editpopup form crm-edit-form-input"
                 />
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+              
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowEditModal(false)}
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+                >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                <Button 
+                  type="submit" 
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+                >
+                  <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Update Doctor
                 </Button>
               </DialogFooter>
@@ -1113,20 +1184,27 @@ const DoctorManagement: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2 text-red-600">
-                <Trash2 className="w-5 h-5" />
-                <span>Delete Doctor</span>
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this doctor? This action cannot be undone.
-              </DialogDescription>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Doctor
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this doctor? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
+            
             {selectedDoctor && (
-              <div className="py-4">
-                <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                     <img
                       src={getDoctorPhotoUrl(selectedDoctor.photo)}
                       alt={selectedDoctor.name}
@@ -1137,18 +1215,39 @@ const DoctorManagement: React.FC = () => {
                       }}
                     />
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{selectedDoctor.name}</p>
-                    <p className="text-sm text-gray-600">{selectedDoctor.id} - {selectedDoctor.specialization}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900 truncate">{selectedDoctor.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Stethoscope className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600 truncate">{selectedDoctor.specialization}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600 truncate">ID: {selectedDoctor.id}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteModal(false)}
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDelete}
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Delete Doctor
               </Button>
             </DialogFooter>

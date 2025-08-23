@@ -740,17 +740,17 @@ const MedicineStock: React.FC = () => {
 
         {/* Edit Stock Dialog */}
         <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+          <DialogContent className="editpopup form crm-modal-container sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="editpopup form crm-modal-header">
+              <div className="editpopup form crm-modal-header-content">
+                <div className="editpopup form crm-modal-icon">
                   <Edit2 className="h-5 w-5 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form crm-modal-title-section">
+                  <DialogTitle className="editpopup form crm-modal-title">
                     Edit Medicine Stock
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form crm-modal-description">
                     Update stock quantities and settings
                   </DialogDescription>
                 </div>
@@ -763,19 +763,28 @@ const MedicineStock: React.FC = () => {
                   e.preventDefault();
                   saveEdit();
                 }}
-                className="space-y-4 p-3 sm:p-4 md:p-6"
+                className="editpopup form crm-edit-form-content"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Product Name</Label>
-                    <div className="p-3 bg-gray-50 rounded border text-sm">{editItem.name}</div>
+                <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Pill className="h-4 w-4" />
+                      Product Name
+                    </Label>
+                    <div className="editpopup form crm-edit-form-input p-3 bg-gray-50 rounded border text-sm">{editItem.name}</div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Category</Label>
-                    <div className="p-3 bg-gray-50 rounded border text-sm">{editItem.category}</div>
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Tag className="h-4 w-4" />
+                      Category
+                    </Label>
+                    <div className="editpopup form crm-edit-form-input p-3 bg-gray-50 rounded border text-sm">{editItem.category}</div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editQuantity" className="text-sm font-medium text-gray-700">Current Stock *</Label>
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="editQuantity" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Package2 className="h-4 w-4" />
+                      Current Stock <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="editQuantity"
                       type="number"
@@ -786,12 +795,15 @@ const MedicineStock: React.FC = () => {
                         if (val < 0) val = 0;
                         setEditQuantity(val);
                       }}
-                      className="text-center"
+                      className="editpopup form crm-edit-form-input text-center"
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editMinStock" className="text-sm font-medium text-gray-700">Min Stock Level</Label>
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="editMinStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Min Stock Level
+                    </Label>
                     <Input
                       id="editMinStock"
                       type="number"
@@ -802,13 +814,16 @@ const MedicineStock: React.FC = () => {
                         if (val < 0) val = 0;
                         setEditMinStock(val);
                       }}
-                      className="text-center"
+                      className="editpopup form crm-edit-form-input text-center"
                     />
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="editStatus" className="text-sm font-medium text-gray-700">Status</Label>
+                  <div className="editpopup form crm-edit-form-group md:col-span-2">
+                    <Label htmlFor="editStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Status
+                    </Label>
                     <Select value={editStatus} onValueChange={(value) => setEditStatus(value as any)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="editpopup form crm-edit-form-select">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -821,20 +836,21 @@ const MedicineStock: React.FC = () => {
                   </div>
                 </div>
                 
-                <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+                <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setEditItem(null)}
                     disabled={submitting}
-                    className="w-full sm:w-auto"
+                    className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                   >
+                    <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
                     disabled={submitting}
-                    className="w-full sm:w-auto global-btn global-btn-primary"
+                    className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                   >
                     {submitting ? (
                       <>
@@ -842,7 +858,10 @@ const MedicineStock: React.FC = () => {
                         Saving...
                       </>
                     ) : (
-                      'Save Changes'
+                      <>
+                        <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        Save Changes
+                      </>
                     )}
                   </Button>
                 </DialogFooter>

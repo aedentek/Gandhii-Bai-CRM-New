@@ -96,6 +96,9 @@ const GeneralAccounts: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [settlementToDelete, setSettlementToDelete] = useState<any>(null);
+  const [deleteIndex, setDeleteIndex] = useState<number>(-1);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewProduct, setViewProduct] = useState<any>(null);
   const [viewSettlements, setViewSettlements] = useState<any[]>([]);
@@ -282,14 +285,20 @@ const GeneralAccounts: React.FC = () => {
     }
   };
 
-  const handleDeleteSettlement = async (idx: number) => {
-    if (!window.confirm('Are you sure you want to delete this settlement record?')) return;
+  const handleDeleteSettlement = (idx: number) => {
+    const settlement = viewSettlements[idx];
+    setSettlementToDelete(settlement);
+    setDeleteIndex(idx);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteSettlement = async () => {
+    if (!settlementToDelete || deleteIndex === -1) return;
     
     try {
       setSubmitting(true);
-      const settlementToDelete = viewSettlements[idx];
       
-      if (settlementToDelete && settlementToDelete.id) {
+      if (settlementToDelete.id) {
         await DatabaseService.deleteSettlementRecord(settlementToDelete.id);
         
         toast({
@@ -299,11 +308,14 @@ const GeneralAccounts: React.FC = () => {
         
         setViewSettlements(prev => {
           const updated = [...prev];
-          updated.splice(idx, 1);
+          updated.splice(deleteIndex, 1);
           return updated;
         });
         
         handleRefresh();
+        setShowDeleteDialog(false);
+        setSettlementToDelete(null);
+        setDeleteIndex(-1);
       }
     } catch (error) {
       console.error('Error deleting settlement:', error);
@@ -1066,17 +1078,17 @@ const GeneralAccounts: React.FC = () => {
 
         {/* Edit Transaction Dialog */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Pencil className="h-5 w-5 text-blue-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     Edit Transaction
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     Update payment details and settlement information
                   </DialogDescription>
                 </div>
@@ -1088,22 +1100,29 @@ const GeneralAccounts: React.FC = () => {
                 e.preventDefault();
                 handleEditSave();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editDate" className="text-sm font-medium text-gray-700">Date</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editDate" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Date
+                  </Label>
                   <Input
                     id="editDate"
                     type="date"
                     value={editDate}
                     onChange={e => setEditDate(e.target.value)}
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editPaymentType" className="text-sm font-medium text-gray-700">Payment Type</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editPaymentType" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Payment Type
+                  </Label>
                   <Select value={editPaymentType} onValueChange={setEditPaymentType}>
-                    <SelectTrigger>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select payment type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1115,11 +1134,14 @@ const GeneralAccounts: React.FC = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editStatus" className="text-sm font-medium text-gray-700">Status</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={editStatus} onValueChange={value => setEditStatus(value as 'pending' | 'completed' | 'cancelled')}>
-                    <SelectTrigger>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1129,21 +1151,27 @@ const GeneralAccounts: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editPurchaseAmount" className="text-sm font-medium text-gray-700">Purchase Amount</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editPurchaseAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Purchase Amount
+                  </Label>
                   <Input 
                     id="editPurchaseAmount"
                     type="text" 
                     value={editPurchaseAmount} 
                     readOnly 
-                    className="bg-gray-50"
+                    className="editpopup form crm-edit-form-input bg-gray-50"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editAmountPayment" className="text-sm font-medium text-gray-700">Amount Payment</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editAmountPayment" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Banknote className="h-4 w-4" />
+                    Amount Payment
+                  </Label>
                   <Input
                     id="editAmountPayment"
                     type="number"
@@ -1152,47 +1180,55 @@ const GeneralAccounts: React.FC = () => {
                     value={editAmountPayment}
                     onChange={handleAmountPaymentChange}
                     placeholder="Enter new payment amount"
+                    className="editpopup form crm-edit-form-input"
                   />
                   <span className="text-xs text-muted-foreground">Enter the amount you want to pay now.</span>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editSettlementAmount" className="text-sm font-medium text-gray-700">Settlement Amount</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="editSettlementAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Settlement Amount
+                  </Label>
                   <Input
                     id="editSettlementAmount"
                     type="text"
                     value={editSettlementAmount}
                     readOnly
-                    className="bg-gray-50"
+                    className="editpopup form crm-edit-form-input bg-gray-50"
                   />
                   <span className="text-xs text-muted-foreground">Total paid so far (including this payment).</span>
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="editBalanceAmount" className="text-sm font-medium text-gray-700">Balance Amount</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="editBalanceAmount" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Balance Amount
+                </Label>
                 <Input 
                   id="editBalanceAmount"
                   type="text" 
                   value={editBalanceAmount} 
                   readOnly 
-                  className="bg-gray-50"
+                  className="editpopup form crm-edit-form-input bg-gray-50"
                 />
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setEditModalOpen(false)}
                   disabled={submitting}
-                  className="w-full sm:w-auto"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -1200,11 +1236,98 @@ const GeneralAccounts: React.FC = () => {
                       Saving...
                     </>
                   ) : (
-                    'Save Changes'
+                    <>
+                      <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Save Changes
+                    </>
                   )}
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="icon-title-container">
+                <Trash2 className="w-6 h-6 text-red-600" />
+                <DialogTitle className="text-red-700">Delete Settlement Record</DialogTitle>
+              </div>
+              <DialogDescription className="text-center text-gray-600">
+                This action will permanently remove the settlement record from accounts.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="staff-details-section">
+              <div className="space-y-3">
+                <div className="detail-row">
+                  <Receipt className="w-4 h-4 text-blue-600" />
+                  <span className="detail-label">Transaction ID:</span>
+                  <span className="detail-value">{settlementToDelete?.id}</span>
+                </div>
+                <div className="detail-row">
+                  <Package className="w-4 h-4 text-green-600" />
+                  <span className="detail-label">Product:</span>
+                  <span className="detail-value">{settlementToDelete?.product_name}</span>
+                </div>
+                <div className="detail-row">
+                  <Calendar className="w-4 h-4 text-purple-600" />
+                  <span className="detail-label">Date:</span>
+                  <span className="detail-value">{settlementToDelete?.purchase_date}</span>
+                </div>
+                <div className="detail-row">
+                  <DollarSign className="w-4 h-4 text-orange-600" />
+                  <span className="detail-label">Settlement Amount:</span>
+                  <span className="detail-value">₹{settlementToDelete?.settlement_amount}</span>
+                </div>
+                <div className="detail-row">
+                  <CreditCard className="w-4 h-4 text-indigo-600" />
+                  <span className="detail-label">Payment Type:</span>
+                  <span className="detail-value">{settlementToDelete?.payment_type}</span>
+                </div>
+                <div className="detail-row">
+                  <Activity className="w-4 h-4 text-teal-600" />
+                  <span className="detail-label">Status:</span>
+                  <span className="detail-value">{settlementToDelete?.status}</span>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter className="gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setSettlementToDelete(null);
+                  setDeleteIndex(-1);
+                }}
+                disabled={submitting}
+                className="flex-1"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={confirmDeleteSettlement}
+                disabled={submitting}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Record
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

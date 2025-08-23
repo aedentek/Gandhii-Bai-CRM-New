@@ -2467,50 +2467,77 @@ const PatientMedicalRecord: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Medical Record</DialogTitle>
-            <DialogDescription className="text-center text-sm sm:text-base">
-              Are you sure you want to delete this medical record?
-              <br />
-              <br />
-              {deleteRecord && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Patient:</strong> {deleteRecord.patientName}</p>
-                    <p><strong>Date:</strong> {format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</p>
-                    <p><strong>Type:</strong> {deleteRecord.recordType}</p>
-                    <p><strong>Description:</strong> {deleteRecord.description || 'No description'}</p>
-                  </div>
-                </div>
-              )}
-              <span className="text-destructive font-medium">⚠️ This will permanently delete:</span>
-              <ul className="text-sm mt-2 text-left">
-                <li>• The complete medical record</li>
-                <li>• All associated files and images</li>
-                <li>• All audio recordings</li>
-                <li>• Medical history entry</li>
-              </ul>
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Medical Record
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this medical record? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+          
+          {deleteRecord && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteRecord.patientName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.recordType}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteRecord.description || 'No description'}</span>
+                </div>
+              </div>
+              
+              <div className="mt-3 p-3 bg-red-50 rounded border border-red-200">
+                <div className="text-sm text-red-800">
+                  <p className="font-medium mb-2">⚠️ This will permanently delete:</p>
+                  <ul className="text-xs space-y-1">
+                    <li>• The complete medical record</li>
+                    <li>• All associated files and images</li>
+                    <li>• All audio recordings</li>
+                    <li>• Medical history entry</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
             <Button 
+              type="button" 
               variant="outline" 
               onClick={() => {
                 setShowDeleteConfirm(false);
                 setDeleteRecord(null);
               }}
-              className="w-full sm:w-auto"
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
             <Button 
-              variant="destructive" 
+              type="button" 
               onClick={handleDelete}
-              className="w-full sm:w-auto"
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Delete Medical Record
             </Button>
           </DialogFooter>

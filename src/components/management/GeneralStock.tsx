@@ -1183,39 +1183,66 @@ const GeneralStock: React.FC = () => {
 
       {/* Edit Stock Dialog */}
       <Dialog open={editItem !== null} onOpenChange={closeEditPopup}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Pencil className="h-5 w-5 text-blue-600" />
-              Edit Stock
-            </DialogTitle>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title">
+                  Edit Stock
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Update stock information and status
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           {editItem && (
-            <div className="space-y-4">
+            <div className="editpopup form crm-edit-form-content">
               {/* Product Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                <div className="text-sm font-medium text-blue-900">{editItem.productName}</div>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Product
+                </Label>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-sm font-medium text-blue-900">{editItem.productName}</div>
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="editpopup form crm-edit-form-grid grid-cols-2">
                 {/* Current Stock */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-                  <div className="text-lg font-bold text-blue-600">{editItem.currentStock}</div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Warehouse className="h-4 w-4" />
+                    Current Stock
+                  </Label>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="text-lg font-bold text-blue-600">{editItem.currentStock}</div>
+                  </div>
                 </div>
                 
                 {/* Available Balance */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Available Balance</label>
-                  <div className="text-lg font-bold text-green-600">{getAvailableBalance(editItem)}</div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package2 className="h-4 w-4" />
+                    Available Balance
+                  </Label>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="text-lg font-bold text-green-600">{getAvailableBalance(editItem)}</div>
+                  </div>
                 </div>
               </div>
               
               {/* Used Stock Input */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Used Stock</label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Used Stock
+                </Label>
                 <Input
                   type="number"
                   min={0}
@@ -1236,7 +1263,7 @@ const GeneralStock: React.FC = () => {
                     
                     setEditUsedStock(val);
                   }}
-                  className="text-center"
+                  className="editpopup form crm-edit-form-input text-center"
                 />
                 <div className="text-xs text-gray-500">
                   Maximum available: {getAvailableBalance(editItem)} units
@@ -1249,16 +1276,24 @@ const GeneralStock: React.FC = () => {
               </div>
               
               {/* Balance After Edit */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Balance After Edit</label>
-                <div className="text-lg font-bold text-yellow-700">{editBalance}</div>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Balance After Edit
+                </Label>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-lg font-bold text-yellow-700">{editBalance}</div>
+                </div>
               </div>
               
               {/* Status Selection */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Stock Status</label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Stock Status
+                </Label>
                 <Select value={editStatus} onValueChange={v => setEditStatus(v as any)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="editpopup form crm-edit-form-select">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1285,22 +1320,24 @@ const GeneralStock: React.FC = () => {
               </div>
               
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button"
                   variant="outline" 
                   onClick={closeEditPopup}
-                  className="w-full sm:w-auto"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   onClick={saveEdit}
-                  className="global-btn"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
+                  <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Save Changes
                 </Button>
-              </div>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
@@ -1308,34 +1345,73 @@ const GeneralStock: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Stock Item</DialogTitle>
-            <DialogDescription className="text-center text-sm sm:text-base">
-              Are you sure you want to delete stock item <strong>{itemToDelete?.productName}</strong>?
-              <br />
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Stock Item
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this stock item? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+          
+          {itemToDelete && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{itemToDelete.productName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{itemToDelete.category}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{itemToDelete.gpId}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Warehouse className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{itemToDelete.currentStock} {itemToDelete.unit}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">₹{itemToDelete.price}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600 capitalize">{itemToDelete.status}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
             <Button 
-              type="button"
+              type="button" 
               variant="outline" 
               onClick={() => {
                 setShowDeleteDialog(false);
                 setItemToDelete(null);
               }}
               disabled={submitting}
-              className="w-full sm:w-auto"
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
             <Button 
-              variant="destructive" 
+              type="button" 
               onClick={confirmDelete}
               disabled={submitting}
-              className="w-full sm:w-auto"
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
               {submitting ? (
                 <>
@@ -1343,7 +1419,10 @@ const GeneralStock: React.FC = () => {
                   Deleting...
                 </>
               ) : (
-                'Delete Item'
+                <>
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  Delete Item
+                </>
               )}
             </Button>
           </DialogFooter>

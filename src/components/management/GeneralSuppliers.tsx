@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText, Building, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
@@ -708,17 +708,17 @@ const GeneralSuppliers: React.FC = () => {
 
         {/* Add/Edit Supplier Dialog */}
         <Dialog open={isAddingSupplier} onOpenChange={setIsAddingSupplier}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  {editingSupplier ? <Edit2 className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-blue-600" />}
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     {editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     {editingSupplier ? 'Update supplier information' : 'Enter the details for the new supplier'}
                   </DialogDescription>
                 </div>
@@ -730,71 +730,87 @@ const GeneralSuppliers: React.FC = () => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">Company Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      placeholder="Enter company name"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contactPerson" className="text-sm font-medium text-gray-700">Contact Person *</Label>
-                    <Input
-                      id="contactPerson"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
-                      placeholder="Enter contact person name"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      placeholder="Enter email address"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone *</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      placeholder="Enter phone number"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Company Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Enter company name"
+                    className="editpopup form crm-edit-form-input"
+                    required
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-sm font-medium text-gray-700">Address</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="contactPerson" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Contact Person <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="contactPerson"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                    placeholder="Enter contact person name"
+                    className="editpopup form crm-edit-form-input"
+                    required
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="email" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="Enter email address"
+                    className="editpopup form crm-edit-form-input"
+                    required
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="phone" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="Enter phone number"
+                    className="editpopup form crm-edit-form-input"
+                    required
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group md:col-span-2">
+                  <Label htmlFor="address" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </Label>
                   <Textarea
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({...formData, address: e.target.value})}
                     placeholder="Enter company address (optional)"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-textarea"
                     rows={3}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'active' | 'inactive'})}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -805,7 +821,7 @@ const GeneralSuppliers: React.FC = () => {
                 </div>
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -821,15 +837,15 @@ const GeneralSuppliers: React.FC = () => {
                       status: 'active',
                     });
                   }}
-                  className="w-full sm:w-auto bg-white hover:bg-gray-50 border-gray-300 text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                   disabled={submitting}
                 >
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="global-btn w-full sm:w-auto"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                   disabled={submitting}
                 >
                   {submitting ? (
@@ -838,7 +854,10 @@ const GeneralSuppliers: React.FC = () => {
                       {editingSupplier ? 'Updating...' : 'Adding...'}
                     </>
                   ) : (
-                    editingSupplier ? 'Update Supplier' : 'Add Supplier'
+                    <>
+                      <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      {editingSupplier ? 'Update Supplier' : 'Add Supplier'}
+                    </>
                   )}
                 </Button>
               </DialogFooter>
@@ -1038,18 +1057,43 @@ const GeneralSuppliers: React.FC = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-            <DialogHeader className="text-center">
-              <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Supplier</DialogTitle>
-              <DialogDescription className="text-center text-sm sm:text-base">
-                Are you sure you want to delete supplier <strong>{supplierToDelete?.name}</strong>?
-                <br />
-                <br />
-                <span className="text-destructive font-medium">This action cannot be undone.</span>
-              </DialogDescription>
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Supplier
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this supplier? This action cannot be undone.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
+            
+            {supplierToDelete && (
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{supplierToDelete.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{supplierToDelete.contactPerson}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600 capitalize">{supplierToDelete.status}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 justify-center">
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -1058,15 +1102,16 @@ const GeneralSuppliers: React.FC = () => {
                   setSupplierToDelete(null);
                 }}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
-                variant="destructive" 
+                type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
@@ -1075,7 +1120,7 @@ const GeneralSuppliers: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Delete Supplier
                   </>
                 )}

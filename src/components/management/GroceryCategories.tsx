@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, X, Tag, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GroceryCategory {
@@ -790,17 +790,17 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Add/Edit Category Dialog */}
         <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  {editingCategory ? <Edit2 className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-blue-600" />}
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     {editingCategory ? 'Edit Category' : 'Add New Category'}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     {editingCategory ? 'Update category information' : 'Enter the details for the new grocery category'}
                   </DialogDescription>
                 </div>
@@ -812,35 +812,44 @@ const handleRefresh = React.useCallback(() => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="space-y-4 p-3 sm:p-4 md:p-6"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">Category Name *</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Category Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="Enter category name"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="description" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Description
+                  </Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Enter category description (optional)"
-                    className="mt-1"
+                    className="editpopup form crm-edit-form-textarea"
                     rows={3}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -851,7 +860,7 @@ const handleRefresh = React.useCallback(() => {
                 </div>
               </div>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -864,14 +873,16 @@ const handleRefresh = React.useCallback(() => {
                       status: 'active',
                     });
                   }}
-                  className="w-full sm:w-auto global-btn"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="w-full sm:w-auto global-btn"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
+                  <FolderOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   {editingCategory ? 'Update Category' : 'Add Category'}
                 </Button>
               </DialogFooter>
@@ -881,30 +892,43 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Category
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this category? This action cannot be undone.
+                  </DialogDescription>
+                </div>
               </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Delete Category
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Are you sure you want to delete this category? This action cannot be undone.
-              </DialogDescription>
             </DialogHeader>
             
             {categoryToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 my-4">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">{categoryToDelete.name}</div>
-                  <div className="text-gray-600">{categoryToDelete.description || 'No description'}</div>
-                  <div className="text-gray-600 capitalize">{categoryToDelete.status}</div>
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{categoryToDelete.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{categoryToDelete.description || 'No description'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Status: {categoryToDelete.status}</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -913,15 +937,16 @@ const handleRefresh = React.useCallback(() => {
                   setCategoryToDelete(null);
                 }}
                 disabled={submitting}
-                className="global-btn w-full sm:w-auto"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="global-btn w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
@@ -930,7 +955,7 @@ const handleRefresh = React.useCallback(() => {
                   </>
                 ) : (
                   <>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Delete Category
                   </>
                 )}

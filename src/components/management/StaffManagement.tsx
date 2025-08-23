@@ -1107,105 +1107,128 @@ const StaffManagement: React.FC = () => {
       {/* Edit Staff Dialog */}
       {editStaff && (
         <Dialog open={!!editStaff} onOpenChange={() => setEditStaff(null)}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Staff - {editStaff.id}</DialogTitle>
-              <DialogDescription>Update staff information</DialogDescription>
+          <DialogContent className="editpopup form crm-modal-container max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader className="editpopup form crm-modal-header">
+              <DialogTitle className="editpopup form crm-modal-title">
+                <Edit2 className="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" />
+                Edit Staff - {editStaff.id}
+              </DialogTitle>
+              <DialogDescription className="editpopup form text-sm sm:text-base text-gray-600">
+                Update staff information
+              </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col items-center py-2">
-              {editStaff.photo ? (
-                <img
-                  src={getImageUrl(editStaff.photo)}
-                  alt={editStaff.name || 'Profile'}
-                  className="w-24 h-24 rounded-full object-cover border mb-2"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-2 text-lg text-muted-foreground border">
-                  N/A
-                </div>
-              )}
-              <div className="flex flex-col items-center gap-2">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="mb-2"
-                  onChange={handlePhotoChange}
-                />
-                <p className="text-sm text-gray-500">Maximum file size: 5MB</p>
-                {editStaff.photo && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditChange('photo', '')}
-                    className="text-red-600"
-                  >
-                    Remove Photo
-                  </Button>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveEdit();
+            }} className="editpopup form crm-edit-form">
+              <div className="flex flex-col items-center py-2 mb-4">
+                {editStaff.photo ? (
+                  <img
+                    src={getImageUrl(editStaff.photo)}
+                    alt={editStaff.name || 'Profile'}
+                    className="w-24 h-24 rounded-full object-cover border mb-2"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-2 text-lg text-muted-foreground border">
+                    N/A
+                  </div>
                 )}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input value={editStaff.name} onChange={e => handleEditChange('name', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={editStaff.email} onChange={e => handleEditChange('email', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input value={editStaff.phone} onChange={e => handleEditChange('phone', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                  value={editStaff.role}
-                  onChange={e => handleEditChange('role', e.target.value)}
-                >
-                  <option value="">Select Role</option>
-                  {staffCategories.map((category) => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-                  {staffCategories.length === 0 && (
-                    <>
-                      <option value="Admin">Admin</option>
-                      <option value="Nurse">Nurse</option>
-                      <option value="Receptionist">Receptionist</option>
-                      <option value="Pharmacist">Pharmacist</option>
-                      <option value="Lab Technician">Lab Technician</option>
-                      <option value="Other">Other</option>
-                    </>
+                <div className="flex flex-col items-center gap-2">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="mb-2"
+                    onChange={handlePhotoChange}
+                  />
+                  <p className="text-sm text-gray-500">Maximum file size: 5MB</p>
+                  {editStaff.photo && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditChange('photo', '')}
+                      className="text-red-600"
+                    >
+                      Remove Photo
+                    </Button>
                   )}
-                </select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                  value={editStaff.department}
-                  onChange={e => handleEditChange('department', e.target.value)}
-                >
-                  <option value="">Select Department</option>
-                  <option value="Administration">Administration</option>
-                  <option value="Nursing">Nursing</option>
-                  <option value="Reception">Reception</option>
-                  <option value="Pharmacy">Pharmacy</option>
-                  <option value="Laboratory">Laboratory</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Human Resources">Human Resources</option>
-                  <option value="IT">IT</option>
+              
+              <div className="editpopup form crm-edit-form-grid grid-cols-2 gap-4">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label">Name</Label>
+                  <Input 
+                    value={editStaff.name} 
+                    onChange={e => handleEditChange('name', e.target.value)} 
+                    className="editpopup form crm-edit-form-input"
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label">Email</Label>
+                  <Input 
+                    value={editStaff.email} 
+                    onChange={e => handleEditChange('email', e.target.value)} 
+                    className="editpopup form crm-edit-form-input"
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label">Phone</Label>
+                  <Input 
+                    value={editStaff.phone} 
+                    onChange={e => handleEditChange('phone', e.target.value)} 
+                    className="editpopup form crm-edit-form-input"
+                  />
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label">Role</Label>
+                  <select
+                    className="editpopup form crm-edit-form-select"
+                    value={editStaff.role}
+                    onChange={e => handleEditChange('role', e.target.value)}
+                  >
+                    <option value="">Select Role</option>
+                    {staffCategories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                    {staffCategories.length === 0 && (
+                      <>
+                        <option value="Admin">Admin</option>
+                        <option value="Nurse">Nurse</option>
+                        <option value="Receptionist">Receptionist</option>
+                        <option value="Pharmacist">Pharmacist</option>
+                        <option value="Lab Technician">Lab Technician</option>
+                        <option value="Other">Other</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label">Department</Label>
+                  <select
+                    className="editpopup form crm-edit-form-select"
+                    value={editStaff.department}
+                    onChange={e => handleEditChange('department', e.target.value)}
+                  >
+                    <option value="">Select Department</option>
+                    <option value="Administration">Administration</option>
+                    <option value="Nursing">Nursing</option>
+                    <option value="Reception">Reception</option>
+                    <option value="Pharmacy">Pharmacy</option>
+                    <option value="Laboratory">Laboratory</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Human Resources">Human Resources</option>
+                    <option value="IT">IT</option>
                   <option value="Maintenance">Maintenance</option>
                   <option value="Security">Security</option>
                   <option value="Housekeeping">Housekeeping</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Join Date</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label">Join Date</Label>
                 <Input 
                   type="date" 
                   value={editStaff.joinDate ? 
@@ -1215,20 +1238,29 @@ const StaffManagement: React.FC = () => {
                     ) : ''
                   } 
                   onChange={e => handleEditChange('joinDate', e.target.value)} 
+                  className="editpopup form crm-edit-form-input"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Salary</Label>
-                <Input value={editStaff.salary} onChange={e => handleEditChange('salary', e.target.value)} />
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label">Salary</Label>
+                <Input 
+                  value={editStaff.salary} 
+                  onChange={e => handleEditChange('salary', e.target.value)} 
+                  className="editpopup form crm-edit-form-input"
+                />
               </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Address</Label>
-                <Textarea value={editStaff.address} onChange={e => handleEditChange('address', e.target.value)} />
+              <div className="editpopup form crm-edit-form-group col-span-2">
+                <Label className="editpopup form crm-edit-form-label">Address</Label>
+                <Textarea 
+                  value={editStaff.address} 
+                  onChange={e => handleEditChange('address', e.target.value)} 
+                  className="editpopup form crm-edit-form-textarea"
+                />
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
+              <div className="editpopup form crm-edit-form-group">
+                <Label className="editpopup form crm-edit-form-label">Status</Label>
                 <select
-                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  className="editpopup form crm-edit-form-select"
                   value={editStaff.status}
                   onChange={e => handleEditChange('status', e.target.value)}
                 >
@@ -1333,17 +1365,24 @@ const StaffManagement: React.FC = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter>
+            </form>
+            
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
+                type="button"
+                variant="outline" 
                 onClick={() => setEditStaff(null)}
-                className="global-btn"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
+                type="button"
                 onClick={handleSaveEdit} 
-                className="global-btn"
+                className="editpopup form footer-button-save w-full sm:w-auto global-btn"
               >
+                <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Save Changes
               </Button>
             </DialogFooter>
@@ -1353,26 +1392,69 @@ const StaffManagement: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive">Delete Staff</DialogTitle>
-            <DialogDescription className="text-center">
-              Are you sure you want to delete staff <strong>{deleteStaff?.name}</strong> (ID: {deleteStaff?.id})?
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Staff Member
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this staff member? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="justify-center space-x-4">
+          
+          {deleteStaff && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteStaff.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <IdCard className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">ID: {deleteStaff.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Role: {deleteStaff.role}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteStaff.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Status: {deleteStaff.status}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
             <Button 
-              onClick={() => setShowDeleteConfirm(false)}
-              className="global-btn"
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteStaff(null);
+              }}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
             <Button 
+              type="button" 
               onClick={confirmDelete}
-              className="global-btn"
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Delete Staff
             </Button>
           </DialogFooter>

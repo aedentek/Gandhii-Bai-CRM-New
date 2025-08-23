@@ -89,8 +89,8 @@
   }
 }
 
-/* Header gradient accent line */
-.crm-modal-header::before {
+/* Header gradient accent line - REMOVED */
+/* .crm-modal-header::before {
   content: '';
   position: absolute;
   top: 0;
@@ -98,7 +98,7 @@
   right: 0;
   height: 4px;
   background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
-}
+} */
 
 /* Header content wrapper */
 .crm-modal-header-content {
@@ -1589,4 +1589,240 @@
 
 .crm-modal-table-cell:last-child {
   border-right: none;
+}
+
+/* ================================================================= */
+/* 14. EDIT POPUP FORM GLOBAL DESIGN */
+/* ================================================================= */
+/* Global design for all edit popup forms across the CRM */
+/* Based on month-year picker dialog design patterns */
+
+/* Base edit popup form container - inherits from dialog styles */
+.editpopup.form .dialog-content {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Header Design */
+.editpopup.form .dialog-header {
+  position: relative;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  padding: 0.75rem 1rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .editpopup.form .dialog-header {
+    padding-bottom: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .editpopup.form .dialog-header {
+    padding-bottom: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+
+.editpopup.form .dialog-header .icon-container {
+  padding: 0.5rem;
+  background-color: rgba(219, 234, 254, 1);
+  border-radius: 0.5rem;
+}
+
+.editpopup.form .dialog-header .icon {
+  height: 1.25rem;
+  width: 1.25rem;
+  color: rgba(37, 99, 235, 1);
+}
+
+.editpopup.form .dialog-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 1);
+}
+
+.editpopup.form .dialog-description {
+  color: rgba(75, 85, 99, 1);
+  margin-top: 0.25rem;
+}
+
+/* Form Container */
+.editpopup.form .form-container {
+  padding: 0.75rem 1rem;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .editpopup.form .form-container {
+    padding: 1rem 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .editpopup.form .form-container {
+    padding: 1.5rem 1.5rem;
+  }
+}
+
+/* Form Sections */
+.editpopup.form .form-section {
+  gap: 1rem;
+}
+
+.editpopup.form .form-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgba(17, 24, 39, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.editpopup.form .form-section-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editpopup.form .form-section-icon.personal {
+  background-color: rgba(219, 234, 254, 1);
+}
+
+.editpopup.form .form-section-icon.contact {
+  background-color: rgba(209, 250, 229, 1);
+}
+
+.editpopup.form .form-section-icon.family {
+  background-color: rgba(243, 232, 255, 1);
+}
+
+.editpopup.form .form-section-icon svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.editpopup.form .form-section-icon.personal svg {
+  color: rgba(37, 99, 235, 1);
+}
+
+.editpopup.form .form-section-icon.contact svg {
+  color: rgba(5, 150, 105, 1);
+}
+
+.editpopup.form .form-section-icon.family svg {
+  color: rgba(147, 51, 234, 1);
+}
+
+/* Form Grid */
+.editpopup.form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .editpopup.form .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Form Fields */
+.editpopup.form .form-field {
+  gap: 0.5rem;
+}
+
+.editpopup.form .form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(55, 65, 81, 1);
+}
+
+.editpopup.form .form-required {
+  color: rgba(239, 68, 68, 1);
+}
+
+/* Input Styling */
+.editpopup.form .form-input,
+.editpopup.form .form-textarea,
+.editpopup.form .form-select-trigger,
+.editpopup.form .crm-edit-form-input,
+.editpopup.form .crm-edit-form-textarea,
+.editpopup.form .crm-edit-form-select {
+  margin-top: 0.25rem;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.editpopup.form .form-input:focus,
+.editpopup.form .form-textarea:focus,
+.editpopup.form .form-select-trigger:focus,
+.editpopup.form .crm-edit-form-input:focus,
+.editpopup.form .crm-edit-form-textarea:focus,
+.editpopup.form .crm-edit-form-select:focus {
+  border-color: rgba(59, 130, 246, 1);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Select Dropdown */
+.editpopup.form .form-select-content {
+  background-color: white;
+  border: 1px solid rgba(209, 213, 219, 1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+}
+
+/* Footer Design */
+.editpopup.form .dialog-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  padding-bottom: 0.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .editpopup.form .dialog-footer {
+    flex-direction: row;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .editpopup.form .dialog-footer {
+    padding-bottom: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Footer Buttons */
+.editpopup.form .footer-button-cancel {
+  width: 100%;
+}
+
+.editpopup.form .footer-button-save {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .editpopup.form .footer-button-cancel,
+  .editpopup.form .footer-button-save {
+    width: auto;
+  }
 }

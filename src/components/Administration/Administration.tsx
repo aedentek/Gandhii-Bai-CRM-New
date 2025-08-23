@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Users, UserCheck, Activity, Pencil, Trash2, TrendingUp, Clock, RefreshCw, Download, Plus, Search, Eye, Edit2, Filter, X, EyeOff } from 'lucide-react';
+import { Users, UserCheck, Activity, Pencil, Trash2, TrendingUp, Clock, RefreshCw, Download, Plus, Search, Eye, Edit2, Filter, X, EyeOff, Edit, UserPlus, Shield, Lock } from 'lucide-react';
 import '@/styles/global-crm-design.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -559,31 +559,50 @@ const Administration: React.FC = () => {
 
 			{/* Edit User Dialog */}
 			<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-				<DialogContent className="sm:max-w-[425px]">
-					<DialogHeader>
-						<DialogTitle>Edit User</DialogTitle>
-						<DialogDescription>
-							Update user information. Click save when you're done.
-						</DialogDescription>
+				<DialogContent className="crm-modal-container">
+					<DialogHeader className="editpopup form dialog-header">
+						<div className="editpopup form icon-title-container">
+							<div className="editpopup form dialog-icon">
+								<Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+							</div>
+							<div className="editpopup form title-description">
+								<DialogTitle className="editpopup form dialog-title">
+									Edit User
+								</DialogTitle>
+								<DialogDescription className="editpopup form dialog-description">
+									Update user information. Click save when you're done.
+								</DialogDescription>
+							</div>
+						</div>
 					</DialogHeader>
-					<div className="grid gap-4 py-4">
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="username" className="text-right">
+					
+					<form
+						onSubmit={e => {
+							e.preventDefault();
+							handleUpdateUser();
+						}}
+						className="editpopup form crm-edit-form-content"
+					>
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="username" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<UserCheck className="h-4 w-4" />
 								Username
 							</Label>
 							<Input
 								id="username"
 								value={formData.username}
 								onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-								className="col-span-3"
+								className="editpopup form crm-edit-form-input"
 							/>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="role" className="text-right">
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="role" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Shield className="h-4 w-4" />
 								Role
 							</Label>
 							<Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-								<SelectTrigger className="col-span-3">
+								<SelectTrigger className="editpopup form crm-edit-form-select">
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -595,17 +614,19 @@ const Administration: React.FC = () => {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="password" className="text-right">
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="password" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Lock className="h-4 w-4" />
 								Password
 							</Label>
-							<div className="relative col-span-3">
+							<div className="relative">
 								<Input
 									id="password"
 									type={showPassword ? "text" : "password"}
 									value={formData.password}
 									onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-									className="pr-10"
+									className="editpopup form crm-edit-form-input pr-10"
 									placeholder="Enter new password (leave blank to keep current)"
 								/>
 								<Button
@@ -623,12 +644,14 @@ const Administration: React.FC = () => {
 								</Button>
 							</div>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="status" className="text-right">
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Activity className="h-4 w-4" />
 								Status
 							</Label>
 							<Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-								<SelectTrigger className="col-span-3">
+								<SelectTrigger className="editpopup form crm-edit-form-select">
 									<SelectValue placeholder="Select status" />
 								</SelectTrigger>
 								<SelectContent>
@@ -637,46 +660,77 @@ const Administration: React.FC = () => {
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-							Cancel
-						</Button>
-						<Button type="button" onClick={handleUpdateUser}>
-							Save Changes
-						</Button>
-					</DialogFooter>
+						
+						<DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+							<Button 
+								type="button" 
+								variant="outline" 
+								onClick={() => setEditDialogOpen(false)}
+								className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+							>
+								<X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+								Cancel
+							</Button>
+							<Button 
+								type="submit"
+								className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+							>
+								<Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+								Save Changes
+							</Button>
+						</DialogFooter>
+					</form>
 				</DialogContent>
 			</Dialog>
 
 			{/* Add User Dialog */}
 			<Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-				<DialogContent className="sm:max-w-[425px]">
-					<DialogHeader>
-						<DialogTitle>Add New User</DialogTitle>
-						<DialogDescription>
-							Create a new user account. Fill in all required information.
-						</DialogDescription>
+				<DialogContent className="crm-modal-container">
+					<DialogHeader className="editpopup form dialog-header">
+						<div className="editpopup form icon-title-container">
+							<div className="editpopup form dialog-icon">
+								<UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+							</div>
+							<div className="editpopup form title-description">
+								<DialogTitle className="editpopup form dialog-title">
+									Add New User
+								</DialogTitle>
+								<DialogDescription className="editpopup form dialog-description">
+									Create a new user account. Fill in all required information.
+								</DialogDescription>
+							</div>
+						</div>
 					</DialogHeader>
-					<div className="grid gap-4 py-4">
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="add-username" className="text-right">
-								Username
+					
+					<form
+						onSubmit={e => {
+							e.preventDefault();
+							handleCreateUser();
+						}}
+						className="editpopup form crm-edit-form-content"
+					>
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="add-username" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<UserCheck className="h-4 w-4" />
+								Username <span className="text-red-500">*</span>
 							</Label>
 							<Input
 								id="add-username"
 								value={addFormData.username}
 								onChange={(e) => setAddFormData({ ...addFormData, username: e.target.value })}
-								className="col-span-3"
+								className="editpopup form crm-edit-form-input"
 								placeholder="Enter username"
+								required
 							/>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="add-role" className="text-right">
-								Role
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="add-role" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Shield className="h-4 w-4" />
+								Role <span className="text-red-500">*</span>
 							</Label>
 							<Select value={addFormData.role} onValueChange={(value) => setAddFormData({ ...addFormData, role: value })}>
-								<SelectTrigger className="col-span-3">
+								<SelectTrigger className="editpopup form crm-edit-form-select">
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -688,18 +742,21 @@ const Administration: React.FC = () => {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="add-password" className="text-right">
-								Password
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="add-password" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Lock className="h-4 w-4" />
+								Password <span className="text-red-500">*</span>
 							</Label>
-							<div className="relative col-span-3">
+							<div className="relative">
 								<Input
 									id="add-password"
 									type={showAddPassword ? "text" : "password"}
 									value={addFormData.password}
 									onChange={(e) => setAddFormData({ ...addFormData, password: e.target.value })}
-									className="pr-10"
+									className="editpopup form crm-edit-form-input pr-10"
 									placeholder="Enter password"
+									required
 								/>
 								<Button
 									type="button"
@@ -716,12 +773,14 @@ const Administration: React.FC = () => {
 								</Button>
 							</div>
 						</div>
-						<div className="grid grid-cols-4 items-center gap-4">
-							<Label htmlFor="add-status" className="text-right">
+						
+						<div className="editpopup form crm-edit-form-group">
+							<Label htmlFor="add-status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+								<Activity className="h-4 w-4" />
 								Status
 							</Label>
 							<Select value={addFormData.status} onValueChange={(value) => setAddFormData({ ...addFormData, status: value })}>
-								<SelectTrigger className="col-span-3">
+								<SelectTrigger className="editpopup form crm-edit-form-select">
 									<SelectValue placeholder="Select status" />
 								</SelectTrigger>
 								<SelectContent>
@@ -730,32 +789,65 @@ const Administration: React.FC = () => {
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
-							Cancel
-						</Button>
-						<Button type="button" onClick={handleCreateUser}>
-							Create User
-						</Button>
-					</DialogFooter>
+						
+						<DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+							<Button 
+								type="button" 
+								variant="outline" 
+								onClick={() => setAddDialogOpen(false)}
+								className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+							>
+								<X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+								Cancel
+							</Button>
+							<Button 
+								type="submit"
+								className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+							>
+								<UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+								Create User
+							</Button>
+						</DialogFooter>
+					</form>
 				</DialogContent>
 			</Dialog>
 
 			{/* Delete User Dialog */}
 			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<DialogContent className="sm:max-w-[425px]">
-					<DialogHeader>
-						<DialogTitle>Delete User</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete user "{userToDelete?.username}"? This action cannot be undone.
-						</DialogDescription>
+				<DialogContent className="crm-modal-container">
+					<DialogHeader className="editpopup form dialog-header">
+						<div className="editpopup form icon-title-container">
+							<div className="editpopup form dialog-icon">
+								<Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+							</div>
+							<div className="editpopup form title-description">
+								<DialogTitle className="editpopup form dialog-title text-red-700">
+									Delete User
+								</DialogTitle>
+								<DialogDescription className="editpopup form dialog-description">
+									Are you sure you want to delete user "{userToDelete?.username}"? This action cannot be undone.
+								</DialogDescription>
+							</div>
+						</div>
 					</DialogHeader>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+					
+					<DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+						<Button 
+							type="button" 
+							variant="outline" 
+							onClick={() => setDeleteDialogOpen(false)}
+							className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+						>
+							<X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
 							Cancel
 						</Button>
-						<Button type="button" variant="destructive" onClick={confirmDeleteUser}>
+						<Button 
+							type="button" 
+							variant="destructive" 
+							onClick={confirmDeleteUser}
+							className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+						>
+							<Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
 							Delete User
 						</Button>
 					</DialogFooter>

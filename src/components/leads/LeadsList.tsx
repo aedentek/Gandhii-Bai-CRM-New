@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MonthYearPickerDialog } from '@/components/shared';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Phone, Calendar } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Phone, Calendar, User, UserPlus, FolderOpen, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
@@ -673,17 +673,17 @@ const LeadsList: React.FC = () => {
 
         {/* Add/Edit Lead Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="w-[calc(100vw-20px)] max-w-[500px] max-h-[90vh] overflow-y-auto m-2 sm:m-5 sm:mx-auto">
-            <DialogHeader className="relative pb-3 sm:pb-4 border-b border-blue-100 p-4 sm:p-5">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <DialogTitle className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title">
                     {editingLead ? 'Edit Lead' : 'Add New Lead'}
                   </DialogTitle>
-                  <DialogDescription className="text-xs sm:text-sm text-gray-600 mt-1">
+                  <DialogDescription className="editpopup form dialog-description">
                     {editingLead ? 'Update lead information' : 'Enter new lead details'}
                   </DialogDescription>
                 </div>
@@ -695,35 +695,47 @@ const LeadsList: React.FC = () => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="space-y-3 sm:space-y-4"
+              className="editpopup form crm-edit-form-content"
             >
-              <div className="p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <div className="w-full">
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">Name *</Label>
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Enter lead name"
-                    className="mt-1 w-full h-11"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="w-full">
-                  <Label htmlFor="date" className="text-sm font-medium text-gray-700">Date</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="date" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Date
+                  </Label>
                   <Input
                     id="date"
                     type="date"
                     value={formData.date}
                     onChange={e => setFormData({ ...formData, date: e.target.value })}
-                    className="mt-1 w-full h-11"
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div className="w-full">
-                  <Label htmlFor="category" className="text-sm font-medium text-gray-700">Category *</Label>
+              </div>
+              
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="category" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    Category <span className="text-red-500">*</span>
+                  </Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger className="mt-1 w-full h-11">
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -733,32 +745,46 @@ const LeadsList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-full">
-                  <Label htmlFor="contactNumber" className="text-sm font-medium text-gray-700">Contact Number *</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="contactNumber" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact Number <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="contactNumber"
                     value={formData.contactNumber}
                     onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
                     placeholder="Enter contact number"
-                    className="mt-1 w-full h-11"
+                    className="editpopup form crm-edit-form-input"
                     required
                   />
                 </div>
-                <div className="w-full">
-                  <Label htmlFor="reminderDate" className="text-sm font-medium text-gray-700">Reminder Date</Label>
+              </div>
+              
+              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="reminderDate" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Reminder Date
+                  </Label>
                   <Input
                     id="reminderDate"
                     type="date"
                     value={formData.reminderDate}
                     onChange={e => setFormData({ ...formData, reminderDate: e.target.value })}
-                    className="mt-1 w-full h-11"
+                    className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                <div className="w-full">
-                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Status
+                  </Label>
                   <Select value={formData.status} onValueChange={(value: 'Closed' | 'Reminder' | 'Not Interested') => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger className="mt-1 w-full h-11">
-                      <SelectValue />
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Closed">Closed</SelectItem>
@@ -767,21 +793,24 @@ const LeadsList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              <div className="w-full">
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
+              </div>
+              
+              <div className="editpopup form crm-edit-form-group">
+                <Label htmlFor="description" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Description
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Enter description (optional)"
-                  className="mt-1 w-full resize-none min-h-[80px]"
+                  className="editpopup form crm-edit-form-input"
                   rows={3}
                 />
               </div>
-              </div>
-              </div>
               
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100 p-4 sm:p-5">
+              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -791,16 +820,32 @@ const LeadsList: React.FC = () => {
                     resetForm();
                   }}
                   disabled={submitting}
-                  className="w-full sm:w-auto min-h-[44px] text-sm"
+                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto global-btn min-h-[44px] text-sm"
+                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
-                  {submitting ? 'Saving...' : (editingLead ? 'Update Lead' : 'Add Lead')}
+                  {submitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : editingLead ? (
+                    <>
+                      <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Update Lead
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Add Lead
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -809,30 +854,43 @@ const LeadsList: React.FC = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="w-[calc(100vw-40px)] max-w-[400px] m-5 sm:mx-auto">
-            <DialogHeader className="text-center pb-4 sm:pb-6 p-5 sm:p-6">
-              <div className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+          <DialogContent className="crm-modal-container">
+            <DialogHeader className="editpopup form dialog-header">
+              <div className="editpopup form icon-title-container">
+                <div className="editpopup form dialog-icon">
+                  <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                </div>
+                <div className="editpopup form title-description">
+                  <DialogTitle className="editpopup form dialog-title text-red-700">
+                    Delete Lead
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form dialog-description">
+                    Are you sure you want to delete this lead? This action cannot be undone.
+                  </DialogDescription>
+                </div>
               </div>
-              <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">
-                Delete Lead
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Are you sure you want to delete this lead? This action cannot be undone.
-              </DialogDescription>
             </DialogHeader>
             
             {leadToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 mx-5 my-4 sm:mx-6">
-                <div className="text-sm space-y-2">
-                  <div className="font-medium text-gray-900 text-center sm:text-left truncate">{leadToDelete.name}</div>
-                  <div className="text-gray-600 text-center sm:text-left">{leadToDelete.contactNumber}</div>
-                  <div className="text-gray-600 text-center sm:text-left">{leadToDelete.category}</div>
+              <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-900">{leadToDelete.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{leadToDelete.contactNumber}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{leadToDelete.category}</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100 p-5 sm:p-6">
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -841,15 +899,16 @@ const LeadsList: React.FC = () => {
                   setLeadToDelete(null);
                 }}
                 disabled={submitting}
-                className="modern-btn modern-btn-secondary w-full sm:w-auto min-h-[44px] text-sm"
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
               >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Cancel
               </Button>
               <Button 
                 type="button" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="modern-btn modern-btn-danger w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white min-h-[44px] text-sm"
+                className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting ? (
                   <>
@@ -858,7 +917,7 @@ const LeadsList: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Delete Lead
                   </>
                 )}

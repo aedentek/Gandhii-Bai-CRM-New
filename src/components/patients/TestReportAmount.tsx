@@ -8,16 +8,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { 
   FileText, Users, RefreshCw, Download, Plus, Eye, Edit, Trash2, 
-  Calendar, Activity, TestTube, Receipt, User
+  Calendar, Activity, TestTube, Receipt, User, X, Phone
 } from 'lucide-react';
 import { format } from 'date-fns';
 import LoadingScreen from '@/components/shared/LoadingScreen';
 import { getPatientPhotoUrl, PatientPhoto } from '@/utils/photoUtils';
+import '@/styles/global-modal-design.css';
 
 interface Patient {
   id: string | number;
@@ -83,6 +84,15 @@ const TestReportAmount: React.FC = () => {
   // Edit Test Report Modal
   const [isEditTestReportOpen, setIsEditTestReportOpen] = useState(false);
   const [editingTestReport, setEditingTestReport] = useState<TestReport | null>(null);
+  
+  // Delete dialog state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteReport, setDeleteReport] = useState<TestReport | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Patient delete dialog state
+  const [showDeletePatientConfirm, setShowDeletePatientConfirm] = useState(false);
+  const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
 
   useEffect(() => {
     loadPatients();
@@ -322,15 +332,19 @@ const TestReportAmount: React.FC = () => {
     }
   };
 
-  const handleDeleteTestReport = async (reportId: number) => {
-    if (!confirm('Are you sure you want to delete this test report?')) {
-      return;
-    }
+  const handleDeleteTestReport = async (report: TestReport) => {
+    setDeleteReport(report);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteReport) return;
 
     try {
-      console.log('🗑️ Deleting test report:', reportId);
+      setSubmitting(true);
+      console.log('🗑️ Deleting test report:', deleteReport.id);
       
-      const response = await fetch(`http://localhost:4000/api/test-reports/${reportId}`, {
+      const response = await fetch(`http://localhost:4000/api/test-reports/${deleteReport.id}`, {
         method: 'DELETE'
       });
 
@@ -342,11 +356,11 @@ const TestReportAmount: React.FC = () => {
       
       if (result.success) {
         // Remove from local state
-        setTestReports(prev => prev.filter(report => report.id !== reportId));
+        setTestReports(prev => prev.filter(report => report.id !== deleteReport.id));
         
         // Update patient reports if viewing
         if (viewingPatient) {
-          const updatedPatientReports = patientTestReports.filter(report => report.id !== reportId);
+          const updatedPatientReports = patientTestReports.filter(report => report.id !== deleteReport.id);
           setPatientTestReports(updatedPatientReports);
         }
         
@@ -354,6 +368,9 @@ const TestReportAmount: React.FC = () => {
           title: "Success",
           description: "Test report deleted successfully",
         });
+        
+        setShowDeleteConfirm(false);
+        setDeleteReport(null);
       } else {
         throw new Error(result.message || 'Failed to delete test report');
       }
@@ -362,6 +379,52 @@ const TestReportAmount: React.FC = () => {
       toast({
         title: "Error",
         description: `Failed to delete test report: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeletePatient = async (patient: Patient) => {
+    setDeletePatient(patient);
+    setShowDeletePatientConfirm(true);
+  };
+
+  const confirmDeletePatient = async () => {
+    if (!deletePatient) return;
+
+    try {
+      console.log('🗑️ Deleting patient:', deletePatient.id);
+      
+      const response = await fetch(`http://localhost:4000/api/patients/${deletePatient.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Patient deleted successfully",
+        });
+        
+        // Remove from patients list
+        setPatients(prev => prev.filter(patient => patient.id !== deletePatient.id));
+        
+        setShowDeletePatientConfirm(false);
+        setDeletePatient(null);
+      } else {
+        throw new Error(result.message || 'Failed to delete patient');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting patient:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete patient: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -773,6 +836,15 @@ const TestReportAmount: React.FC = () => {
                           title="Add Test Report"
                         >
                           <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleDeletePatient(patient)}
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                          title="Delete Patient"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1221,7 +1293,7 @@ const TestReportAmount: React.FC = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleDeleteTestReport(report.id!)}
+                              onClick={() => handleDeleteTestReport(report)}
                               className="action-btn-lead action-btn-delete"
                               title="Delete Report"
                             >
@@ -1242,6 +1314,151 @@ const TestReportAmount: React.FC = () => {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Test Report
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this test report? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {deleteReport && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteReport.patientName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TestTube className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteReport.testType}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{format(new Date(deleteReport.testDate), 'dd/MM/yyyy')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Amount: ₹{deleteReport.amount}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteReport(null);
+              }}
+              disabled={submitting}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={confirmDelete}
+              disabled={submitting}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              {submitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  Delete Test Report
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Patient Confirmation Dialog */}
+      <Dialog open={showDeletePatientConfirm} onOpenChange={setShowDeletePatientConfirm}>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Patient
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this patient? This action cannot be undone and will remove all associated data.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {deletePatient && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deletePatient.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deletePatient.phone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Age: {deletePatient.age}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Admission: {format(new Date(deletePatient.admissionDate), 'dd/MM/yyyy')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowDeletePatientConfirm(false);
+                setDeletePatient(null);
+              }}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={confirmDeletePatient}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Delete Patient
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

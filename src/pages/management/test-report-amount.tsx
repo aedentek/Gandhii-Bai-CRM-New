@@ -337,6 +337,7 @@ const TestReportAmountPage: React.FC = () => {
   const confirmDelete = async () => {
     if (!deleteReport) return;
 
+    setIsSubmitting(true);
     try {
       console.log('🗑️ Deleting test report:', deleteReport.id);
       
@@ -363,6 +364,8 @@ const TestReportAmountPage: React.FC = () => {
       toast('Error', {
         description: `Failed to delete test report: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -727,151 +730,148 @@ const TestReportAmountPage: React.FC = () => {
         />
 
         {/* Add Test Report Modal */}
-        {isReportModalOpen && selectedPatient && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={handleCloseReportModal}
-          >
-            <div 
-              className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage 
-                        src={selectedPatient.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
-                      />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {selectedPatient.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h2 className="text-xl font-semibold text-slate-800">
-                        Add Test Report - {selectedPatient.name}
-                      </h2>
-                      <p className="text-sm text-slate-600">ID: {formatPatientId(selectedPatient.id)}</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCloseReportModal}
-                    className="text-slate-500 hover:text-slate-700"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
+        <Dialog open={isReportModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            handleCloseReportModal();
+          }
+        }}>
+          <DialogContent className="editpopup form crm-modal-container sm:max-w-md w-[95vw] sm:w-full">
+            <DialogHeader className="editpopup form crm-modal-header">
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
+                  <AvatarImage 
+                    src={selectedPatient?.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
+                  />
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-sm sm:text-base">
+                    {selectedPatient?.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="editpopup form crm-modal-title text-lg sm:text-xl">
+                    <TestTube className="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" />
+                    Add Test Report - {selectedPatient?.name}
+                  </DialogTitle>
+                  <DialogDescription className="editpopup form text-sm text-gray-600">
+                    ID: {selectedPatient ? formatPatientId(selectedPatient.id) : ''}
+                  </DialogDescription>
                 </div>
-
-                {/* Add Test Report Form */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <TestTube className="h-5 w-5 text-blue-600" />
-                      Test Report Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Test Type *
-                      </label>
-                      <select
-                        value={testType}
-                        onChange={(e) => setTestType(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select test type</option>
-                        <option value="Blood Test">Blood Test</option>
-                        <option value="Urine Test">Urine Test</option>
-                        <option value="X-Ray">X-Ray</option>
-                        <option value="CT Scan">CT Scan</option>
-                        <option value="MRI">MRI</option>
-                        <option value="Ultrasound">Ultrasound</option>
-                        <option value="ECG">ECG</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Test Date *
-                      </label>
-                      <Input
-                        type="date"
-                        value={testDate}
-                        onChange={(e) => setTestDate(e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Amount (₹) *
-                      </label>
-                      <Input
-                        type="number"
-                        placeholder="Enter test amount"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Status *
-                      </label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as 'Pending' | 'Completed' | 'Cancelled')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Notes
-                      </label>
-                      <Textarea
-                        placeholder="Enter additional notes (optional)"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="w-full min-h-[80px]"
-                      />
-                    </div>
-                    
-                    <Button 
-                      onClick={handleAddReport}
-                      disabled={isSubmitting || !testType || !amount || !testDate}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Add Test Report
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
               </div>
-            </div>
-          </div>
-        )}
+            </DialogHeader>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleAddReport();
+            }} className="editpopup form crm-edit-form">
+              <div className="editpopup form crm-edit-form-grid">
+                <div className="editpopup form crm-edit-form-group">
+                  <label className="editpopup form crm-edit-form-label required">
+                    Test Type
+                  </label>
+                  <select
+                    value={testType}
+                    onChange={(e) => setTestType(e.target.value)}
+                    className="editpopup form crm-edit-form-select"
+                  >
+                    <option value="">Select test type</option>
+                    <option value="Blood Test">Blood Test</option>
+                    <option value="Urine Test">Urine Test</option>
+                    <option value="X-Ray">X-Ray</option>
+                    <option value="CT Scan">CT Scan</option>
+                    <option value="MRI">MRI</option>
+                    <option value="Ultrasound">Ultrasound</option>
+                    <option value="ECG">ECG</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <label className="editpopup form crm-edit-form-label required">
+                    Test Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={testDate}
+                    onChange={(e) => setTestDate(e.target.value)}
+                    className="editpopup form crm-edit-form-input"
+                  />
+                </div>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <label className="editpopup form crm-edit-form-label required">
+                    Amount (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Enter test amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="editpopup form crm-edit-form-input"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <label className="editpopup form crm-edit-form-label required">
+                    Status
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as 'Pending' | 'Completed' | 'Cancelled')}
+                    className="editpopup form crm-edit-form-select"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                
+                <div className="editpopup form crm-edit-form-group">
+                  <label className="editpopup form crm-edit-form-label">
+                    Notes
+                  </label>
+                  <Textarea
+                    placeholder="Enter additional notes (optional)"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="editpopup form crm-edit-form-textarea"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </form>
+
+            <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={handleCloseReportModal} 
+                className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleAddReport}
+                disabled={isSubmitting || !testType || !amount || !testDate}
+                className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Add Test Report
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Patient View Modal - Glass Morphism Design */}
         {isViewModalOpen && selectedPatient && (
@@ -1388,44 +1388,82 @@ const TestReportAmountPage: React.FC = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Dialog - PatientList Style */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Test Report</DialogTitle>
-            <DialogDescription className="text-center text-sm sm:text-base">
-              Are you sure you want to delete this test report?
-              <br />
-              <br />
-              {deleteReport && (
-                <div className="bg-gray-50 p-3 rounded-lg text-left space-y-1">
-                  <p><strong>Patient ID:</strong> PAT{String(deleteReport.patient_id).padStart(3, '0')}</p>
-                  <p><strong>Test Type:</strong> {deleteReport.test_type}</p>
-                  <p><strong>Date:</strong> {new Date(deleteReport.test_date).toLocaleDateString('en-GB')}</p>
-                  <p><strong>Amount:</strong> ₹{(() => {
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Test Report
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this test report? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {deleteReport && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">PAT{String(deleteReport.patient_id).padStart(3, '0')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TestTube className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteReport.test_type}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{new Date(deleteReport.test_date).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">₹{(() => {
                     const amount = typeof deleteReport.amount === 'string' ? parseFloat(deleteReport.amount) : deleteReport.amount;
                     return (isNaN(amount) ? 0 : amount).toLocaleString('en-IN');
-                  })()}</p>
+                  })()}</span>
                 </div>
-              )}
-              <br />
-              <span className="text-destructive font-medium">This action cannot be undone.</span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
             <Button 
+              type="button" 
               variant="outline" 
-              onClick={() => setShowDeleteConfirm(false)} 
-              className="w-full sm:w-auto"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteReport(null);
+              }}
+              disabled={isSubmitting}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
             <Button 
-              variant="destructive" 
-              onClick={confirmDelete} 
-              className="w-full sm:w-auto"
+              type="button" 
+              onClick={confirmDelete}
+              disabled={isSubmitting}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
-              Delete Test Report
+              {isSubmitting ? (
+                <>
+                  <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  Delete Test Report
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

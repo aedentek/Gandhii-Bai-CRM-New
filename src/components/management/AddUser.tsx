@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, User, Shield, Activity, UserCheck, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -29,6 +29,8 @@ const AddUser: React.FC = () => {
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     username: '',
     role: '',
@@ -88,11 +90,18 @@ const AddUser: React.FC = () => {
     setShowAddDialog(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== id));
-      toast({ title: 'User Deleted', description: 'User account deleted successfully' });
-    }
+  const handleDelete = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (!userToDelete) return;
+    
+    setUsers(users.filter(u => u.id !== userToDelete.id));
+    setShowDeleteDialog(false);
+    setUserToDelete(null);
+    toast({ title: 'User Deleted', description: 'User account deleted successfully' });
   };
 
   const filteredUsers = users.filter(user =>
@@ -162,10 +171,10 @@ const AddUser: React.FC = () => {
                     <TableCell className="align-middle">{user.createdAt}</TableCell>
                     <TableCell className="align-middle">
                       <div className="flex space-x-1 justify-center">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(user)} className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg transition-all duration-300">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(user)} className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0">
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDelete(user.id)} className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg transition-all duration-300">
+                        <Button size="sm" variant="outline" onClick={() => handleDelete(user)} className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -248,6 +257,57 @@ const AddUser: React.FC = () => {
             </Button>
             <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
               {editingUser ? 'Update User' : 'Add User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete User Account</DialogTitle>
+            <DialogDescription className="text-center text-sm sm:text-base">
+              Are you sure you want to delete user <strong>{userToDelete?.username}</strong> (ID: {userToDelete?.id})?
+              <br />
+              <br />
+              <div className="text-left bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">Username:</span>
+                  <span>{userToDelete?.username}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-4 h-4 text-purple-600" />
+                  <span className="font-medium">Role:</span>
+                  <span>{userToDelete?.role}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-green-600" />
+                  <span className="font-medium">Status:</span>
+                  <span>{userToDelete?.status}</span>
+                </div>
+              </div>
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDelete}
+              className="w-full sm:w-auto"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete User
             </Button>
           </DialogFooter>
         </DialogContent>

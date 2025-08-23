@@ -370,36 +370,61 @@ const DoctorCategory: React.FC = () => {
 
       {/* Add Category Dialog */}
       <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
-            <DialogDescription>Create a new category for doctors</DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title">
+                  Add New Category
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Create a new category for doctors
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Category Name *</Label>
+          
+          <div className="editpopup form crm-edit-form-content">
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Category Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Enter category name"
+                className="editpopup form crm-edit-form-input"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="description" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Description
+              </Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Enter category description"
                 rows={3}
+                className="editpopup form crm-edit-form-input"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Status
+              </Label>
               <select
                 id="status"
-                className="w-full border rounded px-3 py-2"
+                className="editpopup form crm-edit-form-select"
                 value={formData.status}
                 onChange={e => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
               >
@@ -407,13 +432,25 @@ const DoctorCategory: React.FC = () => {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleAddCategory}>Add Category</Button>
-              <Button variant="outline" onClick={() => setIsAddingCategory(false)}>
-                Cancel
-              </Button>
-            </div>
           </div>
+          
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAddingCategory(false)}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddCategory}
+              className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Add Category
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -562,36 +599,61 @@ const DoctorCategory: React.FC = () => {
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditingCategory} onOpenChange={setIsEditingCategory}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>Update the details for this category</DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title">
+                  Edit Category
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Update the details for this category
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Category Name *</Label>
+          
+          <div className="editpopup form crm-edit-form-content">
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="edit-name" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Category Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Enter category name"
+                className="editpopup form crm-edit-form-input"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="edit-description" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Description
+              </Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Enter category description"
                 rows={3}
+                className="editpopup form crm-edit-form-input"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
+            
+            <div className="editpopup form crm-edit-form-group">
+              <Label htmlFor="edit-status" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Status
+              </Label>
               <select
                 id="edit-status"
-                className="w-full border rounded px-3 py-2"
+                className="editpopup form crm-edit-form-select"
                 value={formData.status}
                 onChange={e => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
               >
@@ -599,32 +661,81 @@ const DoctorCategory: React.FC = () => {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleUpdateCategory}>Update Category</Button>
-              <Button variant="outline" onClick={() => setIsEditingCategory(false)}>
-                Cancel
-              </Button>
-            </div>
           </div>
+          
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditingCategory(false)}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateCategory}
+              className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+            >
+              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Update Category
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-sm border-blue-200 shadow-xl">
-          <DialogHeader className="text-center border-b border-blue-200/30 pb-4">
-            <DialogTitle className="text-red-600 font-semibold">Delete Category</DialogTitle>
-            <DialogDescription className="text-center text-blue-700">
-              Are you sure you want to delete the category <strong className="text-blue-800">"{deleteCategory?.name}"</strong>?
-              <br />
-              <span className="text-red-600 font-medium">This action cannot be undone.</span>
-            </DialogDescription>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Category
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this category? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="justify-center space-x-4 pt-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="border-blue-200 text-blue-600 hover:bg-blue-50">
+          
+          {deleteCategory && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">{deleteCategory.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{deleteCategory.description || 'No description'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Status: {deleteCategory.status}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteCategory} className="bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteCategory}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Delete Category
             </Button>
           </DialogFooter>

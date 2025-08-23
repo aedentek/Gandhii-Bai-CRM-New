@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { 
@@ -27,7 +27,8 @@ import {
   Trash2,
   Stethoscope,
   CalendarDays,
-  UserCheck
+  UserCheck,
+  Activity
 } from 'lucide-react';
 import { DatabaseService } from '@/services/databaseService';
 import { DoctorSalaryAPI } from '@/services/doctorSalaryAPI';
@@ -1367,81 +1368,86 @@ const DoctorSalary: React.FC = () => {
     )}
 
     {/* Delete Confirmation Dialog */}
-    {showDeleteDialog && createPortal(
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-        style={{ 
-          zIndex: 10000,
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0
-        }}
-      >
-        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" style={{ zIndex: 10001 }}>
-          <div className="p-6">
-            <div className="text-center pb-4">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Delete Payment Record
-              </h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Are you sure you want to delete this payment record? This action cannot be undone.
-              </p>
+    <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <DialogContent className="crm-modal-container">
+        <DialogHeader className="editpopup form dialog-header">
+          <div className="editpopup form icon-title-container">
+            <div className="editpopup form dialog-icon">
+              <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
             </div>
-            
-            {paymentToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 my-4">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">Payment Details</div>
-                  <div className="text-gray-600">Date: {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</div>
-                  <div className="text-gray-600">Amount: ₹{parseFloat(paymentToDelete.payment_amount || 0).toLocaleString('en-IN')}</div>
-                  <div className="text-gray-600">Type: {paymentToDelete.type || 'salary'}</div>
-                  <div className="text-gray-600">Mode: {paymentToDelete.payment_mode || 'Bank Transfer'}</div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setPaymentToDelete(null);
-                }}
-                disabled={deletingPayment}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="button" 
-                onClick={confirmDeletePayment}
-                disabled={deletingPayment}
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-              >
-                {deletingPayment ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Payment
-                  </>
-                )}
-              </Button>
+            <div className="editpopup form title-description">
+              <DialogTitle className="editpopup form dialog-title text-red-700">
+                Delete Payment Record
+              </DialogTitle>
+              <DialogDescription className="editpopup form dialog-description">
+                Are you sure you want to delete this payment record? This action cannot be undone.
+              </DialogDescription>
             </div>
           </div>
-        </div>
-      </div>,
-      document.body
-    )}
+        </DialogHeader>
+        
+        {paymentToDelete && (
+          <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span className="font-medium text-gray-900">Payment Details</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-600">Date: {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-600">Amount: ₹{parseFloat(paymentToDelete.payment_amount || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-600">Type: {paymentToDelete.type || 'salary'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-600">Mode: {paymentToDelete.payment_mode || 'Bank Transfer'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setPaymentToDelete(null);
+            }}
+            disabled={deletingPayment}
+            className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+          >
+            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+            Cancel
+          </Button>
+          <Button 
+            type="button" 
+            onClick={confirmDeletePayment}
+            disabled={deletingPayment}
+            className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+          >
+            {deletingPayment ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Delete Payment
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 };
