@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface MedicineCategory {
@@ -46,6 +46,8 @@ interface MedicineCategory {
 
 const MedicineCategories: React.FC = () => {
 const [categories, setCategories] = useState<MedicineCategory[]>([]);
+const [doctors, setDoctors] = useState<any[]>([]);
+const [loadingDoctors, setLoadingDoctors] = useState(true);
 const [loading, setLoading] = useState(true);
 const [refreshKey, setRefreshKey] = useState(0);
 
@@ -60,6 +62,16 @@ React.useEffect(() => {
         id: category.id.toString(),
         createdAt: category.created_at || category.createdAt || '',
       })));
+      
+      // Load doctors data for Active Doctors stats
+      try {
+        const doctorsData = await db.getAllDoctors();
+        setDoctors(doctorsData);
+      } catch (doctorError) {
+        console.error('Error loading doctors:', doctorError);
+      } finally {
+        setLoadingDoctors(false);
+      }
     } catch (e) {
       // Optionally show error
     } finally {
@@ -100,10 +112,10 @@ const handleRefresh = React.useCallback(() => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // Fix: 1-based like General Categories
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Fix: Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
@@ -340,7 +352,7 @@ const handleRefresh = React.useCallback(() => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) && // Fix: convert 1-based filterMonth to 0-based for comparison
         d.getFullYear() === filterYear
       );
     }
@@ -350,6 +362,9 @@ const handleRefresh = React.useCallback(() => {
     const idB = parseInt(b.id) || 0;
     return idA - idB;
   });
+
+  // Calculate active categories count
+  const activeCategories = filteredCategories.filter(c => c.status === 'active').length;
 
   // Pagination logic
   const [page, setPage] = useState(1);
@@ -383,57 +398,25 @@ const handleRefresh = React.useCallback(() => {
         <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
-                <Pill className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
+              <div className="crm-header-icon">
+                <Pill className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Categories</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Medicine Categories List</h1>
+                <p className="text-sm text-gray-600 mt-1">Manage and organize medicine categories</p>
               </div>
             </div>
           
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
-                onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  handleGlobalRefresh();
-                }}
-                disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               
-              <Button 
+              <ActionButtons.MonthYear
+                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
+              />
               
               <Button 
                 onClick={handleExportCSV}
@@ -464,107 +447,125 @@ const handleRefresh = React.useCallback(() => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="crm-stats-grid">
           {/* Total Categories Card */}
-          <div className="bg-blue-50 rounded-lg p-4 lg:p-6 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-                  All types
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-blue-800">{filteredCategories.length}</p>
-                <p className="text-base lg:text-lg font-semibold text-blue-700">Total Categories</p>
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredCategories.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Pill className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All categories</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Pill className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-blue-500 rounded-lg p-3 lg:p-4">
-                <Pill className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Active Categories Card */}
-          <div className="bg-green-50 rounded-lg p-4 lg:p-6 border border-green-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-green-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-green-500 rounded-full"></span>
-                  In use
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-green-800">
-                  {filteredCategories.filter(c => c.status === 'active').length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-green-700">Active Categories</p>
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{activeCategories}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-green-500 rounded-lg p-3 lg:p-4">
-                <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
+            </CardContent>
+          </Card>
+          
+          {/* With Description Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">With Description</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{filteredCategories.filter(c => c.description && c.description.trim()).length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Detailed</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
           {/* Inactive Categories Card */}
-          <div className="bg-red-50 rounded-lg p-4 lg:p-6 border border-red-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-red-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-red-500 rounded-full"></span>
-                  Disabled
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-red-800">
-                  {filteredCategories.filter(c => c.status === 'inactive').length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-red-700">Inactive Categories</p>
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{filteredCategories.filter(c => c.status === 'inactive').length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Disabled</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-              <div className="bg-red-500 rounded-lg p-3 lg:p-4">
-                <AlertCircle className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Specializations Card */}
-          <div className="bg-orange-50 rounded-lg p-4 lg:p-6 border border-orange-100">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
-                  <span className="h-2 w-2 bg-orange-500 rounded-full"></span>
-                  Available
-                </p>
-                <p className="text-2xl lg:text-3xl font-bold text-orange-800">
-                  {filteredCategories.filter(c => c.description && c.description.length > 0).length}
-                </p>
-                <p className="text-base lg:text-lg font-semibold text-orange-700">Specializations</p>
-              </div>
-              <div className="bg-orange-500 rounded-lg p-3 lg:p-4">
-                <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter Section */}
+        {/* Search and Filter Controls */}
         <div className="crm-controls-container">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search categories by name or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
             </div>
-            <div className="w-full sm:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="w-full sm:w-auto min-w-[140px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                }}
+                className="global-btn global-btn-secondary flex-shrink-0 text-xs sm:text-sm px-3 sm:px-4 py-2"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Clear Filters</span>
+                <span className="sm:hidden">Clear</span>
+              </button>
             </div>
           </div>
         </div>
@@ -588,42 +589,43 @@ const handleRefresh = React.useCallback(() => {
         />
 
         {/* Categories Table */}
-        <div className="crm-table-container">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Pill className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Categories List ({filteredCategories.length})</span>
-              <span className="sm:hidden">Categories ({filteredCategories.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <Pill className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Categories List ({filteredCategories.length})</span>
+              <span className="crm-table-title-text-mobile">Categories ({filteredCategories.length})</span>
             </div>
-          </div>
+          </CardHeader>
         
-        <div className="overflow-x-auto">
-          <Table className="w-full min-w-[1000px]">
-            <TableHeader>
-              <TableRow className="bg-gray-50 border-b">
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">S No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Date</span>
-                  </div>
-                </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Category Name</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Description</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                    <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Status</span>
-                  </div>
-                </TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedCategories.map((category, idx) => (
-                <TableRow key={category.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
-                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(page - 1) * pageSize + idx + 1}</TableCell>
-                  <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table className="crm-table">
+                <TableHeader>
+                  <TableRow className="crm-table-header-row">
+                    <TableHead className="crm-table-header-cell text-center">S No</TableHead>
+                    <TableHead className="crm-table-header-cell text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span>Date</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="crm-table-header-cell text-center">Category Name</TableHead>
+                    <TableHead className="crm-table-header-cell text-center">Description</TableHead>
+                    <TableHead className="crm-table-header-cell text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span>Status</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="crm-table-header-cell text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedCategories.map((category, idx) => (
+                    <TableRow key={category.id} className="crm-table-row">
+                      <TableCell className="crm-table-cell text-center">{(page - 1) * pageSize + idx + 1}</TableCell>
+                      <TableCell className="crm-table-cell text-center">{
                     (() => {
                       const dateStr = category.createdAt;
                       if (!dateStr) return '';
@@ -691,12 +693,12 @@ const handleRefresh = React.useCallback(() => {
         
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-50/50 border-t">
-            <div className="text-sm text-gray-600">
+          <div className="crm-pagination-container">
+            <div className="crm-pagination-info">
               Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredCategories.length)} of {filteredCategories.length} categories
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="crm-pagination-controls">
               <Button
                 variant="outline"
                 size="sm"
@@ -739,13 +741,15 @@ const handleRefresh = React.useCallback(() => {
                 size="sm"
                 onClick={handleNextPage}
                 disabled={page === totalPages}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Next
               </Button>
             </div>
           </div>
         )}
+        </CardContent>
+        </Card>
       </div>
 
         {/* Add/Edit Category Dialog */}
@@ -897,7 +901,6 @@ const handleRefresh = React.useCallback(() => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 };
 

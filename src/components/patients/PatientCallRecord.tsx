@@ -8,6 +8,7 @@ import { Label } from '../../components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { toast } from '../../hooks/use-toast';
 import { FileText, Search, Download, Edit2, Loader2, Play, Pause, RefreshCw, Trash2, Eye, Pencil, Mic, Square, File as FileIcon, User, Phone, Calendar, X } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
@@ -80,14 +81,15 @@ const PatientCallRecord: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const currentMonth = new Date().getMonth() + 1;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(null);
-  const [filterYear, setFilterYear] = useState<number | null>(null);
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth);
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // Month and year state for view dialog filtering
-  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(new Date().getMonth());
+  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(currentMonth);
   const [viewDialogSelectedYear, setViewDialogSelectedYear] = useState(currentYear);
   const [showViewDialogMonthYearDialog, setShowViewDialogMonthYearDialog] = useState(false);
   const [viewDialogFilterMonth, setViewDialogFilterMonth] = useState<number | null>(null);
@@ -218,7 +220,7 @@ const PatientCallRecord: React.FC = () => {
     if (filterMonth !== null && filterYear !== null) {
       filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+        return recordDate.getMonth() === (filterMonth - 1) && recordDate.getFullYear() === filterYear;
       });
     }
 
@@ -271,7 +273,7 @@ const PatientCallRecord: React.FC = () => {
     if (viewDialogFilterMonth !== null && viewDialogFilterYear !== null) {
       patientRecords = patientRecords.filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === viewDialogFilterMonth && recordDate.getFullYear() === viewDialogFilterYear;
+        return recordDate.getMonth() === (viewDialogFilterMonth - 1) && recordDate.getFullYear() === viewDialogFilterYear;
       });
     }
 
@@ -1110,26 +1112,10 @@ const PatientCallRecord: React.FC = () => {
               </Button>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="crm-month-year-btn"
+            <ActionButtons.MonthYear
+              text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
               onClick={() => setShowMonthYearDialog(true)}
-            >
-              <FileIcon className="crm-month-year-btn-icon" />
-              <span className="crm-month-year-btn-text">
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth]} ${filterYear}`
-                  : `${months[selectedMonth]} ${selectedYear}`
-                }
-              </span>
-              <span className="crm-month-year-btn-text-mobile">
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                  : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                }
-              </span>
-            </Button>
+            />
           </div>
         </div>
 
@@ -1303,10 +1289,10 @@ const PatientCallRecord: React.FC = () => {
                               <div className="flex justify-center gap-2">
                                 <button
                                   onClick={() => handleView(record)}
-                                  className="action-btn-lead action-btn-view"
+                                  className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
                                   title="View Patient Details"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -1319,10 +1305,10 @@ const PatientCallRecord: React.FC = () => {
                                       handleEdit(record);
                                     }
                                   }}
-                                  className="action-btn-lead action-btn-edit"
+                                  className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
                                   title={record.id.toString().startsWith('patient_') ? 'Add Call Record' : 'Edit Call Record'}
                                 >
-                                  <Mic className="w-4 h-4" />
+                                  <Mic className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </button>
                               </div>
                             </TableCell>
@@ -1482,7 +1468,7 @@ const PatientCallRecord: React.FC = () => {
                         size="sm"
                         onClick={() => removeAudioFile(index)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   ))}
@@ -1688,8 +1674,8 @@ const PatientCallRecord: React.FC = () => {
                       onClick={() => setShowViewDialogMonthYearDialog(true)}
                     >
                       {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
-                        ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
-                        : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
+                        ? `${months[(viewDialogFilterMonth) - 1]} ${viewDialogFilterYear}`
+                        : `${months[(viewDialogSelectedMonth) - 1]} ${viewDialogSelectedYear}`
                       }
                     </button>
                   </div>
@@ -1808,10 +1794,10 @@ const PatientCallRecord: React.FC = () => {
                                 <td className="px-4 py-3 text-center">
                                   <button
                                     onClick={() => handleDeleteFromViewPopup(record)}
-                                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                    className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
                                     title="Delete call record"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                   </button>
                                 </td>
                               </tr>
@@ -1883,59 +1869,24 @@ const PatientCallRecord: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Month/Year Filter Dialog for Main Table */}
-      <Dialog open={showMonthYearDialog} onOpenChange={setShowMonthYearDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter Records</DialogTitle>
-            <DialogDescription>
-              Select month and year to filter records
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {months.map((month, index) => (
-                  <option key={index} value={index}>{month}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Year</Label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {Array.from({ length: 10 }, (_, i) => currentYear - i).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setFilterMonth(null);
-              setFilterYear(null);
-              setShowMonthYearDialog(false);
-            }}>
-              Clear Filter
-            </Button>
-            <Button onClick={() => {
-              setFilterMonth(selectedMonth);
-              setFilterYear(selectedYear);
-              setShowMonthYearDialog(false);
-            }}>
-              Apply Filter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Month/Year Filter Dialog */}
+      <MonthYearPickerDialog
+        open={showMonthYearDialog}
+        onOpenChange={setShowMonthYearDialog}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onMonthChange={setSelectedMonth}
+        onYearChange={setSelectedYear}
+        onApply={() => {
+          setFilterMonth(selectedMonth);
+          setFilterYear(selectedYear);
+          setShowMonthYearDialog(false);
+        }}
+        title="Filter Records"
+        description="Select month and year to filter call records"
+        previewText="records"
+      />
+      
       </div>
     </div>
   );

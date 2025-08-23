@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { DatabaseService } from '@/services/databaseService';
 import { DoctorAdvanceAPI } from '@/services/doctorAdvanceAPI';
 import { DoctorAdvance } from '@/types/doctorAdvance';
@@ -54,7 +55,7 @@ const DoctorAdvancePage: React.FC = () => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const currentMonth = new Date().getMonth();
+  const currentMonth = new Date().getMonth() + 1; // 1-based
   const currentYear = new Date().getFullYear();
   
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -192,7 +193,7 @@ const DoctorAdvancePage: React.FC = () => {
           return false;
         }
         
-        const advanceMonth = advanceDate.getMonth(); // 0-11
+        const advanceMonth = advanceDate.getMonth() + 1; // 1-based to match other logic
         const advanceYear = advanceDate.getFullYear();
         
         console.log(`Stats - Advance date: ${advance.date} -> Month: ${advanceMonth}, Year: ${advanceYear}`);
@@ -470,43 +471,23 @@ const DoctorAdvancePage: React.FC = () => {
             </div>
           
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
+              <ActionButtons.Refresh
                 onClick={() => {
-                  // Reset filters to current month/year and refresh
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setPageSelectedMonth(currentMonth);
-                  setPageSelectedYear(currentYear);
-                  loadData();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
-                disabled={isLoading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+                loading={isLoading}
+              />
               
               {/* Month & Year Filter Button */}
-              <Button 
+              <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[pageSelectedMonth]} ${pageSelectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[pageSelectedMonth].slice(0, 3)} ${pageSelectedYear}`
-                  }
-                </span>
-              </Button>
+                text={
+                  filterMonth !== null && filterYear !== null 
+                    ? `${months[filterMonth - 1]} ${filterYear}` // Convert 1-based to 0-based
+                    : `${months[pageSelectedMonth - 1]} ${pageSelectedYear}` // Convert 1-based to 0-based
+                }
+              />
 
               {/* Clear Filter Button */}
               {(filterMonth !== currentMonth || filterYear !== currentYear) && (
@@ -719,7 +700,7 @@ const DoctorAdvancePage: React.FC = () => {
                                 className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="View Doctor Details"
                               >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">View</span>
                               </Button>
                               <Button 
@@ -729,7 +710,7 @@ const DoctorAdvancePage: React.FC = () => {
                                 className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Edit Doctor"
                               >
-                                <Edit className="h-3 w-3" />
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">Edit</span>
                               </Button>
                             </div>
@@ -1105,10 +1086,10 @@ const DoctorAdvancePage: React.FC = () => {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleDeleteAdvance(advance.id!)}
-                                      className="action-btn-lead action-btn-delete h-8 w-8 p-0"
+                                      className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                       title="Delete advance record"
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                     </Button>
                                   </td>
                                 </tr>

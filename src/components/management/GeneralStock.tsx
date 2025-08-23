@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import '@/styles/global-crm-design.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Search, Package, AlertTriangle, TrendingUp, TrendingDown, Download, RefreshCw, Calendar, Edit2, Eye, Trash2, Activity, AlertCircle, Pencil, Info, History, X, Tag, DollarSign, Clock, BarChart3, Warehouse, Package2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText, AlertTriangle, TrendingDown, Tag, DollarSign, Clock, BarChart3, Warehouse, Package2, Layers, Info, History, PencilIcon as Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
-import HeaderActionButtons from '@/components/ui/HeaderActionButtons';
 
 interface GeneralStockItem {
   id: string;
@@ -38,17 +39,30 @@ const GeneralStock: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based for UI
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
   
-  // Additional state for modern design
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<GeneralStockItem | null>(null);
+  const [formData, setFormData] = useState({
+    gpId: '',
+    productName: '',
+    category: '',
+    currentStock: 0,
+    usedStock: 0,
+    unit: '',
+    supplier: '',
+    price: 0,
+    status: 'in-stock' as 'in-stock' | 'low-stock' | 'out-of-stock',
+  });
   
   // Fetch products and categories from backend
   const [products, setProducts] = useState<any[]>([]);
@@ -163,12 +177,6 @@ const GeneralStock: React.FC = () => {
     setStockHistory(history);
   }
 
-  // Close view popup
-  function closeViewPopup() {
-    setViewItem(null);
-    setStockHistory([]);
-  }
-
   // Delete/Reset used stock for a product
   async function resetUsedStock(productId: string) {
     try {
@@ -246,107 +254,128 @@ const GeneralStock: React.FC = () => {
     }
   };
 
-  // Enhanced filtering with month/year, search, status, and category
+  // Filter stock items by search, status, category, and by selected month/year if filter is active
   const filteredStockItems = stockItems.filter(item => {
-    const matchesSearch = item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.supplier?.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesStatus = statusFilter === 'all' || getStockStatus(item) === statusFilter;
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     
-    // If no month/year filter is active, show all items
-    if (filterMonth === null || filterYear === null) {
-      return matchesSearch && matchesStatus && matchesCategory;
-    }
-    
-    // Get the balance stock (current stock - used stock)
-    const balanceStock = item.currentStock - item.usedStock;
-    
-    // If viewing current month, show items that:
-    // 1. Were purchased in the current month, OR
-    // 2. Have balance stock from any previous month
-    if (filterMonth === new Date().getMonth() && filterYear === new Date().getFullYear()) {
+    if (filterMonth !== null && filterYear !== null) {
       const dateStr = item.purchaseDate;
-      let itemDate = null;
-      
-      if (dateStr) {
-        if (dateStr.includes('T')) {
-          itemDate = new Date(dateStr);
-        } else if (dateStr.includes('-') && dateStr.split('-').length === 3) {
-          const [y, m, d] = dateStr.split('-');
-          if (y && m && d) {
-            itemDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-          }
-        }
+      if (!dateStr) return false;
+      let d;
+      if (dateStr.includes('T')) {
+        d = new Date(dateStr);
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        d = new Date(dateStr + 'T00:00:00');
+      } else {
+        return false;
       }
-      
-      if (itemDate && !isNaN(itemDate.getTime())) {
-        const currentDate = new Date();
-        const isPurchasedInCurrentMonth = itemDate.getMonth() === filterMonth && itemDate.getFullYear() === filterYear;
-        const isPurchasedBeforeCurrentMonth = itemDate < new Date(filterYear, filterMonth, 1);
-        
-        // Show if purchased in current month OR has balance stock from previous months
-        const shouldShow = isPurchasedInCurrentMonth || (isPurchasedBeforeCurrentMonth && balanceStock > 0);
-        
-        return matchesSearch && matchesStatus && matchesCategory && shouldShow;
-      }
-      
-      // If no valid purchase date, show only if has balance stock
-      return matchesSearch && matchesStatus && matchesCategory && balanceStock > 0;
+      if (isNaN(d.getTime())) return false;
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCategory &&
+        d.getMonth() === (filterMonth - 1) &&
+        d.getFullYear() === filterYear
+      );
     }
-    
-    // For other months, show items purchased in that specific month
-    const dateStr = item.purchaseDate;
-    if (!dateStr) return false;
-    
-    let itemDate;
-    if (dateStr.includes('T')) {
-      itemDate = new Date(dateStr);
-    } else if (dateStr.includes('-') && dateStr.split('-').length === 3) {
-      const [y, m, d] = dateStr.split('-');
-      if (y && m && d) {
-        itemDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-      }
+    return matchesSearch && matchesStatus && matchesCategory;
+  }).sort((a, b) => parseInt(a.id) - parseInt(b.id)); // Ascending order by ID
+
+  // CRUD operations like GeneralSuppliers
+  const handleSubmit = async () => {
+    if (!formData.productName || !formData.category || !formData.currentStock || !formData.supplier) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
     }
-    
-    if (!itemDate || isNaN(itemDate.getTime())) return false;
-    
-    const matchesMonthYear = itemDate.getMonth() === filterMonth && itemDate.getFullYear() === filterYear;
-    
-    return matchesSearch && matchesStatus && matchesCategory && matchesMonthYear;
-  });
 
-  
-  // Update the variable name to match what we use in export function
-  const filteredItems = filteredStockItems;
+    setSubmitting(true);
+    try {
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      
+      // This function is only for adding new items
+      const newItem = await db.addGeneralProduct({
+        gp_id: formData.gpId,
+        name: formData.productName,
+        category: formData.category,
+        current_stock: formData.currentStock,
+        used_stock: formData.usedStock,
+        unit: formData.unit,
+        supplier: formData.supplier,
+        price: formData.price,
+        stock_status: formData.status
+      });
+      toast({ title: "Success", description: "Stock item added successfully" });
+      
+      setFormData({ 
+        gpId: '', productName: '', category: '', currentStock: 0, usedStock: 0, 
+        unit: '', supplier: '', price: 0, status: 'in-stock' 
+      });
+      setIsAddingItem(false);
+      handleGlobalRefresh();
+    } catch (e) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to add stock item", 
+        variant: "destructive" 
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  // Sort filtered items by GP ID in ascending order
-  const sortedItems = filteredItems.sort((a, b) => {
-    const gpIdA = a.gpId || '';
-    const gpIdB = b.gpId || '';
+  const handleEditItem = (item: GeneralStockItem) => {
+    openEditPopup(item);
+  };
+
+  const handleDeleteItem = (item: GeneralStockItem) => {
+    setItemToDelete(item);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
     
-    // Extract numeric part from GP ID (e.g., "GP0001" -> 1, "GP0010" -> 10)
-    const numA = parseInt(gpIdA.replace(/[^0-9]/g, '')) || 0;
-    const numB = parseInt(gpIdB.replace(/[^0-9]/g, '')) || 0;
-    
-    return numA - numB;
-  });  // Pagination logic
+    setSubmitting(true);
+    try {
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      await db.deleteGeneralProduct(itemToDelete.id);
+      toast({ title: "Success", description: "Stock item deleted successfully" });
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
+      handleGlobalRefresh();
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to delete stock item", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Pagination logic
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const totalPages = Math.ceil(sortedItems.length / pageSize);
-  const paginatedItems = sortedItems.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(filteredStockItems.length / pageSize);
+  const paginatedStockItems = filteredStockItems.slice((page - 1) * pageSize, page * pageSize);
 
   const handlePrevPage = () => setPage((p) => Math.max(1, p - 1));
   const handleNextPage = () => setPage((p) => Math.min(totalPages, p + 1));
-  React.useEffect(() => { setPage(1); }, [searchTerm, stockItems.length]);
+  React.useEffect(() => { setPage(1); }, [searchTerm, statusFilter, stockItems.length]);
 
-  // Calculate statistics based on filtered items (current month/year selection)
-  const totalValue = filteredItems.reduce((sum, item) => sum + (item.currentStock * item.price), 0);
-  const lowStockCount = filteredItems.filter(item => getStockStatus(item) === 'low-stock').length;
-  const outOfStockCount = filteredItems.filter(item => getStockStatus(item) === 'out-of-stock').length;
-  const inStockCount = filteredItems.filter(item => getStockStatus(item) === 'in-stock').length;
-  const totalProducts = filteredItems.length;
-  const totalBalanceStock = filteredItems.reduce((sum, item) => sum + (item.currentStock - item.usedStock), 0);
+  // Calculate statistics based on filtered items
+  const totalValue = filteredStockItems.reduce((sum, item) => sum + (item.currentStock * item.price), 0);
+  const lowStockCount = filteredStockItems.filter(item => getStockStatus(item) === 'low-stock').length;
+  const outOfStockCount = filteredStockItems.filter(item => getStockStatus(item) === 'out-of-stock').length;
+  const inStockCount = filteredStockItems.filter(item => getStockStatus(item) === 'in-stock').length;
+  const totalProducts = filteredStockItems.length;
 
   // Edit popup state
   const [editItem, setEditItem] = useState<GeneralStockItem | null>(null);
@@ -450,7 +479,7 @@ const GeneralStock: React.FC = () => {
   const downloadExcel = () => {
     try {
       // Prepare data for Excel export
-      const excelData = filteredItems.map((item, index) => ({
+      const excelData = filteredStockItems.map((item, index) => ({
         'S NO': index + 1,
         'GP ID': item.gpId || 'N/A',
         'Product Name': item.productName,
@@ -571,36 +600,55 @@ const GeneralStock: React.FC = () => {
               </div>
             </div>
           
-            <HeaderActionButtons
-              onRefresh={() => {
-                // Reset all filters to current month/year and refresh
-                const currentMonth = new Date().getMonth();
-                const currentYear = new Date().getFullYear();
-                
-                setStatusFilter('all');
-                setCategoryFilter('all');
-                setSearchTerm('');
-                setFilterMonth(currentMonth);
-                setFilterYear(currentYear);
-                setSelectedMonth(currentMonth);
-                setSelectedYear(currentYear);
-                setPage(1);
-                
-                // Refresh the data
-                handleGlobalRefresh();
-              }}
-              refreshLoading={loading}
+            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <ActionButtons.Refresh
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
+                loading={loading}
+              />
               
-              onExport={handleExportCSV}
-              exportText="Export CSV"
+              <Button 
+                onClick={handleExportCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                title="Export filtered stock items to CSV"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
               
-              onMonthYearClick={() => setShowMonthYearDialog(true)}
-              monthYearText={
-                filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth]} ${filterYear}`
-                  : `${months[selectedMonth]} ${selectedYear}`
-              }
-            />
+              <ActionButtons.MonthYear
+                onClick={() => setShowMonthYearDialog(true)}
+                text={filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth - 1]} ${filterYear}`
+                  : `${months[selectedMonth - 1]} ${selectedYear}`
+                }
+              />
+              
+              {/* <Button 
+                onClick={() => {
+                  setFormData({
+                    gpId: '',
+                    productName: '',
+                    category: '',
+                    currentStock: 0,
+                    usedStock: 0,
+                    unit: '',
+                    supplier: '',
+                    price: 0,
+                    status: 'in-stock',
+                  });
+                  setIsAddingItem(true);
+                }}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Stock</span>
+                <span className="sm:hidden">+</span>
+              </Button> */}
+            </div>
           </div>
         </div>
 
@@ -734,8 +782,8 @@ const GeneralStock: React.FC = () => {
           <CardHeader className="crm-table-header">
             <div className="crm-table-title">
               <Package className="crm-table-title-icon" />
-              <span className="crm-table-title-text">Stock Inventory ({filteredItems.length})</span>
-              <span className="crm-table-title-text-mobile">Stock ({filteredItems.length})</span>
+              <span className="crm-table-title-text">Stock Inventory ({filteredStockItems.length})</span>
+              <span className="crm-table-title-text-mobile">Stock ({filteredStockItems.length})</span>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -804,7 +852,7 @@ const GeneralStock: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.map((item, idx) => (
+              {paginatedStockItems.map((item, idx) => (
                 <TableRow key={item.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(page - 1) * pageSize + idx + 1}</TableCell>
                   <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium">{item.gpId}</TableCell>
@@ -841,17 +889,26 @@ const GeneralStock: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => openEditPopup(item)}
+                        onClick={() => handleEditItem(item)}
                         className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Stock"
                       >
-                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeleteItem(item)}
+                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                        title="Delete Stock"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {paginatedItems.length === 0 && (
+              {paginatedStockItems.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     No stock items found
@@ -866,7 +923,7 @@ const GeneralStock: React.FC = () => {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-50/50 border-t">
             <div className="text-sm text-gray-600">
-              Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredItems.length)} of {filteredItems.length} items
+              Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredStockItems.length)} of {filteredStockItems.length} items
             </div>
             
             <div className="flex items-center gap-2">
@@ -940,328 +997,189 @@ const GeneralStock: React.FC = () => {
         previewText="stock data"
       />
 
-      {/* View/Stock History Dialog - Medicine Stock Modal Style */}
-      {viewItem && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => closeViewPopup()}
-        >
-          <div 
-            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header - Glass Morphism Style */}
-            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
-                <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <Package className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1">
-                    <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${
-                      getStockStatus(viewItem) === 'in-stock' ? 'bg-green-100 text-green-800' :
-                      getStockStatus(viewItem) === 'low-stock' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {getStockStatus(viewItem).replace(/[-_]/g, ' ').charAt(0).toUpperCase() + getStockStatus(viewItem).replace(/[-_]/g, ' ').slice(1)}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
-                    <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
-                    <span className="truncate">{viewItem.productName}</span>
-                  </h2>
-                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
-                    <span className="text-gray-600">GP ID:</span>
-                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
-                      {viewItem.gpId || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => closeViewPopup()}
-                  className="text-slate-500 hover:text-slate-700"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+      {/* View Stock Item Dialog */}
+      <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Eye className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-gray-900">
+                  Stock Item Details
+                </DialogTitle>
+                <DialogDescription className="text-gray-600 mt-1">
+                  View detailed information about this stock item
+                </DialogDescription>
               </div>
             </div>
-
-            {/* Modal Body - Glass Morphism Style */}
-            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
-              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
-                
-                {/* Product Information Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Package className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
-                    </div>
-                    Product Information
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                    
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Product Name</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewItem.productName}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewItem.category}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewItem.supplier || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Price</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewItem.price || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Purchase Date</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewItem.purchaseDate}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-teal-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-teal-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-teal-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-teal-600 uppercase tracking-wide">Unit</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewItem.unit}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
+          </DialogHeader>
+          
+          {viewItem && (
+            <div className="space-y-6 p-3 sm:p-4 md:p-6">
+              {/* Product Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Product Name</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.productName}</p>
                   </div>
                 </div>
-
-                {/* Stock Summary Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
-                    </div>
-                    Stock Summary
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-                    
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{viewItem.currentStock || 0}</div>
-                      <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Stock</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-red-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-red-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">{viewItem.usedStock || 0}</div>
-                      <div className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Used Stock</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Package2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">{(viewItem.currentStock || 0) - (viewItem.usedStock || 0)}</div>
-                      <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Available</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        getStockStatus(viewItem) === 'in-stock' ? 'bg-green-100 text-green-800' :
-                        getStockStatus(viewItem) === 'low-stock' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {getStockStatus(viewItem).replace(/[-_]/g, ' ').charAt(0).toUpperCase() + getStockStatus(viewItem).replace(/[-_]/g, ' ').slice(1)}
-                      </div>
-                      <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-2">Status</div>
-                    </div>
-                    
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">GP ID</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.gpId || 'N/A'}</p>
                   </div>
                 </div>
-
-                {/* Stock Movement History */}
-                {stockHistory.length > 0 && (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
-                      </div>
-                      Stock Movement History ({stockHistory.length})
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">S.No</th>
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock Change</th>
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock After</th>
-                            <th className="text-left py-3 px-4 font-semibold text-gray-700">Description</th>
-                            <th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stockHistory.map((entry, idx) => {
-                            // Format date as DD-MM-YYYY
-                            let formattedDate = entry.update_date;
-                            if (formattedDate) {
-                              const date = new Date(formattedDate);
-                              if (!isNaN(date.getTime())) {
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const year = date.getFullYear();
-                                formattedDate = `${day}-${month}-${year}`;
-                              }
-                            }
-                            return (
-                              <tr key={entry.id || idx} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
-                                <td className="py-3 px-4 text-gray-900 font-medium">{idx + 1}</td>
-                                <td className="py-3 px-4 text-gray-900">{formattedDate}</td>
-                                <td className="py-3 px-4 font-bold">
-                                  <span className={entry.stock_type === 'used' ? 'text-red-600' : 'text-green-600'}>
-                                    {entry.stock_type === 'used' ? '-' : '+'}{entry.stock_change}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Badge variant={entry.stock_type === 'used' ? 'destructive' : entry.stock_type === 'added' ? 'default' : 'secondary'}>
-                                    {entry.stock_type}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-4 text-gray-900 font-medium">{entry.current_stock_after}</td>
-                                <td className="py-3 px-4 text-gray-900">{entry.description || '-'}</td>
-                                <td className="py-3 px-4 text-center">
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors shadow-sm"
-                                    title="Delete Stock History Entry"
-                                    onClick={async () => {
-                                      if (window.confirm(`Are you sure you want to delete this stock history entry?`)) {
-                                        try {
-                                          const db = (await import('@/services/databaseService')).DatabaseService;
-                                          
-                                          // Delete the specific history entry
-                                          await db.deleteStockHistoryRecord(entry.id);
-                                          
-                                          // Get updated stock history after deletion
-                                          const updatedHistory = await getStockHistory(viewItem.id);
-                                          setStockHistory(updatedHistory);
-                                          
-                                          // Recalculate total used stock from remaining history entries
-                                          const totalUsedStock = updatedHistory
-                                            .filter((h: any) => h.stock_type === 'used')
-                                            .reduce((sum: number, h: any) => sum + h.stock_change, 0);
-                                          
-                                          // Update the product's used stock in the database
-                                          await db.updateGeneralStock(viewItem.id, {
-                                            used_stock: totalUsedStock,
-                                            stock_status: totalUsedStock === 0 ? 'in-stock' : 
-                                                         (viewItem.currentStock - totalUsedStock) <= 5 ? 'low-stock' : 'in-stock',
-                                            last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
-                                          });
-                                          
-                                          // Update the viewItem to reflect new stock levels
-                                          const newStatus: 'in-stock' | 'low-stock' | 'out-of-stock' = 
-                                            totalUsedStock === 0 ? 'in-stock' : 
-                                            (viewItem.currentStock - totalUsedStock) <= 5 ? 'low-stock' : 'in-stock';
-                                          
-                                          setViewItem({
-                                            ...viewItem,
-                                            usedStock: totalUsedStock,
-                                            status: newStatus
-                                          });
-                                          
-                                          // Refresh the main products list to reflect changes
-                                          setRefreshKey(prev => prev + 1);
-                                          
-                                          console.log('Stock history entry deleted and stock recalculated');
-                                        } catch (error) {
-                                          console.error('Error deleting stock history entry:', error);
-                                          alert('Error deleting stock history entry');
-                                        }
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Category</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.category}</p>
                   </div>
-                )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Supplier</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.supplier || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Price</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">₹{viewItem.price || 0}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Unit</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.unit}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Purchase Date</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-semibold text-gray-900">{viewItem.purchaseDate}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Status</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <Badge 
+                      variant={getStatusColor(getStockStatus(viewItem))}
+                      className={`
+                        ${getStockStatus(viewItem) === 'in-stock' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 
+                          getStockStatus(viewItem) === 'low-stock' ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 
+                          'bg-red-100 text-red-800 hover:bg-red-200'}
+                      `}
+                    >
+                      {getStockStatus(viewItem).replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-                {/* No Stock History State */}
-                {stockHistory.length === 0 && (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm text-center py-12">
+              {/* Stock Summary */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Summary</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{viewItem.currentStock || 0}</div>
+                    <div className="text-sm font-medium text-blue-600">Total Stock</div>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 text-center">
+                    <div className="text-2xl font-bold text-red-600">{viewItem.usedStock || 0}</div>
+                    <div className="text-sm font-medium text-red-600">Used Stock</div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
+                    <div className="text-2xl font-bold text-green-600">{(viewItem.currentStock || 0) - (viewItem.usedStock || 0)}</div>
+                    <div className="text-sm font-medium text-green-600">Available</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stock History */}
+              {stockHistory.length > 0 && (
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Movement History</h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-center">Date</TableHead>
+                          <TableHead className="text-center">Change</TableHead>
+                          <TableHead className="text-center">Type</TableHead>
+                          <TableHead className="text-center">Stock After</TableHead>
+                          <TableHead className="text-center">Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stockHistory.slice(0, 5).map((entry, idx) => {
+                          const formattedDate = (() => {
+                            const date = new Date(entry.update_date);
+                            if (isNaN(date.getTime())) return entry.update_date;
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const year = date.getFullYear();
+                            return `${day}-${month}-${year}`;
+                          })();
+                          
+                          return (
+                            <TableRow key={entry.id || idx}>
+                              <TableCell className="text-center">{formattedDate}</TableCell>
+                              <TableCell className="text-center">
+                                <span className={entry.stock_type === 'used' ? 'text-red-600' : 'text-green-600'}>
+                                  {entry.stock_type === 'used' ? '-' : '+'}{entry.stock_change}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant={entry.stock_type === 'used' ? 'destructive' : 'default'}>
+                                  {entry.stock_type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">{entry.current_stock_after}</TableCell>
+                              <TableCell className="text-center">{entry.description || '-'}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                    {stockHistory.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center mt-2">
+                        Showing recent 5 entries of {stockHistory.length} total
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* No Stock History State */}
+              {stockHistory.length === 0 && (
+                <div className="border-t pt-6">
+                  <div className="text-center py-8">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Package className="h-8 w-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Stock History</h3>
                     <p className="text-gray-500">No stock movement history recorded yet for this product</p>
                   </div>
-                )}
-
-              </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+          )}
+          
+          <DialogFooter className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => setViewItem(null)}
+              className="w-full sm:w-auto"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Stock Dialog */}
       <Dialog open={editItem !== null} onOpenChange={closeEditPopup}>
@@ -1369,9 +1287,10 @@ const GeneralStock: React.FC = () => {
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4">
                 <Button 
+                  type="button"
                   variant="outline" 
                   onClick={closeEditPopup}
-                  className="action-btn action-btn-outline"
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -1384,6 +1303,50 @@ const GeneralStock: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Stock Item</DialogTitle>
+            <DialogDescription className="text-center text-sm sm:text-base">
+              Are you sure you want to delete stock item <strong>{itemToDelete?.productName}</strong>?
+              <br />
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setItemToDelete(null);
+              }}
+              disabled={submitting}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={submitting}
+              className="w-full sm:w-auto"
+            >
+              {submitting ? (
+                <>
+                  <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Item'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>

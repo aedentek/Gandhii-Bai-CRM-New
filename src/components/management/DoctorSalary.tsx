@@ -26,7 +26,8 @@ import {
   X,
   Trash2,
   Stethoscope,
-  CalendarDays
+  CalendarDays,
+  UserCheck
 } from 'lucide-react';
 import { DatabaseService } from '@/services/databaseService';
 import { DoctorSalaryAPI } from '@/services/doctorSalaryAPI';
@@ -84,16 +85,16 @@ const DoctorSalary: React.FC = () => {
   const [filteredPaymentHistory, setFilteredPaymentHistory] = useState<any[]>([]);
   const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0);
 
-  // Month and year state for filtering - same as GroceryStock
+  // Month and year state for filtering - same as GroceryManagement
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [filterSelectedMonth, setFilterSelectedMonth] = useState(new Date().getMonth());
+  const [filterSelectedMonth, setFilterSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
   const [filterSelectedYear, setFilterSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const rowsPerPage = 10;
@@ -587,25 +588,13 @@ const DoctorSalary: React.FC = () => {
                 <span className="sm:hidden">Save</span>
               </Button>
               
-              <Button
+              <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[filterSelectedMonth]} ${filterSelectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[filterSelectedMonth].slice(0, 3)} ${filterSelectedYear}`
-                  }
-                </span>
-              </Button>
+                text={filterMonth !== null && filterYear !== null 
+                  ? months[filterMonth - 1] // Convert 1-based to 0-based for array access
+                  : months[filterSelectedMonth - 1] // Convert 1-based to 0-based for array access
+                }
+              />
               
               <Button
                 onClick={exportToCSV}
@@ -616,41 +605,33 @@ const DoctorSalary: React.FC = () => {
                 <span className="sm:hidden">Export</span>
               </Button>
               
-              <Button
+              <ActionButtons.Refresh
                 onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setFilterSelectedMonth(currentMonth);
-                  setFilterSelectedYear(currentYear);
-                  fetchDoctors();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
-                disabled={loading}
-                variant="outline"
-                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
+                loading={loading}
+              />
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="crm-stats-grid">
-          {/* Total Doctors Card */}
+          {/* Active Doctors Card */}
           <Card className="crm-stat-card crm-stat-card-blue">
             <CardContent className="relative p-3 sm:p-4 lg:p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Doctors</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{totalDoctors}</p>
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Active Doctors</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{activeDoctors}</p>
                   <div className="flex items-center text-xs text-blue-600">
-                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Registered</span>
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">On duty</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-blue">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>

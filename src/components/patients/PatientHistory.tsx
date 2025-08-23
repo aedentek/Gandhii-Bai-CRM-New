@@ -26,7 +26,8 @@ import {
   Volume2,
   Users,
   Activity,
-  X
+  X,
+  RefreshCcw
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -34,6 +35,8 @@ import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import { getFileUrl, uploadMedicalHistoryFile } from '@/services/simpleFileUpload';
 import { PatientPhoto } from '@/utils/photoUtils';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 
 interface DocumentWithData {
   name: string;
@@ -42,6 +45,14 @@ interface DocumentWithData {
   lastModified?: number;
   data?: string; // Base64 data (legacy)
   filePath?: string; // Server file path (new)
+}
+
+interface AudioFileWithData {
+  name: string;
+  size?: number;
+  type: string;
+  filePath?: string; // Server file path (new)
+  lastModified?: number;
 }
 
 interface HistoryRecord {
@@ -60,7 +71,7 @@ interface HistoryRecord {
     filePath?: string;
     fileName?: string;
   };
-  audioFiles: File[]; // Changed from single audioFile to multiple audioFiles
+  audioFiles: (File | AudioFileWithData)[]; // Can be either File objects or metadata objects
   documents: DocumentWithData[]; // Changed to use custom interface
   createdAt: string;
 }
@@ -114,6 +125,7 @@ const PatientHistory: React.FC = () => {
   const [medicalRecords, setMedicalRecords] = useState<HistoryRecord[]>([]); // Separate state for actual medical records
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshCounter, setRefreshCounter] = useState(0); // For forcing re-renders
+  const [refreshKey, setRefreshKey] = useState(0); // For main page refresh
   const [isUpdatingRecords, setIsUpdatingRecords] = useState(false); // Track when updating
   
   // Loading states for better UX
@@ -128,11 +140,13 @@ const PatientHistory: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const currentMonth = new Date().getMonth() + 1; // 1-based for August = 8
+  
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(null);
-  const [filterYear, setFilterYear] = useState<number | null>(null);
+  const [isMonthYearDialogOpen, setIsMonthYearDialogOpen] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth);
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
   
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -176,7 +190,7 @@ const PatientHistory: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Month and year state for view dialog filtering
-  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(new Date().getMonth());
+  const [viewDialogSelectedMonth, setViewDialogSelectedMonth] = useState(currentMonth); // 1-based
   const [viewDialogSelectedYear, setViewDialogSelectedYear] = useState(currentYear);
   const [showViewDialogMonthYearDialog, setShowViewDialogMonthYearDialog] = useState(false);
   const [viewDialogFilterMonth, setViewDialogFilterMonth] = useState<number | null>(null);
@@ -221,7 +235,7 @@ const PatientHistory: React.FC = () => {
       }
     };
     loadData();
-  }, []);
+  }, [refreshKey]);
 
   // Reset to first page when filter changes
   useEffect(() => {
@@ -470,7 +484,62 @@ const PatientHistory: React.FC = () => {
           filePath: record.audio_recording,
           fileName: record.audio_file_name || 'audio.wav'
         } : undefined,
-        audioFiles: record.audio_file_name ? [{ name: record.audio_file_name } as File] : [],
+        audioFiles: (() => {
+          // Start with legacy audio files
+          const audioFiles: any[] = [];
+          
+          // Add legacy audio file if exists
+          if (record.audio_file_name) {
+            audioFiles.push({ 
+              name: record.audio_file_name,
+              filePath: record.audio_recording, // Use the audio_recording field as the file path
+              type: 'audio/wav' // Default to wav for legacy files
+            });
+          }
+          
+          // Parse documents_info to find additional audio files
+          if (record.documents_info) {
+            try {
+              let jsonString = record.documents_info;
+              
+              // Handle invalid cases
+              if (jsonString === "0" || jsonString === "" || jsonString === "null") {
+                return audioFiles;
+              }
+              
+              // Handle double-encoded JSON
+              if (typeof jsonString === 'string' && jsonString.startsWith('"') && jsonString.endsWith('"')) {
+                jsonString = jsonString.slice(1, -1);
+                jsonString = jsonString.replace(/\\"/g, '"');
+              }
+              
+              const parsed = JSON.parse(jsonString);
+              
+              if (Array.isArray(parsed)) {
+                const parsedAudioFiles = parsed.filter(item => item && item.name && item.type?.startsWith('audio/'));
+                // Add filePath information to audio files from documents_info
+                parsedAudioFiles.forEach(audioFile => {
+                  if (audioFile.filePath && !audioFile.filePath.startsWith('http')) {
+                    // Ensure the filePath is correctly formatted for the server
+                    audioFile.filePath = audioFile.filePath;
+                  }
+                });
+                audioFiles.push(...parsedAudioFiles);
+              } else if (parsed && parsed.name && parsed.type?.startsWith('audio/')) {
+                if (parsed.filePath && !parsed.filePath.startsWith('http')) {
+                  // Ensure the filePath is correctly formatted for the server
+                  parsed.filePath = parsed.filePath;
+                }
+                audioFiles.push(parsed);
+              }
+            } catch (error) {
+              console.error('Error parsing documents_info for audio files:', error);
+            }
+          }
+          
+          console.log(`🎵 Audio files for record ${record.id}:`, audioFiles);
+          return audioFiles;
+        })(),
         documents: record.documents_info ? (() => {
           try {
             console.log(`🔧 Processing documents_info for record ${record.id}:`, record.documents_info);
@@ -496,18 +565,18 @@ const PatientHistory: React.FC = () => {
             console.log(`✅ Parse successful for record ${record.id}:`, parsed);
             
             if (Array.isArray(parsed)) {
-              const validDocs = parsed.filter(item => item && item.name);
-              console.log(`📋 Valid documents found:`, validDocs.length, validDocs);
-              return validDocs;
-            } else if (parsed && parsed.name) {
-              console.log(`📋 Single document found:`, parsed);
+              // Return only non-audio documents
+              const documentFiles = parsed.filter(item => item && item.name && !item.type?.startsWith('audio/'));
+              console.log(`📋 Document files found:`, documentFiles.length, documentFiles);
+              return documentFiles;
+            } else if (parsed && parsed.name && !parsed.type?.startsWith('audio/')) {
+              console.log(`📋 Single non-audio document found:`, parsed);
               return [parsed];
             }
             
             return [];
           } catch (error) {
-            console.error('❌ All parsing attempts failed for record', record.id, ':', error);
-            console.error('❌ Raw value:', record.documents_info);
+            console.error('❌ Error parsing documents_info for documents:', error);
             return [];
           }
         })() : [],
@@ -593,6 +662,34 @@ const PatientHistory: React.FC = () => {
     }
   };
 
+  // Function to load all data - matches PatientMedicalRecord implementation
+  const loadData = async () => {
+    try {
+      // Load all data in parallel for better performance
+      const [patientsResult, doctorsResult, historyResult] = await Promise.allSettled([
+        loadPatients(),
+        loadDoctors(),
+        loadHistoryRecords()
+      ]);
+      
+      // Handle any failed promises
+      if (patientsResult.status === 'rejected') {
+        console.error('Failed to load patients:', patientsResult.reason);
+      }
+      if (doctorsResult.status === 'rejected') {
+        console.error('Failed to load doctors:', doctorsResult.reason);
+      }
+      if (historyResult.status === 'rejected') {
+        console.error('Failed to load history:', historyResult.reason);
+      }
+      
+      setIsLoadingComplete(true);
+    } catch (error) {
+      console.error('Error in loadData:', error);
+      setIsLoadingComplete(true);
+    }
+  };
+
   const saveHistoryRecords = async (records: HistoryRecord[]) => {
     // This method is not needed anymore since we save directly to database
     setHistoryRecords(records);
@@ -622,7 +719,7 @@ const PatientHistory: React.FC = () => {
     if (filterMonth !== null && filterYear !== null) {
       filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+        return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
       });
     }
 
@@ -1020,7 +1117,7 @@ const PatientHistory: React.FC = () => {
       description: record.description,
       date: record.date || new Date().toISOString().split('T')[0], // Add date field
       documents: [], // For edit mode, we'll show existing documents separately
-      audioFiles: record.audioFiles || [],
+      audioFiles: (record.audioFiles || []) as File[], // Cast to File[] for form state
       photoFiles: [] // For edit mode, we'll show existing photos within documents
     });
     
@@ -1116,9 +1213,10 @@ const PatientHistory: React.FC = () => {
       
       let filePaths: string[] = [];
       
-      // Upload files if any
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+      // Upload files if any (including regular files and audio files)
+      const allFiles = [...selectedFiles, ...newRecord.audioFiles];
+      if (allFiles.length > 0) {
+        for (const file of allFiles) {
           try {
             const fileType = file.type.startsWith('audio/') ? 'audio' : 'document';
             const filePath = await uploadMedicalHistoryFile(file, viewRecord.patientId, fileType);
@@ -1129,37 +1227,13 @@ const PatientHistory: React.FC = () => {
         }
       }
 
-      // Upload audio recording if exists
-      if (audioRecording?.blob) {
-        try {
-          // Create a File-like object from blob for upload
-          const fileName = audioRecording.fileName || `audio_${Date.now()}.wav`;
-          const audioFile = Object.assign(audioRecording.blob, {
-            name: fileName,
-            lastModified: Date.now()
-          }) as File;
-          const audioPath = await uploadMedicalHistoryFile(audioFile, viewRecord.patientId, 'audio');
-          filePaths.push(audioPath);
-        } catch (error) {
-          console.error('Audio upload failed:', error);
-        }
-      }
-
       // Create documents info
-      const documentsInfo = [
-        ...selectedFiles.map((file, index) => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          filePath: filePaths[index] || null
-        })),
-        ...(audioRecording?.blob ? [{
-          name: audioRecording.fileName || `audio_${Date.now()}.wav`,
-          size: audioRecording.blob.size,
-          type: 'audio/wav',
-          filePath: filePaths[selectedFiles.length] || null
-        }] : [])
-      ];
+      const documentsInfo = allFiles.map((file, index) => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        filePath: filePaths[index] || null
+      }));
 
       // Create the record
       const dbRecord = {
@@ -1384,7 +1458,7 @@ const PatientHistory: React.FC = () => {
     if (viewDialogFilterMonth !== null && viewDialogFilterYear !== null) {
       records = records.filter(record => {
         const recordDate = new Date(record.date || record.createdAt);
-        return recordDate.getMonth() === viewDialogFilterMonth && recordDate.getFullYear() === viewDialogFilterYear;
+        return recordDate.getMonth() + 1 === viewDialogFilterMonth && recordDate.getFullYear() === viewDialogFilterYear;
       });
     }
     
@@ -1405,7 +1479,20 @@ const PatientHistory: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <div className="flex flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
+              
+              <Button 
+                onClick={() => setIsMonthYearDialogOpen(true)}
+                className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                {months[selectedMonth - 1]} {selectedYear}
+              </Button>
+              
               <Button 
                 onClick={() => {
                   console.log('🔵 Add Record button clicked');
@@ -1430,7 +1517,31 @@ const PatientHistory: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Active Patients</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{patients.filter(p => p.status === 'Active').length}</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
+                    {(() => {
+                      // Filter active patients based on medical records that match the month/year filter
+                      let activePatientIds = new Set();
+                      let filteredMedicalRecords = medicalRecords;
+                      
+                      // Apply month & year filtering
+                      if (filterMonth !== null && filterYear !== null) {
+                        filteredMedicalRecords = filteredMedicalRecords.filter(record => {
+                          const recordDate = new Date(record.date);
+                          return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
+                        });
+                      }
+                      
+                      // Get unique patient IDs from filtered medical records
+                      filteredMedicalRecords.forEach(record => {
+                        const patient = patients.find(p => String(p.id) === String(record.patientId));
+                        if (patient && patient.status === 'Active') {
+                          activePatientIds.add(record.patientId);
+                        }
+                      });
+                      
+                      return activePatientIds.size;
+                    })()}
+                  </p>
                   <div className="flex items-center text-xs text-blue-600">
                     <Users className="w-3 h-3 mr-1 flex-shrink-0" />
                     <span className="truncate">In treatment</span>
@@ -1470,7 +1581,7 @@ const PatientHistory: React.FC = () => {
                       if (filterMonth !== null && filterYear !== null) {
                         filteredMedicalRecords = filteredMedicalRecords.filter(record => {
                           const recordDate = new Date(record.date);
-                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                          return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
                         });
                       }
 
@@ -1530,7 +1641,7 @@ const PatientHistory: React.FC = () => {
                       if (filterMonth !== null && filterYear !== null) {
                         filteredMedicalRecords = filteredMedicalRecords.filter(record => {
                           const recordDate = new Date(record.date);
-                          return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+                          return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
                         });
                       }
 
@@ -1563,17 +1674,16 @@ const PatientHistory: React.FC = () => {
 
         {/* Filters */}
         <div className="crm-controls-container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="w-full">
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search records..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
-          
           </div>
         </div>
 
@@ -1671,13 +1781,28 @@ const PatientHistory: React.FC = () => {
                                 const firstAudioRecord = medicalRecords.find(medicalRecord => {
                                   const medicalPatientId = String(medicalRecord.patientId).replace(/^P0*/, '');
                                   const currentPatientId = String(record.patientId).replace(/^P0*/, '');
-                                  return medicalPatientId === currentPatientId && medicalRecord.audioRecording;
+                                  return medicalPatientId === currentPatientId && (medicalRecord.audioRecording || (medicalRecord.audioFiles && medicalRecord.audioFiles.length > 0));
                                 });
+                                
                                 if (firstAudioRecord?.audioRecording) {
+                                  // Handle legacy audio recording
                                   playAudio(firstAudioRecord.audioRecording.url, firstAudioRecord.id);
+                                } else if (firstAudioRecord?.audioFiles && firstAudioRecord.audioFiles.length > 0) {
+                                  // Handle new audio files - try to play the first one
+                                  const firstAudioFile = firstAudioRecord.audioFiles[0];
+                                  if (firstAudioFile && (firstAudioFile as any).filePath) {
+                                    const audioUrl = getFileUrl((firstAudioFile as any).filePath);
+                                    playAudio(audioUrl, firstAudioRecord.id);
+                                  } else {
+                                    toast({
+                                      title: "Audio Not Available",
+                                      description: "Audio file path not found.",
+                                      variant: "destructive",
+                                    });
+                                  }
                                 }
                               }}
-                              className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full w-8 h-8 p-0"
+                              className="action-btn-count action-btn-primary"
                               title={`${fileCounts.audioCount} audio recording${fileCounts.audioCount > 1 ? 's' : ''} available`}
                             >
                               <span className="text-sm font-semibold">{fileCounts.audioCount}</span>
@@ -1734,7 +1859,7 @@ const PatientHistory: React.FC = () => {
                                 });
                               }
                             }}
-                            className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-full w-8 h-8 p-0"
+                            className="action-btn-count action-btn-secondary"
                             title={`${fileCounts.documentsCount} document${fileCounts.documentsCount > 1 ? 's' : ''} available - Click to view`}
                           >
                             <span className="text-sm font-semibold">{fileCounts.documentsCount}</span>
@@ -1761,40 +1886,11 @@ const PatientHistory: React.FC = () => {
                           <Eye className="w-4 h-4" />
                         </Button>
                         {record.id.startsWith('patient_') ? (
-                          // For basic patient records, show add history option
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setFormData({
-                                patientId: record.patientId,
-                                doctor: '',
-                                title: '',
-                                category: '',
-                                description: '',
-                                date: new Date().toISOString().split('T')[0], // Add date field
-                                documents: [],
-                                audioFiles: [],
-                                photoFiles: []
-                              });
-                              setShowAddDialog(true);
-                            }}
-                            title="Add Medical Record"
-                            className="action-btn-lead action-btn-success"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
+                          // For basic patient records, show add history option - REMOVED EDIT BUTTON
+                          null
                         ) : (
-                          // For actual medical records, show edit option
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(record)}
-                            title="Edit Record"
-                            className="action-btn-lead action-btn-edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
+                          // For actual medical records, show edit option - REMOVED EDIT BUTTON
+                          null
                         )}
                         {!record.id.startsWith('patient_') && (
                           // Only show delete for actual medical records, not basic patient entries
@@ -1881,10 +1977,10 @@ const PatientHistory: React.FC = () => {
           resetForm(); // Reset form when dialog is closed
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit2 className="w-5 h-5" />
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0 pb-4 border-b border-gray-200">
+            <DialogTitle className="flex items-center space-x-2 text-xl">
+              <Edit2 className="w-6 h-6" />
               <span>{editRecord ? 'Edit Medical Record' : 'Add Medical Record'}</span>
             </DialogTitle>
             <DialogDescription>
@@ -1892,7 +1988,7 @@ const PatientHistory: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Patient *</Label>
@@ -2136,7 +2232,7 @@ const PatientHistory: React.FC = () => {
                               });
                             }
                           }}
-                          className="text-blue-600 hover:text-blue-700"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-2 py-1"
                           title="Download"
                         >
                           <Download className="w-4 h-4" />
@@ -2175,7 +2271,7 @@ const PatientHistory: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeDocument(index)}
-                        className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+                        className="action-btn-lead action-btn-delete"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -2228,23 +2324,34 @@ const PatientHistory: React.FC = () => {
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t-2 border-gray-300 pt-6 bg-gradient-to-r from-gray-50 to-white shadow-xl sticky bottom-0 z-10 flex justify-end gap-4">
             <Button 
               variant="outline" 
               onClick={() => {
                 setShowAddDialog(false);
                 resetForm(); // Reset form when canceling
               }}
-              className="global-btn global-btn-secondary"
+              className="px-6 py-3 text-base font-medium border-2 border-gray-300 hover:bg-gray-100 transition-all"
             >
+              <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit} 
-              className="global-btn global-btn-primary"
+              disabled={submitting || !newRecord.date || !newRecord.doctor.trim() || !newRecord.recordType.trim()}
+              className="px-8 py-3 text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
             >
-              <Edit2 className="w-4 h-4 mr-2" />
-              {editRecord ? 'Update Record' : 'Add Record'}
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  {editRecord ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5 mr-2" />
+                  {editRecord ? 'Update Medical Record' : 'Add Medical Record'}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2547,12 +2654,12 @@ const PatientHistory: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <div className="flex justify-end pt-4">
+                  {/* Submit Button for Medical Record Form */}
+                  <div className="flex justify-end pt-6 pb-2 border-t border-gray-200 mt-6">
                     <Button
                       type="submit"
                       disabled={submitting || !newRecord.date || !newRecord.doctor.trim() || !newRecord.recordType.trim()}
-                      className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-sm transition-all duration-200"
+                      className="px-8 py-3 text-base font-bold bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                     >
                       {submitting ? (
                         <>
@@ -2561,12 +2668,13 @@ const PatientHistory: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <FileText className="w-4 h-4 mr-2" />
+                          <FileText className="w-5 h-5 mr-2" />
                           Add Medical Record
                         </>
                       )}
                     </Button>
                   </div>
+
                 </form>
               </div>
 
@@ -2577,24 +2685,13 @@ const PatientHistory: React.FC = () => {
                     <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                     Medical History Records
                   </h3>
-                  <button
-                    type="button"
-                    className="bg-white/90 backdrop-blur-sm border border-purple-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 flex items-center gap-2 min-w-[140px] text-sm hover:bg-purple-50 transition-colors"
-                    onClick={() => setShowViewDialogMonthYearDialog(true)}
-                  >
-                    <Calendar className="h-4 w-4 text-purple-600" />
-                    {viewDialogFilterMonth !== null && viewDialogFilterYear !== null 
-                      ? `${months[viewDialogFilterMonth]} ${viewDialogFilterYear}`
-                      : `${months[viewDialogSelectedMonth]} ${viewDialogSelectedYear}`
-                    }
-                  </button>
                 </div>
 
                 {/* Medical Records Table with Glass Morphism */}
                 <div className="bg-white/60 backdrop-blur-sm rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 hover:bg-gradient-to-r hover:from-purple-600 hover:via-blue-600 hover:to-indigo-600">
+                      <TableRow className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500">
                         <TableHead className="text-center font-bold text-white">S NO</TableHead>
                         <TableHead className="text-center font-bold text-white">Date</TableHead>
                         <TableHead className="text-center font-bold text-white">Doctor</TableHead>
@@ -2632,12 +2729,49 @@ const PatientHistory: React.FC = () => {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => {
-                                        const audioUrl = record.audioRecording?.url || 
-                                                       (record.audioFiles && record.audioFiles.length > 0 ? URL.createObjectURL(record.audioFiles[0]) : '');
-                                        if (audioUrl) playAudio(audioUrl, record.id);
+                                        let audioUrl = '';
+                                        
+                                        // Priority 1: Use audioRecording.url if available (server-side audio files)
+                                        if (record.audioRecording?.url) {
+                                          audioUrl = record.audioRecording.url;
+                                          console.log('🎵 Using audioRecording URL:', audioUrl);
+                                        }
+                                        // Priority 2: Try to construct URL from audioFiles metadata (for server-side files)
+                                        else if (record.audioFiles && record.audioFiles.length > 0) {
+                                          const audioFile = record.audioFiles[0];
+                                          
+                                          // Type guard: Check if it's an AudioFileWithData object
+                                          if ('filePath' in audioFile && audioFile.filePath) {
+                                            audioUrl = getFileUrl(audioFile.filePath);
+                                            console.log('🎵 Using audioFile filePath:', audioFile.filePath, '-> URL:', audioUrl);
+                                          }
+                                          // If it's an actual File object, create blob URL
+                                          else if (audioFile instanceof File) {
+                                            audioUrl = URL.createObjectURL(audioFile as File);
+                                            console.log('🎵 Created blob URL from File object:', audioUrl);
+                                          }
+                                          // If it has name property, try to construct server path
+                                          else if ('name' in audioFile && audioFile.name) {
+                                            // Assume server-side file in uploads directory
+                                            audioUrl = getFileUrl(`uploads/medical-history-audio/${audioFile.name}`);
+                                            console.log('🎵 Constructed server URL from name:', audioFile.name, '-> URL:', audioUrl);
+                                          }
+                                        }
+                                        
+                                        if (audioUrl) {
+                                          console.log('🎵 Final audio URL for playback:', audioUrl);
+                                          playAudio(audioUrl, record.id);
+                                        } else {
+                                          console.error('❌ No valid audio URL found for record:', record.id);
+                                          toast({
+                                            title: "Audio Not Found",
+                                            description: "No valid audio file found for this record.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       }}
                                       title="Play Audio"
-                                      className="bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-200"
+                                      className="action-btn-lead bg-green-50 hover:bg-green-100 text-green-600 border border-green-200"
                                     >
                                       {playingAudio === record.id ? (
                                         <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -2649,12 +2783,36 @@ const PatientHistory: React.FC = () => {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => {
-                                        const audioUrl = record.audioRecording?.url || 
-                                                       (record.audioFiles && record.audioFiles.length > 0 ? URL.createObjectURL(record.audioFiles[0]) : '');
-                                        if (audioUrl) downloadAudio(audioUrl, `${record.patientName}-audio`);
+                                        let audioUrl = '';
+                                        
+                                        // Priority 1: Use audioRecording.url if available
+                                        if (record.audioRecording?.url) {
+                                          audioUrl = record.audioRecording.url;
+                                        }
+                                        // Priority 2: Try to construct URL from audioFiles metadata
+                                        else if (record.audioFiles && record.audioFiles.length > 0) {
+                                          const audioFile = record.audioFiles[0];
+                                          
+                                          // Type guard: Check if it's an AudioFileWithData object
+                                          if ('filePath' in audioFile && audioFile.filePath) {
+                                            audioUrl = getFileUrl(audioFile.filePath);
+                                          } 
+                                          // If it's an actual File object, create blob URL
+                                          else if (audioFile instanceof File) {
+                                            audioUrl = URL.createObjectURL(audioFile as File);
+                                          } 
+                                          // If it has name property, try to construct server path
+                                          else if ('name' in audioFile && audioFile.name) {
+                                            audioUrl = getFileUrl(`uploads/medical-history-audio/${audioFile.name}`);
+                                          }
+                                        }
+                                        
+                                        if (audioUrl) {
+                                          downloadAudio(audioUrl, `${record.patientName}-audio`);
+                                        }
                                       }}
                                       title="Download Audio"
-                                      className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
+                                      className="action-btn-lead bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200"
                                     >
                                       <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                                     </Button>
@@ -2699,7 +2857,7 @@ const PatientHistory: React.FC = () => {
                                         });
                                       }}
                                       title="Download All Documents"
-                                      className="bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-200"
+                                      className="action-btn-lead bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200"
                                     >
                                       <File className="w-3 h-3 sm:w-4 sm:h-4" />
                                     </Button>
@@ -2742,7 +2900,7 @@ const PatientHistory: React.FC = () => {
                                       }
                                     }}
                                     title="View Document"
-                                    className="bg-green-100 hover:bg-green-200 text-green-600 border-green-200"
+                                    className="action-btn-lead action-btn-view"
                                   >
                                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                   </Button>
@@ -2754,7 +2912,7 @@ const PatientHistory: React.FC = () => {
                                   variant="ghost"
                                   onClick={() => handleDeleteFromViewPopup(record)}
                                   title="Delete Medical Record"
-                                  className="bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+                                  className="action-btn-lead action-btn-delete"
                                 >
                                   <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
@@ -2839,10 +2997,10 @@ const PatientHistory: React.FC = () => {
                             downloadAudio(viewRecord.audioRecording.url, `${viewRecord.patientName}-${viewRecord.audioRecording.fileName || 'audio.wav'}`);
                           }
                         }}
-                        className="bg-white/90 backdrop-blur-sm border-green-200 hover:bg-green-50 flex items-center gap-2"
+                        className="bg-blue-50/90 backdrop-blur-sm border-blue-200 hover:bg-blue-100 flex items-center gap-2"
                       >
-                        <Download className="w-4 h-4 text-green-600" />
-                        <span className="text-green-600 font-medium">Download</span>
+                        <Download className="w-4 h-4 text-blue-600" />
+                        <span className="text-blue-600 font-medium">Download</span>
                       </Button>
                       
                       <Button
@@ -3021,7 +3179,7 @@ const PatientHistory: React.FC = () => {
                                       alert('This document cannot be downloaded as it was uploaded before file storage was implemented.');
                                     }
                                   }}
-                                  className="bg-green-100 hover:bg-green-200 text-green-600 border border-green-200 px-3 py-2"
+                                  className="action-btn-lead bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200"
                                   title="Download Document"
                                 >
                                   <Download className="w-4 h-4" />
@@ -3094,7 +3252,7 @@ const PatientHistory: React.FC = () => {
                   setViewDialogFilterYear(viewDialogSelectedYear);
                   setShowViewDialogMonthYearDialog(false);
                 }}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                className="action-btn-lead action-btn-primary"
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 Apply Filter
@@ -3156,67 +3314,23 @@ const PatientHistory: React.FC = () => {
       </Dialog>
 
       {/* Month/Year Picker Dialog */}
-      <Dialog open={showMonthYearDialog} onOpenChange={setShowMonthYearDialog}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Select Month & Year</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <div className="flex gap-2">
-              <select
-                className="border rounded px-3 py-2 flex-1"
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(Number(e.target.value))}
-              >
-                {months.map((month, idx) => (
-                  <option key={month} value={idx}>{month}</option>
-                ))}
-              </select>
-              <select
-                className="border rounded px-3 py-2 flex-1"
-                value={selectedYear}
-                onChange={e => setSelectedYear(Number(e.target.value))}
-              >
-                {[...Array(10)].map((_, i) => (
-                  <option key={currentYear - 5 + i} value={currentYear - 5 + i}>{currentYear - 5 + i}</option>
-                ))}
-              </select>
-            </div>
-            <DialogFooter>
-              <Button 
-                type="button" 
-                onClick={() => {
-                  setFilterMonth(selectedMonth);
-                  setFilterYear(selectedYear);
-                  setShowMonthYearDialog(false);
-                }}
-                className="global-btn global-btn-primary"
-              >
-                Apply Filter
-              </Button>
-              <Button 
-                type="button" 
-                onClick={() => setShowMonthYearDialog(false)}
-                className="global-btn global-btn-secondary"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => {
-                  setFilterMonth(null);
-                  setFilterYear(null);
-                  setShowMonthYearDialog(false);
-                }}
-                className="global-btn global-btn-secondary"
-              >
-                Clear Filter
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MonthYearPickerDialog
+        open={isMonthYearDialogOpen}
+        onOpenChange={setIsMonthYearDialogOpen}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onMonthChange={setSelectedMonth}
+        onYearChange={setSelectedYear}
+        onApply={() => {
+          setFilterMonth(selectedMonth);
+          setFilterYear(selectedYear);
+          setIsMonthYearDialogOpen(false);
+          loadData(); // Use loadData instead of refreshData to preserve selected filters
+        }}
+        title="Select Month & Year"
+        description="Filter patient history records by specific month and year"
+        previewText="history records"
+      />
     </div>
   );
 };

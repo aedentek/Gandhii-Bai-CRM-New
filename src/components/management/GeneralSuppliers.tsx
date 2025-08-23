@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
@@ -52,10 +52,10 @@ const GeneralSuppliers: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based for UI
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // Global refresh function
@@ -271,7 +271,7 @@ const GeneralSuppliers: React.FC = () => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) &&
         d.getFullYear() === filterYear
       );
     }
@@ -309,20 +309,7 @@ const GeneralSuppliers: React.FC = () => {
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
                 onClick={() => {
-                  // Reset all filters to current month/year and refresh
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  // Refresh the data
-                  handleGlobalRefresh();
+                  window.location.reload();
                 }}
                 loading={loading}
               />
@@ -340,8 +327,8 @@ const GeneralSuppliers: React.FC = () => {
               <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
                 text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                  ? `${months[filterMonth - 1]} ${filterYear}`
+                  : `${months[selectedMonth - 1]} ${selectedYear}`
                 }
               />
               
@@ -834,9 +821,10 @@ const GeneralSuppliers: React.FC = () => {
                       status: 'active',
                     });
                   }}
-                  className="action-btn action-btn-outline w-full sm:w-auto"
+                  className="w-full sm:w-auto bg-white hover:bg-gray-50 border-gray-300 text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
                   disabled={submitting}
                 >
+                  <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
@@ -846,7 +834,7 @@ const GeneralSuppliers: React.FC = () => {
                 >
                   {submitting ? (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
                       {editingSupplier ? 'Updating...' : 'Adding...'}
                     </>
                   ) : (
@@ -858,129 +846,210 @@ const GeneralSuppliers: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* View Supplier Dialog */}
-        <Dialog open={!!viewingSupplier} onOpenChange={() => setViewingSupplier(null)}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Eye className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-gray-900">Supplier Details</DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
-                    View supplier information
-                  </DialogDescription>
+        {/* View Supplier Dialog - Glass Morphism Design */}
+        {viewingSupplier && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewingSupplier(null)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-4xl bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Glass Morphism Style */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-shrink-0">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-green-500 to-blue-600">
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-white font-bold text-sm sm:text-base md:text-lg lg:text-xl">
+                          {(viewingSupplier.name || 'S').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">Supplier Details</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">
+                        Complete supplier information and details
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewingSupplier(null)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-            </DialogHeader>
-            
-            {viewingSupplier && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Company Name</Label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Status</Label>
-                    <div className="mt-1">
-                      <Badge 
-                        variant={viewingSupplier.status === 'active' ? 'default' : 'secondary'}
-                        className={`
-                          ${viewingSupplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                        `}
-                      >
-                        {viewingSupplier.status.charAt(0).toUpperCase() + viewingSupplier.status.slice(1)}
-                      </Badge>
+              
+              {/* Main content with scrolling enabled */}
+              <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style={{scrollbarWidth: 'thin', scrollbarColor: '#60a5fa #dbeafe'}}>
+                {/* Supplier Information Cards */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    Supplier Information
+                  </h3>
+
+                  {/* Supplier Details Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-blue-700 block">Company Name</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{viewingSupplier.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-purple-700 block">Status</label>
+                          <p className="text-sm sm:text-base font-semibold">
+                            <Badge 
+                              variant={viewingSupplier.status === 'active' ? 'default' : 'secondary'}
+                              className={`
+                                ${viewingSupplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                              `}
+                            >
+                              {viewingSupplier.status.charAt(0).toUpperCase() + viewingSupplier.status.slice(1)}
+                            </Badge>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-green-700 block">Created Date</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900">
+                            {viewingSupplier.createdAt ? (() => {
+                              const dateStr = viewingSupplier.createdAt;
+                              let dateObj;
+                              if (dateStr.includes('T')) {
+                                dateObj = new Date(dateStr);
+                              } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                dateObj = new Date(dateStr + 'T00:00:00');
+                              }
+                              if (dateObj && !isNaN(dateObj.getTime())) {
+                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                const year = dateObj.getFullYear();
+                                return `${day}/${month}/${year}`;
+                              }
+                              return dateStr;
+                            })() : 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Contact Person</Label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.contactPerson || 'Not specified'}</p>
+
+                {/* Contact Information */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Contact Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                    <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 rounded-lg border border-orange-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-orange-700 block">Contact Person</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900">
+                            {viewingSupplier.contactPerson || 'Not specified'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-blue-700 block">Phone Number</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900">
+                            {viewingSupplier.phone || 'Not specified'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-purple-700 block">Email Address</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {viewingSupplier.email || 'Not specified'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs sm:text-sm font-medium text-green-700 block">Address</label>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 leading-relaxed">
+                            {viewingSupplier.address || 'Not specified'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Phone</Label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingSupplier.phone || 'Not specified'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Email</Label>
-                  <p className="mt-1 text-sm text-gray-900">{viewingSupplier.email || 'Not specified'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Address</Label>
-                  <p className="mt-1 text-sm text-gray-900">{viewingSupplier.address || 'Not specified'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Created Date</Label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {viewingSupplier.createdAt ? (() => {
-                      const dateStr = viewingSupplier.createdAt;
-                      let dateObj;
-                      if (dateStr.includes('T')) {
-                        dateObj = new Date(dateStr);
-                      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                        dateObj = new Date(dateStr + 'T00:00:00');
-                      }
-                      if (dateObj && !isNaN(dateObj.getTime())) {
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const year = dateObj.getFullYear();
-                        return `${day}/${month}/${year}`;
-                      }
-                      return dateStr;
-                    })() : 'Unknown'}
-                  </p>
                 </div>
               </div>
-            )}
-
-            <DialogFooter>
-              <Button 
-                type="button" 
-                onClick={() => setViewingSupplier(null)}
-                className="action-btn action-btn-outline w-full sm:w-auto"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Delete Supplier
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Are you sure you want to delete this supplier? This action cannot be undone.
+          <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+            <DialogHeader className="text-center">
+              <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Supplier</DialogTitle>
+              <DialogDescription className="text-center text-sm sm:text-base">
+                Are you sure you want to delete supplier <strong>{supplierToDelete?.name}</strong>?
+                <br />
+                <br />
+                <span className="text-destructive font-medium">This action cannot be undone.</span>
               </DialogDescription>
             </DialogHeader>
-            
-            {supplierToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 my-4">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">{supplierToDelete.name}</div>
-                  <div className="text-gray-600">{supplierToDelete.contactPerson}</div>
-                  <div className="text-gray-600">{supplierToDelete.email}</div>
-                  <div className="text-gray-600">Status: {supplierToDelete.status}</div>
-                </div>
-              </div>
-            )}
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 justify-center">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -989,19 +1058,19 @@ const GeneralSuppliers: React.FC = () => {
                   setSupplierToDelete(null);
                 }}
                 disabled={submitting}
-                className="action-btn action-btn-outline w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button 
-                type="button" 
+                variant="destructive" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="action-btn action-btn-delete w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {submitting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
                     Deleting...
                   </>
                 ) : (

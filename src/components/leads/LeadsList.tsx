@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
+import '../../styles/global-crm-design.css';
 
 interface Lead {
   id: string;
@@ -57,7 +58,7 @@ const LeadsList: React.FC = () => {
 
   // Month/Year filter states
   const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
+  const currentMonth = currentDate.getMonth() + 1; // 1-based
   const currentYear = currentDate.getFullYear();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -123,7 +124,7 @@ const LeadsList: React.FC = () => {
     let matchesDate = true;
     if (filterMonth !== null && filterYear !== null) {
       const leadDate = new Date(lead.date);
-      matchesDate = leadDate.getMonth() === filterMonth && leadDate.getFullYear() === filterYear;
+      matchesDate = leadDate.getMonth() === (filterMonth - 1) && leadDate.getFullYear() === filterYear; // Convert 1-based to 0-based
     }
     
     return matchesSearch && matchesStatus && matchesDate;
@@ -268,7 +269,7 @@ const LeadsList: React.FC = () => {
     // Create filename with filter info
     let filename = 'leads-list';
     if (filterMonth !== null && filterYear !== null) {
-      filename += `_${months[filterMonth]}_${filterYear}`;
+      filename += `_${months[filterMonth - 1]}_${filterYear}`; // Convert 1-based to 0-based
     }
     if (statusFilter !== 'All') {
       filename += `_${statusFilter.toLowerCase()}`;
@@ -282,199 +283,211 @@ const LeadsList: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading leads...</p>
+      <div className="crm-page-bg">
+        <div className="max-w-7xl mx-auto p-6">
+          <Card className="crm-loading-card">
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading leads...</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="crm-header-container">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Leads Management</h1>
-             
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
-              <div className="flex gap-2">
-                <ActionButtons.Refresh 
+            <div className="flex flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <ActionButtons.Refresh 
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
+              />
+              
+              <ActionButtons.MonthYear 
+                onClick={() => setShowMonthYearDialog(true)}
+                text={filterMonth !== null && filterYear !== null 
+                  ? `${months[filterMonth - 1].slice(0, 3)} ${String(filterYear).slice(-2)}` // Convert 1-based to 0-based
+                  : `${months[selectedMonth - 1].slice(0, 3)} ${String(selectedYear).slice(-2)}` // Convert 1-based to 0-based
+                }
+              />
+
+              {/* Clear Filter Button */}
+              {(filterMonth !== currentMonth || filterYear !== currentYear) && (
+                <Button 
+                  type="button"
                   onClick={() => {
-                    setStatusFilter('all');
-                    setSearchTerm('');
                     setFilterMonth(currentMonth);
                     setFilterYear(currentYear);
                     setSelectedMonth(currentMonth);
                     setSelectedYear(currentYear);
-                    setCurrentPage(1);
-                    loadLeads();
                   }}
-                  loading={loading}
-                />
-                
-                <ActionButtons.MonthYear 
-                  onClick={() => setShowMonthYearDialog(true)}
-                  text={filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                    : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
-                  }
-                />
-
-                {/* Clear Filter Button */}
-                {(filterMonth !== currentMonth || filterYear !== currentYear) && (
-                  <Button 
-                    type="button"
-                    onClick={() => {
-                      setFilterMonth(currentMonth);
-                      setFilterYear(currentYear);
-                      setSelectedMonth(currentMonth);
-                      setSelectedYear(currentYear);
-                    }}
-                    variant="outline"
-                    className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[80px]"
-                  >
-                    <span className="hidden sm:inline">Reset</span>
-                    <span className="sm:hidden">↻</span>
-                  </Button>
-                )}
-              </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  type="button"
-                  onClick={exportToCSV}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
+                  variant="outline"
+                  className="modern-btn modern-btn-secondary flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2"
                 >
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Export CSV</span>
-                  <span className="sm:hidden">CSV</span>
+                  <span className="hidden sm:inline">Reset</span>
+                  <span className="sm:hidden">↻</span>
                 </Button>
+              )}
 
-                <Button 
-                  type="button"
-                  onClick={() => setShowAddDialog(true)}
-                  className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 lg:min-w-[120px]"
-                >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Add Lead</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-              </div>
+              <Button 
+                type="button"
+                onClick={exportToCSV}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+
+              <Button 
+                type="button"
+                onClick={() => setShowAddDialog(true)}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Lead</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{filteredLeads.length}</div>
-                <div className="text-xs text-gray-600">Total Leads</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredLeads.filter(l => l.status === 'Closed').length}
+        <div className="crm-stats-grid">
+          {/* Total Leads Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Leads</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredLeads.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All leads</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Closed</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredLeads.filter(l => l.status === 'Reminder').length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">Reminder</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-red">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <TrendingUp className="h-3 w-3 sm:h-5 sm:w-5 text-red-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredLeads.filter(l => l.status === 'Not Interested').length}
+          {/* Closed Leads Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Closed Leads</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {filteredLeads.filter(l => l.status === 'Closed').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Successful</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Not Interested</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Reminder Leads Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Reminder Leads</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredLeads.filter(l => l.status === 'Reminder').length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Pending</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Not Interested Leads Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Not Interested</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {filteredLeads.filter(l => l.status === 'Not Interested').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Declined</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search leads by name, phone, or category..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                />
+        <Card className="crm-controls-card">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search leads by name, phone, or category..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 h-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="w-full sm:w-auto sm:min-w-[200px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                    <SelectItem value="Reminder">Reminder</SelectItem>
+                    <SelectItem value="Not Interested">Not Interested</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            
-            <div className="w-full sm:w-auto min-w-[200px]">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Status</SelectItem>
-                  <SelectItem value="Closed">Closed</SelectItem>
-                  <SelectItem value="Reminder">Reminder</SelectItem>
-                  <SelectItem value="Not Interested">Not Interested</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Leads Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Leads List ({filteredLeads.length})</span>
-              <span className="sm:hidden">Leads ({filteredLeads.length})</span>
-            </div>
-          </div>
-        
-        {/* Scrollable Table View for All Screen Sizes */}
         <div className="overflow-x-auto">
           <Table className="w-full min-w-[800px]">
             <TableHeader>
@@ -520,9 +533,7 @@ const LeadsList: React.FC = () => {
                   </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center">
-                    <span>Actions</span>
-                  </div>
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -555,19 +566,19 @@ const LeadsList: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEdit(lead)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-400 action-btn-edit rounded-lg"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Lead"
                         >
-                          <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                          <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDelete(lead)}
-                          className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-400 action-btn-delete rounded-lg"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Lead"
                         >
-                          <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -586,23 +597,23 @@ const LeadsList: React.FC = () => {
 
         {/* Pagination - Only show if more than one page */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
-            <div className="text-sm text-gray-600">
+          <div className="crm-pagination-container">
+            <div className="crm-pagination-info">
               Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, filteredLeads.length)} of {filteredLeads.length} leads
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="crm-pagination-controls">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Previous
               </Button>
               
-              <div className="flex items-center gap-1">
+              <div className="crm-pagination-pages">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let page;
                   if (totalPages <= 5) {
@@ -621,7 +632,7 @@ const LeadsList: React.FC = () => {
                       variant={currentPage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-page"
                     >
                       {page}
                     </Button>
@@ -634,14 +645,13 @@ const LeadsList: React.FC = () => {
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Next
               </Button>
             </div>
           </div>
         )}
-        </div>
 
         {/* Month/Year Filter Dialog */}
         <MonthYearPickerDialog

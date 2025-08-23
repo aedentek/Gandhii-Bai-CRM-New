@@ -236,10 +236,16 @@ const UserManagement: React.FC = () => {
             <div>
               <CardTitle>User List</CardTitle>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} className="bg-gradient-medical">
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
+            <div className="flex gap-2">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
+              <Button onClick={() => setShowAddDialog(true)} className="bg-gradient-medical">
+                <Plus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

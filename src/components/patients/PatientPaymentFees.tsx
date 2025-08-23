@@ -3,6 +3,7 @@ import { Eye, Edit, Plus, Search, Download, Printer, User, CreditCard, CheckCirc
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -911,6 +912,10 @@ export default function PatientPaymentFees() {
             </div>
             
             <div className="flex items-center space-x-3">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               <Button 
                 onClick={printReport}
                 className="global-btn global-btn-primary"

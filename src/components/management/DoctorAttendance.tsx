@@ -46,10 +46,10 @@ const DoctorAttendance: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // Set initial page when component mounts
@@ -230,7 +230,7 @@ const DoctorAttendance: React.FC = () => {
 
   const exportAttendance = () => {
     // Use selected month/year from the popup filter
-    const exportMonth = filterMonth !== null ? filterMonth : new Date().getMonth();
+    const exportMonth = filterMonth !== null ? filterMonth - 1 : new Date().getMonth(); // Convert 1-based to 0-based for Date constructor
     const exportYear = filterYear !== null ? filterYear : new Date().getFullYear();
     
     // Create date object for the selected month/year
@@ -297,7 +297,7 @@ const DoctorAttendance: React.FC = () => {
 
   const getAttendanceStats = () => {
     if (doctors.length === 0) {
-      return { total: 0, present: 0, absent: 0, late: 0 };
+      return { total: 0, present: 0, absent: 0, late: 0, active: 0 };
     }
     const dateString = format(selectedDate, 'yyyy-MM-dd');
     
@@ -325,11 +325,15 @@ const DoctorAttendance: React.FC = () => {
       }
     });
     
+    // Count active doctors
+    const active = doctors.filter(doctor => doctor.status === 'active' || doctor.status === 'Active').length;
+    
     return {
       total: doctors.length,
       present,
       absent,
-      late
+      late,
+      active
     };
   };
 
@@ -365,7 +369,10 @@ const DoctorAttendance: React.FC = () => {
           
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh 
-                onClick={loadDoctors}
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
                 loading={loading}
                 disabled={loading}
               />
@@ -373,8 +380,8 @@ const DoctorAttendance: React.FC = () => {
               <ActionButtons.MonthYear 
                 onClick={() => setShowMonthYearDialog(true)}
                 text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                  : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
+                  ? months[filterMonth - 1] // Convert 1-based to 0-based for array access
+                  : months[selectedMonth - 1] // Convert 1-based to 0-based for array access
                 }
               />
               
@@ -394,22 +401,22 @@ const DoctorAttendance: React.FC = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-          {/* Total Doctors Card */}
+          {/* Active Doctors Card */}
           <Card className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100/80 border-0 rounded-xl lg:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10"></div>
             <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200/20 rounded-full -mr-8 -mt-8"></div>
             <CardContent className="relative p-3 sm:p-4 lg:p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Doctors</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.total}</p>
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Active Doctors</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.active}</p>
                   <div className="flex items-center text-xs text-blue-600">
-                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Active</span>
+                    <UserCheck className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">On duty</span>
                   </div>
                 </div>
                 <div className="p-2 sm:p-3 bg-blue-500 rounded-lg lg:rounded-xl shadow-md group-hover:bg-blue-600 transition-colors duration-300 flex-shrink-0">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>

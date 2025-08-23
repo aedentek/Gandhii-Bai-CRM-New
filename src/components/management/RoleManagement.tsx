@@ -440,17 +440,13 @@ const RoleManagement: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Role Management</h1>
-                             </div>
+                <p className="text-sm text-gray-600 mt-1">Manage user roles and permissions</p>
+              </div>
             </div>
           
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh 
-                onClick={() => {
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setPage(1);
-                  handleGlobalRefresh();
-                }}
+                onClick={handleGlobalRefresh}
                 loading={loading}
                 disabled={loading}
               />
@@ -663,7 +659,7 @@ const RoleManagement: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleViewClick(role)}
-                          className="action-btn-lead action-btn-view h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="View Details"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -673,7 +669,7 @@ const RoleManagement: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleEditClick(role)}
-                          className="action-btn-lead action-btn-edit h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Edit Role"
                         >
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -683,7 +679,7 @@ const RoleManagement: React.FC = () => {
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleDeleteRole(role.id, role.name)}
-                          className="action-btn-lead action-btn-delete h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                           title="Delete Role"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -718,7 +714,7 @@ const RoleManagement: React.FC = () => {
                 Previous
               </Button>
               
-              <div className="flex items-center gap-1">
+              <div className="crm-pagination-pages">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let pageNum;
                   if (totalPages <= 5) {
@@ -737,7 +733,7 @@ const RoleManagement: React.FC = () => {
                       variant={page === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setPage(pageNum)}
-                      className="crm-pagination-number"
+                      className="crm-pagination-page-btn"
                     >
                       {pageNum}
                     </Button>
@@ -865,7 +861,7 @@ const RoleManagement: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>
@@ -1190,7 +1186,7 @@ const RoleManagement: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="w-full sm:w-auto modern-btn modern-btn-primary"
+                  className="w-full sm:w-auto global-btn"
                 >
                   {submitting ? (
                     <>

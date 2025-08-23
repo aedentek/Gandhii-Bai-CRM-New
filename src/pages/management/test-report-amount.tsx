@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatabaseService } from '@/services/databaseService';
 import { TestReportAmountAPI } from '@/services/testReportAmountAPI';
@@ -425,19 +426,10 @@ const TestReportAmountPage: React.FC = () => {
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 {months[selectedMonth - 1]} {selectedYear}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('🔄 Manual refresh triggered - refreshing entire page');
-                  window.location.reload();
-                }}
-                disabled={isLoading}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                {/* <span className="hidden sm:inline">Refresh</span> */}
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               {/* <Button 
                 onClick={async () => {
                   console.log('🧪 Testing Test Reports API directly...');
@@ -694,7 +686,7 @@ const TestReportAmountPage: React.FC = () => {
                                 className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="View Patient Details"
                               >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">View</span>
                               </Button>
                               <Button 
@@ -704,7 +696,7 @@ const TestReportAmountPage: React.FC = () => {
                                 className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Add Test Report"
                               >
-                                <Edit className="h-3 w-3" />
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">Add Report</span>
                               </Button>
                             </div>
@@ -1330,7 +1322,7 @@ const TestReportAmountPage: React.FC = () => {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="action-btn-lead action-btn-delete h-8 w-8 p-0"
+                                        className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                                         title="Delete Test Report"
                                         onClick={() => handleDeleteTestReport(report)}
                                       >

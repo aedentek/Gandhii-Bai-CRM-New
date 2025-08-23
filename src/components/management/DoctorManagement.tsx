@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Stethoscope, User, Phone, Mail, MapPin, Calendar, DollarSign, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '@/styles/global-crm-design.css';
@@ -122,6 +123,18 @@ const DoctorManagement: React.FC = () => {
   const [categories, setCategories] = useState<DoctorCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
+  // Month and year state for filtering (1-based like Grocery Management)
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const currentYear = new Date().getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -148,7 +161,7 @@ const DoctorManagement: React.FC = () => {
 
   useEffect(() => {
     filterDoctors();
-  }, [doctors, searchTerm, statusFilter, selectedCategory]);
+  }, [doctors, searchTerm, statusFilter, selectedCategory, filterMonth, filterYear]);
 
   const loadDoctors = async () => {
     try {
@@ -249,6 +262,41 @@ const DoctorManagement: React.FC = () => {
     // Category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(doctor => doctor.specialization === selectedCategory);
+    }
+
+    // Month/Year filter (1-based like Grocery Management)
+    if (filterMonth !== null && filterYear !== null) {
+      filtered = filtered.filter(doctor => {
+        const dateStr = doctor.join_date || doctor.created_at;
+        if (!dateStr) return false;
+        
+        let d;
+        if (dateStr instanceof Date) {
+          d = dateStr;
+        } else {
+          // Convert to string if it's not already
+          const dateString = String(dateStr);
+          if (dateString.includes('T')) {
+            d = new Date(dateString);
+          } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            d = new Date(dateString + 'T00:00:00');
+          } else if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
+            // Handle DD-MM-YYYY format
+            const [day, month, year] = dateString.split('-');
+            d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          } else {
+            return false;
+          }
+        }
+        
+        if (isNaN(d.getTime())) return false;
+        
+        // Convert 1-based filterMonth to 0-based for comparison
+        return (
+          d.getMonth() === filterMonth - 1 &&
+          d.getFullYear() === filterYear
+        );
+      });
     }
 
     setFilteredDoctors(filtered);
@@ -375,6 +423,21 @@ const DoctorManagement: React.FC = () => {
             </div>
 
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              <ActionButtons.Refresh 
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
+                loading={false}
+                disabled={false}
+              />
+              
+              {/* Month & Year Filter Button */}
+              <ActionButtons.MonthYear
+                onClick={() => setShowMonthYearDialog(true)}
+                text={months[selectedMonth - 1]} // 1-based month to 0-based array
+              />
+              
               <Button 
                 onClick={() => navigate('/management/doctors/add')}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
@@ -383,11 +446,6 @@ const DoctorManagement: React.FC = () => {
                 <span className="hidden sm:inline">Add Doctor</span>
                 <span className="sm:hidden">+</span>
               </Button>
-              <ActionButtons.Refresh 
-                onClick={loadDoctors}
-                loading={false}
-                disabled={false}
-              />
             </div>
           </div>
         </div>
@@ -482,57 +540,53 @@ const DoctorManagement: React.FC = () => {
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search doctors..."
+                  placeholder="Search doctors by name, email, phone, or specialization..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-200 focus:border-blue-500 rounded-lg"
+                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
-
+            </div>
+            <div className="w-full sm:w-48">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="rounded-lg border-gray-200">
-                  <SelectValue placeholder="Filter by status" />
+                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
+                  <div className="px-2 py-1 border-t border-gray-200">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => {
+                        setStatusFilter('all');
+                        setSearchTerm('');
+                        setSelectedCategory('all');
+                        setFilterMonth(new Date().getMonth() + 1);
+                        setFilterYear(new Date().getFullYear());
+                        setSelectedMonth(new Date().getMonth() + 1);
+                        setSelectedYear(new Date().getFullYear());
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3 mr-2" />
+                      Reset All Filters
+                    </Button>
+                  </div>
                 </SelectContent>
               </Select>
-
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="rounded-lg border-gray-200">
-                  <SelectValue placeholder="Filter by specialization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Specializations</SelectItem>
-                  {Array.from(new Set(doctors.map(d => d.specialization))).map((spec) => (
-                    <SelectItem key={spec} value={spec}>
-                      {spec}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 rounded-lg border-gray-200">
-                  <Filter className="w-4 h-4 mr-2" />
-                  More Filters
-                </Button>
-                <Button variant="outline" className="rounded-lg border-gray-200">
-                  <Download className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Doctors Table */}
         <Card className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl shadow-lg">
@@ -1038,6 +1092,24 @@ const DoctorManagement: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Month/Year Picker Dialog */}
+        <MonthYearPickerDialog
+          open={showMonthYearDialog}
+          onOpenChange={setShowMonthYearDialog}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          onApply={() => {
+            setFilterMonth(selectedMonth);
+            setFilterYear(selectedYear);
+            setShowMonthYearDialog(false);
+          }}
+          title="Select Month & Year"
+          description="Filter doctors by specific month and year"
+          previewText="doctors"
+        />
 
         {/* Delete Confirmation Modal */}
         <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>

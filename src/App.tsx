@@ -53,7 +53,7 @@ import GroceryAccounts from '@/components/management/GroceryAccounts';
 import AttendanceManagement from '@/components/management/AttendanceManagement';
 // import UserRoleManagement from '@/components/management/UserRoleManagement';
 import Settings from '@/components/settings/Settings';
-import CategoryManagement from '@/components/management/CategoryManagement';
+import CategoryManagement from '@/components/management/MedicineCategories';
 import MedicineStock from '@/components/management/MedicineStock';
 import MedicineAccounts from '@/components/management/MedicineAccounts';
 import GeneralManagement from '@/components/management/GeneralManagement';

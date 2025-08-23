@@ -110,10 +110,10 @@ const GroceryAccounts: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like other Grocery pages
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
@@ -417,7 +417,7 @@ const GroceryAccounts: React.FC = () => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) && // Convert 1-based filterMonth to 0-based for comparison
         d.getFullYear() === filterYear
       );
     }
@@ -482,28 +482,15 @@ const GroceryAccounts: React.FC = () => {
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
                 onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  handleGlobalRefresh();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
                 loading={loading}
               />
               
               <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
-                }
+                text={months[selectedMonth - 1]} // Mirror General Categories: 1-based month to 0-based array
               />
               
               <Button 

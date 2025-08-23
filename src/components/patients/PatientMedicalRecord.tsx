@@ -1353,27 +1353,15 @@ const PatientMedicalRecord: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log('🔄 Manual refresh triggered - refreshing entire page');
-                    window.location.reload();
-                  }}
-                  disabled={isLoadingPatients || isLoadingRecords}
-                  className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-                >
-                  <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${(isLoadingPatients || isLoadingRecords) ? 'animate-spin' : ''}`} />
-                  {/* <span className="hidden sm:inline">Refresh</span> */}
-                </Button>
+                <ActionButtons.Refresh onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }} />
                 
-                <Button 
+                <ActionButtons.MonthYear
+                  text={`${months[selectedMonth - 1]} ${selectedYear}`}
                   onClick={() => setIsMonthYearDialogOpen(true)}
-                  className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                >
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  {months[selectedMonth - 1]} {selectedYear}
-                </Button>
+                />
               </div>
               
 

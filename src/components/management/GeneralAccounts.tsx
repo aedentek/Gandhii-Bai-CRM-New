@@ -115,10 +115,10 @@ const GeneralAccounts: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
@@ -374,7 +374,7 @@ const GeneralAccounts: React.FC = () => {
         let filename = `general-accounts-${dateStr}`;
         
         if (filterMonth !== null && filterYear !== null) {
-          filename += `-${months[filterMonth]}-${filterYear}`;
+          filename += `-${months[filterMonth - 1]}-${filterYear}`; // Convert 1-based to 0-based
         }
         
         if (statusFilter !== 'all') {
@@ -422,7 +422,7 @@ const GeneralAccounts: React.FC = () => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) && // Convert 1-based to 0-based
         d.getFullYear() === filterYear
       );
     }
@@ -479,18 +479,8 @@ const GeneralAccounts: React.FC = () => {
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
                 onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  handleGlobalRefresh();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
                 loading={loading}
               />
@@ -498,8 +488,8 @@ const GeneralAccounts: React.FC = () => {
               <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
                 text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
+                  ? `${months[filterMonth - 1].slice(0, 3)} ${String(filterYear).slice(-2)}` // Convert 1-based to 0-based
+                  : `${months[selectedMonth - 1].slice(0, 3)} ${String(selectedYear).slice(-2)}` // Convert 1-based to 0-based
                 }
               />
               

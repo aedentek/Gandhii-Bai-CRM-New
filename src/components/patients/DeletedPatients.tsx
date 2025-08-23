@@ -1,31 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import '@/styles/global-crm-design.css';
+import '@/styles/global-modal-design.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { 
-  RotateCcw, 
-  Search, 
+  Search,
   Users, 
-  Calendar as CalendarIcon, 
-  Filter, 
-  UserMinus, 
-  Trash2, 
-  Clock,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
-  Heart,
+  RotateCcw,
+  Trash2, 
+  Clock,
+  UserX,
+  TrendingUp,
   Activity,
-  UserX
+  Plus,
+  RefreshCw,
+  Filter,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -53,12 +56,26 @@ interface Patient {
 }
 
 const DeletedPatients: React.FC = () => {
+  // Month/year constants
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+
   const [deletedPatients, setDeletedPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [deletedByFilter, setDeletedByFilter] = useState('');
+  
+  // Month/Year filter states
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth);
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [restorePatient, setRestorePatient] = useState<Patient | null>(null);
@@ -70,7 +87,7 @@ const DeletedPatients: React.FC = () => {
 
   useEffect(() => {
     filterPatients();
-  }, [deletedPatients, searchTerm, dateFilter, deletedByFilter]);
+  }, [deletedPatients, searchTerm, dateFilter, deletedByFilter, filterMonth, filterYear]);
 
   const loadDeletedPatients = async () => {
     try {
@@ -154,6 +171,14 @@ const DeletedPatients: React.FC = () => {
       );
     }
 
+    // Month/Year filtering by deletion date
+    if (filterMonth !== null && filterYear !== null) {
+      filtered = filtered.filter(patient => {
+        const deletedDate = new Date(patient.deletedAt);
+        return deletedDate.getMonth() === (filterMonth - 1) && deletedDate.getFullYear() === filterYear;
+      });
+    }
+
     if (dateFilter) {
       filtered = filtered.filter(patient => {
         const deletedDate = new Date(patient.deletedAt);
@@ -167,6 +192,7 @@ const DeletedPatients: React.FC = () => {
     }
 
     setFilteredPatients(filtered);
+    setCurrentPage(1); // Reset to first page on filter
   };
 
   const handleRestore = (patient: Patient) => {
@@ -265,92 +291,120 @@ const DeletedPatients: React.FC = () => {
   return (
     <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Professional Header */}
+        {/* Header Section */}
         <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="crm-header-icon crm-header-icon-red">
-                <UserX className="w-6 h-6 text-white" />
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <UserX className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Deleted Patients</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Manage and restore deleted patient records
-                </p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Deleted Patients</h1>
               </div>
             </div>
             
-            <div className="action-buttons-container">
-              <button 
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
+              
+              <ActionButtons.MonthYear
+                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
+                onClick={() => setShowMonthYearDialog(true)}
+              />
+              
+              <Button 
                 onClick={exportToExcel}
-                className="action-btn-lead"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
-                <Download className="h-4 w-4" />
-                <span className="font-medium">Export Excel</span>
-              </button>
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export Excel</span>
+                <span className="sm:hidden">Excel</span>
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Professional Stats Cards */}
+        {/* Stats Cards */}
         <div className="crm-stats-grid">
+          {/* Total Deleted Card */}
           <Card className="crm-stat-card crm-stat-card-red">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-600">Total Deleted</p>
-                  <p className="text-2xl font-bold text-gray-900">{deletedPatients.length}</p>
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Total Deleted</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">{deletedPatients.length}</p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Trash2 className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">{months[(filterMonth || 1) - 1]} {filterYear}</span>
+                  </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-red">
-                  <Trash2 className="h-6 w-6" />
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* Filtered Results Card */}
           <Card className="crm-stat-card crm-stat-card-orange">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-600">Filtered</p>
-                  <p className="text-2xl font-bold text-gray-900">{filteredPatients.length}</p>
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Filtered Results</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{filteredPatients.length}</p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Search className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Current view</span>
+                  </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-orange">
-                  <Filter className="h-6 w-6" />
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* This Month Card */}
           <Card className="crm-stat-card crm-stat-card-blue">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-600">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">This Month</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
                     {deletedPatients.filter(p => {
                       const deletedDate = new Date(p.deletedAt);
                       const today = new Date();
                       return deletedDate.getMonth() === today.getMonth() && deletedDate.getFullYear() === today.getFullYear();
                     }).length}
                   </p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <CalendarIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Recent deletions</span>
+                  </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-blue">
-                  <CalendarIcon className="h-6 w-6" />
+                  <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* Can Restore Card */}
           <Card className="crm-stat-card crm-stat-card-green">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Can Restore</p>
-                  <p className="text-2xl font-bold text-gray-900">{filteredPatients.length}</p>
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Can Restore</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{filteredPatients.length}</p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <RotateCcw className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Available</span>
+                  </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-green">
-                  <RotateCcw className="h-6 w-6" />
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -359,71 +413,77 @@ const DeletedPatients: React.FC = () => {
 
         {/* Search and Filter Controls */}
         <div className="crm-controls-container">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search patients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 border-gray-200 hover:border-gray-300 transition-colors duration-300"
-              />
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search deleted patients by name, ID, or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                />
+              </div>
             </div>
             
-            <div className="relative">
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="h-12 border-gray-200 hover:border-gray-300 transition-colors duration-300"
-              />
-            </div>
-
-            <div className="relative">
-              <select
-                className="w-full h-12 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 hover:border-gray-300 transition-colors duration-300"
-                value={deletedByFilter}
-                onChange={(e) => setDeletedByFilter(e.target.value)}
-              >
-                <option value="">All Users</option>
-                {getDeletedByOptions().map((person) => (
-                  <option key={person} value={person}>
-                    {person}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="w-full sm:w-auto min-w-[160px]">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Deletion date"
+                />
+              </div>
+              
+              <div className="w-full sm:w-auto min-w-[140px]">
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  value={deletedByFilter}
+                  onChange={(e) => setDeletedByFilter(e.target.value)}
+                >
+                  <option value="">All Users</option>
+                  {getDeletedByOptions().map((person) => (
+                    <option key={person} value={person}>
+                      {person}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setDateFilter('');
                   setDeletedByFilter('');
                 }}
-                className="global-btn global-btn-secondary"
+                className="global-btn global-btn-secondary flex-shrink-0 text-xs sm:text-sm px-3 sm:px-4 py-2"
               >
-                Clear Filters
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Clear Filters</span>
+                <span className="sm:hidden">Clear</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Patients Table */}
-        <Card className="crm-table-card">
+        <Card className="crm-table-container">
           <CardHeader className="crm-table-header">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                Deleted Patient Records
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-                  {filteredPatients.length} deleted
-                </Badge>
-                <Badge variant="outline">
-                  Page {currentPage} of {totalPages}
-                </Badge>
-              </div>
+            <div className="crm-table-title">
+              <UserX className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Deleted Patient Records ({filteredPatients.length})</span>
+              <span className="crm-table-title-text-mobile">Deleted ({filteredPatients.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+                {filteredPatients.length} deleted
+              </Badge>
+              <Badge variant="outline">
+                Page {currentPage} of {totalPages}
+              </Badge>
             </div>
           </CardHeader>
           
@@ -436,65 +496,67 @@ const DeletedPatients: React.FC = () => {
                   <p className="text-gray-500">There are no deleted patients matching your criteria.</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="crm-table">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center font-semibold">Sr No.</TableHead>
-                      <TableHead className="text-center font-semibold">Patient ID</TableHead>
-                      <TableHead className="text-center font-semibold">Name</TableHead>
-                      <TableHead className="text-center font-semibold">Age</TableHead>
-                      <TableHead className="text-center font-semibold">Gender</TableHead>
-                      <TableHead className="text-center font-semibold">Phone</TableHead>
-                      <TableHead className="text-center font-semibold">Deleted Date</TableHead>
-                      <TableHead className="text-center font-semibold">Deleted By</TableHead>
-                      <TableHead className="text-center font-semibold">Status</TableHead>
-                      <TableHead className="text-center font-semibold">Actions</TableHead>
+                    <TableRow className="crm-table-header-row">
+                      <TableHead className="crm-table-header-cell text-center">Sr No.</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Patient ID</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Name</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Age</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Gender</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Phone</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Deleted Date</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Deleted By</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Status</TableHead>
+                      <TableHead className="crm-table-header-cell text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentPatients.map((patient, idx) => (
-                      <TableRow key={patient.id} className="hover:bg-gray-50">
-                        <TableCell className="text-center font-medium">
+                      <TableRow key={patient.id} className="crm-table-row">
+                        <TableCell className="crm-table-cell text-center">
                           {startIndex + idx + 1}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-blue-600">
-                          {patient.id}
+                        <TableCell className="crm-table-cell text-center">
+                          <span className="crm-patient-id">{patient.id}</span>
                         </TableCell>
-                        <TableCell className="text-center font-medium">
-                          {patient.name}
+                        <TableCell className="crm-table-cell text-center">
+                          <span className="crm-patient-name">{patient.name}</span>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="crm-table-cell text-center">
                           {patient.age}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'}>
+                        <TableCell className="crm-table-cell text-center">
+                          <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'} className="crm-badge">
                             {patient.gender}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center font-mono">
-                          {patient.phone}
+                        <TableCell className="crm-table-cell text-center">
+                          <span className="crm-phone">{patient.phone}</span>
                         </TableCell>
-                        <TableCell className="text-center">
-                          {formatDate(patient.deletedAt)}
+                        <TableCell className="crm-table-cell text-center">
+                          <span className="crm-date">{formatDate(patient.deletedAt)}</span>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">
+                        <TableCell className="crm-table-cell text-center">
+                          <Badge variant="outline" className="crm-badge">
                             {patient.deletedBy}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="destructive">
+                        <TableCell className="crm-table-cell text-center">
+                          <Badge variant="destructive" className="crm-status-badge crm-status-deleted">
                             Deleted
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <button
-                            onClick={() => handleRestore(patient)}
-                            className="action-btn-success"
-                            title="Restore Patient"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
+                        <TableCell className="crm-table-cell text-center">
+                          <div className="crm-action-buttons">
+                            <button
+                              onClick={() => handleRestore(patient)}
+                              className="crm-action-btn crm-action-btn-success"
+                              title="Restore Patient"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -502,19 +564,19 @@ const DeletedPatients: React.FC = () => {
                 </Table>
               )}
 
-              {/* Professional Pagination */}
+              {/* Modern CRM Pagination */}
               {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200 px-6 pb-6">
-                  <div className="text-sm text-gray-700">
+                <div className="crm-pagination-container">
+                  <div className="crm-pagination-info">
                     Showing {startIndex + 1} to {Math.min(endIndex, filteredPatients.length)} of {filteredPatients.length} results
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="crm-pagination-controls">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-btn"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -528,8 +590,8 @@ const DeletedPatients: React.FC = () => {
                           size="sm"
                           onClick={() => setCurrentPage(pageNum)}
                           className={cn(
-                            "h-8 w-8 p-0",
-                            currentPage === pageNum && "bg-blue-600 text-white"
+                            "crm-pagination-btn",
+                            currentPage === pageNum && "crm-pagination-btn-active"
                           )}
                         >
                           {pageNum}
@@ -542,7 +604,7 @@ const DeletedPatients: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-btn"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -555,18 +617,18 @@ const DeletedPatients: React.FC = () => {
 
         {/* Restore Confirmation Dialog */}
         <Dialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
-          <DialogContent>
+          <DialogContent className="crm-dialog">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
+              <DialogTitle className="crm-dialog-title">
                 <RotateCcw className="w-5 h-5 mr-2 text-green-600" />
                 Restore Patient
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="crm-dialog-description">
                 Are you sure you want to restore <strong>{restorePatient?.name}</strong>?
                 This will move the patient back to the active patients list.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
+            <DialogFooter className="crm-dialog-footer">
               <button 
                 className="global-btn global-btn-secondary"
                 onClick={() => setShowRestoreConfirm(false)}
@@ -583,6 +645,19 @@ const DeletedPatients: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Month Year Picker Dialog */}
+        <MonthYearPickerDialog
+          open={showMonthYearDialog}
+          onOpenChange={setShowMonthYearDialog}
+          selectedMonth={filterMonth || currentMonth}
+          selectedYear={filterYear || currentYear}
+          onMonthChange={setFilterMonth}
+          onYearChange={setFilterYear}
+          onApply={() => {
+            setShowMonthYearDialog(false);
+          }}
+        />
       </div>
     </div>
   );

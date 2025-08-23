@@ -11,7 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, FolderOpen, ChevronLeft, ChevronRight, RefreshCw, Download, Users, Activity, Calendar } from 'lucide-react';
+import LoadingScreen from '@/components/shared/LoadingScreen';
+import { Plus, Search, Edit2, Trash2, FolderOpen, ChevronLeft, ChevronRight, RefreshCw, Download, Users, Activity, Calendar, TrendingUp, Clock } from 'lucide-react';
+import '@/styles/global-crm-design.css';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '../../styles/modern-settings.css';
@@ -241,54 +243,56 @@ const AddLeadCategory: React.FC = () => {
   }, [filteredCategories, paginatedCategories, currentPage]);
 
   if (loading) {
-    return (
-      <div className="p-4 md:p-6 space-y-6 max-w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Lead Categories</h1>
-        <Card className="p-8 text-center">
-          <div className="text-lg">Loading categories...</div>
-        </Card>
-      </div>
-    );
+    return <LoadingScreen message="Loading lead categories..." />;
   }
 
   if (error) {
     return (
-      <div className="p-4 md:p-6 space-y-6 max-w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Lead Categories</h1>
-        <Card className="p-8 text-center border-red-200 bg-red-50">
-          <div className="text-red-700 text-lg font-medium mb-2">Connection Error</div>
-          <div className="text-red-600 mb-4">{error}</div>
-          <Button onClick={fetchCategories} variant="outline">
-            Try Again
-          </Button>
-        </Card>
+      <div className="crm-page-bg">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+          <div className="crm-header-container">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Lead Categories</h1>
+                <p className="text-sm text-gray-600 mt-1">Connection Error</p>
+              </div>
+            </div>
+          </div>
+          <Card className="p-8 text-center border-red-200 bg-red-50">
+            <div className="text-red-700 text-lg font-medium mb-2">Connection Error</div>
+            <div className="text-red-600 mb-4">{error}</div>
+            <Button onClick={fetchCategories} variant="outline" className="global-btn">
+              Try Again
+            </Button>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Section */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="crm-header-container">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl">
+              <div className="crm-header-icon">
                 <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Lead Categories</h1>
-                {/* <p className="text-sm text-gray-600 mt-1">Manage and organize your lead categories</p> */}
               </div>
             </div>
           
             <div className="flex flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
-                onClick={() => {
-                  setLoading(true);
-                  fetchCategories();
-                }}
+                onClick={fetchCategories}
                 loading={loading}
+                disabled={loading}
               />
               
               <Button 
@@ -297,71 +301,99 @@ const AddLeadCategory: React.FC = () => {
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Add Category</span>
-                <span className="sm:hidden">+</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-          <div className="modern-stat-card stat-card-blue">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FolderOpen className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">{categories.length}</div>
-                <div className="text-xs text-gray-600">Total Categories</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-green">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {categories.filter(c => c.status === 'active').length}
+        <div className="crm-stats-grid">
+          {/* Total Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{categories.length}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">All categories</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="modern-stat-card stat-card-orange">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {categories.filter(c => c.status === 'inactive').length}
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="text-xs text-gray-600">Inactive</div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          <div className="modern-stat-card stat-card-purple">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Calendar className="h-3 w-3 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredCategories.length}
+          {/* Active Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-green">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                    {categories.filter(c => c.status === 'active').length}
+                  </p>
+                  <div className="flex items-center text-xs text-green-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Operational</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">Filtered</div>
+                <div className="crm-stat-icon crm-stat-icon-green">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          {/* Inactive Categories Card */}
+          <Card className="crm-stat-card crm-stat-card-red">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 mb-1 truncate">Inactive Categories</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mb-1">
+                    {categories.filter(c => c.status === 'inactive').length}
+                  </p>
+                  <div className="flex items-center text-xs text-red-600">
+                    <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Disabled</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-red">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Filtered Results Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Filtered Results</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredCategories.length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Search className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Current view</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search Controls */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-sm">
+        {/* Search and Filter Controls */}
+        <div className="crm-controls-container">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -379,14 +411,15 @@ const AddLeadCategory: React.FC = () => {
         </div>
 
         {/* Categories Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <FolderOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Categories List ({filteredCategories.length})</span>
-              <span className="sm:hidden">Categories ({filteredCategories.length})</span>
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <FolderOpen className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Categories List ({filteredCategories.length})</span>
+              <span className="crm-table-title-text-mobile">Categories ({filteredCategories.length})</span>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
 
         {/* Add Category Dialog */}
         <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
@@ -592,13 +625,21 @@ const AddLeadCategory: React.FC = () => {
             <TableHeader>
               <TableRow className="bg-gray-50 border-b">
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  S No
+                  <div className="flex items-center justify-center">
+                    <span>S No</span>
+                  </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  Category Name
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <FolderOpen className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Category Name</span>
+                  </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  Description
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Description</span>
+                  </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
@@ -674,7 +715,7 @@ const AddLeadCategory: React.FC = () => {
                         className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Edit Category"
                       >
-                        <Edit2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button 
                         size="sm" 
@@ -686,7 +727,7 @@ const AddLeadCategory: React.FC = () => {
                         className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
                         title="Delete Category"
                       >
-                        <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -702,26 +743,28 @@ const AddLeadCategory: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+          </CardContent>
+        </Card>
         
-        {/* Pagination - Only show if more than one page */}
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
-            <div className="text-sm text-gray-600">
+          <div className="crm-pagination-container">
+            <div className="crm-pagination-info">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredCategories.length)} of {filteredCategories.length} categories
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="crm-pagination-controls">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Previous
               </Button>
               
-              <div className="flex items-center gap-1">
+              <div className="crm-pagination-pages">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let page;
                   if (totalPages <= 5) {
@@ -740,7 +783,7 @@ const AddLeadCategory: React.FC = () => {
                       variant={currentPage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-page-btn"
                     >
                       {page}
                     </Button>
@@ -753,14 +796,13 @@ const AddLeadCategory: React.FC = () => {
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Next
               </Button>
             </div>
           </div>
         )}
-        </div>
 
         
         {/* Delete Confirmation Dialog */}

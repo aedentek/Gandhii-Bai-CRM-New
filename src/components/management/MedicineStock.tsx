@@ -31,7 +31,7 @@ import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, DollarSign, BarChart3, History, X, User, Pill, Building, ShoppingCart, Clock, Tag, Warehouse, Package2 } from 'lucide-react';
+import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, DollarSign, BarChart3, History, X, User, Pill, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 import '@/styles/global-crm-design.css';
@@ -72,6 +72,8 @@ interface MedicineStockItem {
 
 const MedicineStock: React.FC = () => {
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -81,6 +83,16 @@ const MedicineStock: React.FC = () => {
       try {
         const data = await DatabaseService.getAllMedicineProducts();
         setMedicines(data);
+        
+        // Load doctors data for Active Doctors stats
+        try {
+          const doctorsData = await DatabaseService.getAllDoctors();
+          setDoctors(doctorsData);
+        } catch (doctorError) {
+          console.error('Error loading doctors:', doctorError);
+        } finally {
+          setLoadingDoctors(false);
+        }
       } catch (e) {
         // Optionally show error
       } finally {
@@ -118,10 +130,10 @@ const MedicineStock: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
@@ -294,7 +306,7 @@ const MedicineStock: React.FC = () => {
         let filename = `medicine-stock-${dateStr}`;
         
         if (filterMonth !== null && filterYear !== null) {
-          filename += `-${months[filterMonth]}-${filterYear}`;
+          filename += `-${months[filterMonth - 1]}-${filterYear}`; // Convert 1-based to 0-based for array access
         }
         
         if (statusFilter !== 'all') {
@@ -350,7 +362,7 @@ const MedicineStock: React.FC = () => {
         matchesSearch &&
         matchesStatus &&
         matchesCategory &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === filterMonth - 1 && // Convert 1-based to 0-based for comparison
         d.getFullYear() === filterYear
       );
     }
@@ -414,54 +426,20 @@ const MedicineStock: React.FC = () => {
               </div>
             </div>
           
-            <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button 
-                onClick={() => {
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setCategoryFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  handleGlobalRefresh();
-                }}
-                disabled={loading}
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-                <span className="sm:hidden">↻</span>
-              </Button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               
-              <Button 
+              <ActionButtons.MonthYear
+                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
                 onClick={() => setShowMonthYearDialog(true)}
-                variant="outline"
-                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth]} ${filterYear}`
-                    : `${months[selectedMonth]} ${selectedYear}`
-                  }
-                </span>
-                <span className="sm:hidden">
-                  {filterMonth !== null && filterYear !== null 
-                    ? `${months[filterMonth].slice(0, 3)} ${filterYear}`
-                    : `${months[selectedMonth].slice(0, 3)} ${selectedYear}`
-                  }
-                </span>
-              </Button>
+              />
               
               <Button 
                 onClick={handleExportCSV}
-                className="modern-btn modern-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Export CSV</span>
@@ -548,6 +526,8 @@ const MedicineStock: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+
         </div>
 
         {/* Search and Filter Section */}
@@ -613,31 +593,32 @@ const MedicineStock: React.FC = () => {
         />
 
         {/* Stock Table */}
-        <div className="bg-white/90 backdrop-blur-sm border border-white/20 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50/50">
-            <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Stock Inventory ({filteredItems.length})</span>
-              <span className="sm:hidden">Stock ({filteredItems.length})</span>
+        <Card className="crm-table-card">
+          <CardContent className="p-0">
+            <div className="crm-table-header">
+              <div className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="crm-table-title-text">Stock Inventory ({filteredItems.length})</span>
+                <span className="crm-table-title-text-mobile">Stock ({filteredItems.length})</span>
+              </div>
             </div>
-          </div>
         
-        <div className="overflow-x-auto">
-          <Table className="w-full min-w-[1200px]">
-            <TableHeader>
-              <TableRow className="bg-gray-50 border-b">
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">S No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">ID No</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Product</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Category</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Stock Value</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Used Stock</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Balance Stock</TableHead>
-                <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                    <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Status</span>
-                  </div>
+            <div className="crm-table-container">
+              <Table className="crm-table">
+                <TableHeader>
+                  <TableRow className="crm-table-header-row">
+                    <TableHead className="crm-table-head">S No</TableHead>
+                    <TableHead className="crm-table-head">ID No</TableHead>
+                    <TableHead className="crm-table-head">Product</TableHead>
+                    <TableHead className="crm-table-head">Category</TableHead>
+                    <TableHead className="crm-table-head">Stock Value</TableHead>
+                    <TableHead className="crm-table-head">Used Stock</TableHead>
+                    <TableHead className="crm-table-head">Balance Stock</TableHead>
+                    <TableHead className="crm-table-head">
+                      <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                        <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span>Status</span>
+                      </div>
                 </TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Last Update</TableHead>
                 <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
@@ -694,27 +675,29 @@ const MedicineStock: React.FC = () => {
               )}
             </TableBody>
           </Table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
         
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-50/50 border-t">
-            <div className="text-sm text-gray-600">
+          <div className="crm-pagination-container">
+            <div className="crm-pagination-info">
               Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredItems.length)} of {filteredItems.length} medicines
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="crm-pagination-controls">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
                 disabled={page === 1}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Previous
               </Button>
               
-              <div className="flex items-center gap-1">
+              <div className="crm-pagination-pages">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let pageNum;
                   if (totalPages <= 5) {
@@ -733,7 +716,7 @@ const MedicineStock: React.FC = () => {
                       variant={page === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setPage(pageNum)}
-                      className="h-8 w-8 p-0"
+                      className="crm-pagination-page-btn"
                     >
                       {pageNum}
                     </Button>
@@ -746,7 +729,7 @@ const MedicineStock: React.FC = () => {
                 size="sm"
                 onClick={handleNextPage}
                 disabled={page === totalPages}
-                className="h-8 px-3"
+                className="crm-pagination-btn"
               >
                 Next
               </Button>
@@ -851,7 +834,7 @@ const MedicineStock: React.FC = () => {
                   <Button 
                     type="submit" 
                     disabled={submitting}
-                    className="w-full sm:w-auto modern-btn modern-btn-primary"
+                    className="w-full sm:w-auto global-btn global-btn-primary"
                   >
                     {submitting ? (
                       <>
@@ -1106,7 +1089,6 @@ const MedicineStock: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
   );
 };
 

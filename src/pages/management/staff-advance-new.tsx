@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { DatabaseService } from '@/services/databaseService';
 import { StaffAdvanceAPI } from '@/services/staffAdvanceAPI';
 import { StaffAdvance } from '@/types/staffAdvance';
@@ -425,16 +426,10 @@ const StaffAdvancePage: React.FC = () => {
             </div>
             
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadData}
-                disabled={isLoading}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               
               <Button
                 variant="outline"

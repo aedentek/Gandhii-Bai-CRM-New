@@ -256,7 +256,10 @@ const StaffCategoryManagement: React.FC = () => {
             
             <div className="flex items-center gap-2 sm:gap-3">
               <ActionButtons.Refresh 
-                onClick={() => loadCategories()}
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
                 loading={loading}
                 disabled={loading}
               />

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { DatabaseService } from '@/services/databaseService';
 import { StaffAdvanceAPI } from '@/services/staffAdvanceAPI';
 import { StaffAdvance } from '@/types/staffAdvance';
@@ -54,7 +55,7 @@ const StaffAdvancePage: React.FC = () => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const currentMonth = new Date().getMonth();
+  const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -157,7 +158,7 @@ const StaffAdvancePage: React.FC = () => {
     if (filterMonth !== null && filterYear !== null) {
       filtered = filtered.filter(advance => {
         const advanceDate = new Date(advance.date);
-        return advanceDate.getMonth() === filterMonth && advanceDate.getFullYear() === filterYear;
+        return advanceDate.getMonth() === (filterMonth - 1) && advanceDate.getFullYear() === filterYear;
       });
     }
     
@@ -459,26 +460,15 @@ const StaffAdvancePage: React.FC = () => {
             </div>
             
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadData}
-                disabled={isLoading}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               
-              <Button
-                variant="outline"
-                size="sm"
+              <ActionButtons.MonthYear
+                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
                 onClick={() => setShowMonthYearDialog(true)}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>{months[filterMonth || 0]?.slice(0, 3)} {filterYear}</span>
-              </Button>
+              />
               
               <Button
                 size="sm"
@@ -523,7 +513,7 @@ const StaffAdvancePage: React.FC = () => {
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">{totalAdvances}</p>
                   <div className="flex items-center text-xs text-orange-600">
                     <FileText className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">{months[filterMonth || 0]} {filterYear}</span>
+                    <span className="truncate">{months[(filterMonth || 1) - 1]} {filterYear}</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-orange">
@@ -658,7 +648,7 @@ const StaffAdvancePage: React.FC = () => {
                                 className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="View Staff Details"
                               >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">View</span>
                               </Button>
                               <Button 
@@ -668,7 +658,7 @@ const StaffAdvancePage: React.FC = () => {
                                 className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0"
                                 title="Add Advance"
                               >
-                                <Edit className="h-3 w-3" />
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="sr-only">Edit</span>
                               </Button>
                             </div>
@@ -1046,11 +1036,12 @@ const StaffAdvancePage: React.FC = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                  <button 
+                                  <button
                                     onClick={() => handleDeleteAdvance(advance.id)}
-                                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                    className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
+                                    title="Delete advance record"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                   </button>
                                 </td>
                               </tr>

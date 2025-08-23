@@ -1014,6 +1014,85 @@
   justify-content: space-between;
   padding: 1rem;
   border-top: 1px solid #f3f4f6;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+.crm-pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.crm-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.crm-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.crm-pagination-btn {
+  border-color: #d1d5db;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.crm-pagination-btn:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.crm-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crm-pagination-page-btn {
+  min-width: 2.5rem;
+  border-color: #d1d5db;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.crm-pagination-page-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Active page button styling */
+.crm-pagination-page-btn[data-state="on"] {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .crm-pagination-container {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .crm-pagination-info {
+    font-size: 0.75rem;
+  }
+  
+  .crm-pagination-pages {
+    gap: 0.125rem;
+  }
+  
+  .crm-pagination-page-btn {
+    min-width: 2rem;
+    font-size: 0.875rem;
+  }
 }
 
 /* Controls container (date picker, search, etc.) */

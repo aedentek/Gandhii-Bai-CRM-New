@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { toast } from '@/hooks/use-toast';
 import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, RefreshCcw, UserCheck, Activity, TrendingUp, Clock, X, Camera, Calendar, CreditCard, Heart, Shield, User, Phone, MapPin, Contact } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -231,11 +232,26 @@ const FileUploadField: React.FC<FileUploadFieldProps> = ({
 
 const PatientList: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Month/year constants
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  
+  // Month/Year filter states
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth);
+  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
+  
   const [viewPatient, setViewPatient] = useState<Patient | null>(null);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
@@ -327,7 +343,7 @@ const PatientList: React.FC = () => {
   useEffect(() => {
     filterPatients();
     setCurrentPage(1); // Reset to first page on filter/search change
-  }, [patients, searchTerm, statusFilter]);
+  }, [patients, searchTerm, statusFilter, filterMonth, filterYear]);
 
   // Removed auto-navigation to ensure page always starts at 1
 
@@ -546,6 +562,15 @@ const PatientList: React.FC = () => {
 
     if (statusFilter !== 'All') {
       filtered = filtered.filter(patient => patient.status === statusFilter);
+    }
+
+    // Month/Year filtering by admission date
+    if (filterMonth !== null && filterYear !== null) {
+      filtered = filtered.filter(patient => {
+        if (!patient.admissionDate) return false;
+        const admissionDate = new Date(patient.admissionDate);
+        return admissionDate.getMonth() === (filterMonth - 1) && admissionDate.getFullYear() === filterYear;
+      });
     }
 
     // Sort by Patient ID (P0001 format)
@@ -1417,19 +1442,16 @@ const PatientList: React.FC = () => {
             </div>
           
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('🔄 Manual refresh triggered - refreshing entire page');
-                  window.location.reload();
-                }}
-                disabled={loading}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-                {/* <span className="hidden sm:inline">Refresh</span> */}
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
+              
+              <ActionButtons.MonthYear
+                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
+                onClick={() => setShowMonthYearDialog(true)}
+              />
+              
               <Button 
                 onClick={exportToCSV}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
@@ -3200,6 +3222,23 @@ const PatientList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Month/Year Picker Dialog */}
+      <MonthYearPickerDialog
+        open={showMonthYearDialog}
+        onOpenChange={setShowMonthYearDialog}
+        selectedMonth={filterMonth || currentMonth}
+        selectedYear={filterYear || currentYear}
+        onMonthChange={setFilterMonth}
+        onYearChange={setFilterYear}
+        onApply={() => {
+          setShowMonthYearDialog(false);
+        }}
+        title="Select Month & Year"
+        description="Filter patients by admission date"
+        previewText="patients"
+      />
+      
       </div>
     </div>
   );

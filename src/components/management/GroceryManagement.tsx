@@ -195,10 +195,10 @@ const handleRefresh = React.useCallback(() => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like General Categories
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // Open edit dialog and populate form
@@ -528,7 +528,7 @@ const handleRefresh = React.useCallback(() => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) && // Convert 1-based filterMonth to 0-based for comparison
         d.getFullYear() === filterYear
       );
     }
@@ -584,20 +584,8 @@ const handleRefresh = React.useCallback(() => {
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
                 onClick={() => {
-                  // Reset all filters to current month/year and refresh
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  // Refresh the data
-                  handleGlobalRefresh();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
                 loading={loading}
               />
@@ -605,10 +593,7 @@ const handleRefresh = React.useCallback(() => {
               {/* Month & Year Filter Button */}
               <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
-                }
+                text={months[selectedMonth - 1]} // Mirror General Categories: 1-based month to 0-based array
               />
               
               {/* Export CSV Button */}
@@ -762,9 +747,9 @@ const handleRefresh = React.useCallback(() => {
                       onClick={() => {
                         setStatusFilter('all');
                         setSearchTerm('');
-                        setFilterMonth(new Date().getMonth());
+                        setFilterMonth(new Date().getMonth() + 1);
                         setFilterYear(new Date().getFullYear());
-                        setSelectedMonth(new Date().getMonth());
+                        setSelectedMonth(new Date().getMonth() + 1);
                         setSelectedYear(new Date().getFullYear());
                       }}
                     >

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User, Activity, Eye, Save, DollarSign, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -69,11 +70,17 @@ const SalaryPayment: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
   const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(new Date().getMonth() + 1);
   const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(new Date().getFullYear());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
   const [deletingPayment, setDeletingPayment] = useState(false);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   useEffect(() => {
     loadStaff();
@@ -440,19 +447,10 @@ const SalaryPayment: React.FC = () => {
                 <span className="sm:hidden">Save</span>
               </Button>
               
-              <Button
-                onClick={() => {}} // Will add month/year dialog functionality later
-                variant="outline"
-                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 min-w-[120px] sm:min-w-[140px]"
-              >
-                <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </span>
-                <span className="sm:hidden">
-                  {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                </span>
-              </Button>
+              <ActionButtons.MonthYear
+                onClick={() => setShowMonthYearDialog(true)}
+                text={`${months[selectedMonth - 1]} ${selectedYear}`} // Convert 1-based to 0-based
+              />
               
               <Button 
                 onClick={exportToExcel}
@@ -463,18 +461,10 @@ const SalaryPayment: React.FC = () => {
                 <span className="sm:hidden">Export</span>
               </Button>
               
-              <Button
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                  refreshData();
-                }}
-                disabled={loading}
-                variant="outline"
-                className="action-btn-lead flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-2"
-              >
-                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
             </div>
           </div>
         </div>
@@ -1191,6 +1181,22 @@ const SalaryPayment: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Month/Year Picker Dialog */}
+        <MonthYearPickerDialog
+          open={showMonthYearDialog}
+          onOpenChange={setShowMonthYearDialog}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          onApply={() => {
+            setShowMonthYearDialog(false);
+          }}
+          title="Select Month & Year"
+          description="Select month and year for staff salary data"
+          previewText="staff records"
+        />
       </div>
     </div>
   );

@@ -148,7 +148,10 @@ const DeletedDoctors: React.FC = () => {
 
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh 
-                onClick={loadDeletedDoctors}
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
+                }}
                 loading={loading}
                 disabled={loading}
               />

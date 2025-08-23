@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GeneralProduct {
@@ -193,10 +193,10 @@ const handleRefresh = React.useCallback(() => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Patient Attendance
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   // Open edit dialog and populate form
@@ -526,7 +526,7 @@ const handleRefresh = React.useCallback(() => {
       return (
         matchesSearch &&
         matchesStatus &&
-        d.getMonth() === filterMonth &&
+        d.getMonth() === (filterMonth - 1) && // Convert 1-based filterMonth to 0-based for comparison
         d.getFullYear() === filterYear
       );
     }
@@ -570,20 +570,8 @@ const handleRefresh = React.useCallback(() => {
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
               <ActionButtons.Refresh
                 onClick={() => {
-                  // Reset all filters to current month/year and refresh
-                  const currentMonth = new Date().getMonth();
-                  const currentYear = new Date().getFullYear();
-                  
-                  setStatusFilter('all');
-                  setSearchTerm('');
-                  setFilterMonth(currentMonth);
-                  setFilterYear(currentYear);
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                  setPage(1);
-                  
-                  // Refresh the data
-                  handleGlobalRefresh();
+                  console.log('🔄 Manual refresh triggered - refreshing entire page');
+                  window.location.reload();
                 }}
                 loading={loading}
               />
@@ -601,10 +589,7 @@ const handleRefresh = React.useCallback(() => {
               
               <ActionButtons.MonthYear
                 onClick={() => setShowMonthYearDialog(true)}
-                text={filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth].slice(0, 3)} ${String(filterYear).slice(-2)}`
-                  : `${months[selectedMonth].slice(0, 3)} ${String(selectedYear).slice(-2)}`
-                }
+                text={months[selectedMonth - 1]} // Mirror Patient Attendance: 1-based month to 0-based array
               />
               
               <Button 
@@ -756,7 +741,7 @@ const handleRefresh = React.useCallback(() => {
                         setSelectedYear(new Date().getFullYear());
                       }}
                     >
-                      <RefreshCw className="h-3 w-3 mr-2" />
+                      <RefreshCcw className="h-3 w-3 mr-2" />
                       Reset All Filters
                     </Button>
                   </div>
@@ -1123,8 +1108,9 @@ const handleRefresh = React.useCallback(() => {
                       purchaseDate: new Date().toISOString().split('T')[0],
                     });
                   }}
-                  className="action-btn action-btn-outline w-full sm:w-auto"
+                  className="w-full sm:w-auto bg-white hover:bg-gray-50 border-gray-300 text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
                 >
+                  <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
@@ -1140,59 +1126,41 @@ const handleRefresh = React.useCallback(() => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Delete Product
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-2">
-                Are you sure you want to delete this product? This action cannot be undone.
+          <DialogContent className="sm:max-w-md w-[95vw] sm:w-full">
+            <DialogHeader className="text-center">
+              <DialogTitle className="text-destructive text-lg sm:text-xl">Delete Product</DialogTitle>
+              <DialogDescription className="text-center text-sm sm:text-base">
+                Are you sure you want to delete product <strong>{productToDelete?.name}</strong>?
+                <br />
+                <br />
+                <span className="text-destructive font-medium">This action cannot be undone.</span>
               </DialogDescription>
             </DialogHeader>
-            
-            {productToDelete && (
-              <div className="bg-gray-50 rounded-lg p-4 my-4">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">{productToDelete.name}</div>
-                  <div className="text-gray-600">{productToDelete.category}</div>
-                  <div className="text-gray-600">{productToDelete.supplier}</div>
-                  <div className="text-gray-600">₹{productToDelete.price.toLocaleString('en-IN')}</div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
+            <DialogFooter className="flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
               <Button 
-                type="button" 
                 variant="outline" 
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setProductToDelete(null);
                 }}
                 disabled={submitting}
-                className="action-btn action-btn-outline w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button 
-                type="button" 
+                variant="destructive" 
                 onClick={confirmDelete}
                 disabled={submitting}
-                className="action-btn action-btn-delete w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {submitting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
                     Deleting...
                   </>
                 ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Product
-                  </>
+                  'Delete Product'
                 )}
               </Button>
             </DialogFooter>

@@ -374,19 +374,10 @@ const PatientAttendance: React.FC = () => {
             </div>
           
             <div className="flex flex-row sm:flex-row gap-1 sm:gap-3 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('🔄 Manual refresh triggered - refreshing entire page');
-                  window.location.reload();
-                }}
-                disabled={loading}
-                className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <RefreshCcw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-                {/* <span className="hidden sm:inline">Refresh</span> */}
-              </Button>
+              <ActionButtons.Refresh onClick={() => {
+                console.log('🔄 Manual refresh triggered - refreshing entire page');
+                window.location.reload();
+              }} />
               
               <Button 
                 onClick={() => setIsMonthYearDialogOpen(true)}
