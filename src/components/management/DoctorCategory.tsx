@@ -12,6 +12,7 @@ import { Plus, Search, Edit, Trash2, FolderOpen, CheckCircle, XCircle, Stethosco
 import { toast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface DoctorCategoryType {
@@ -24,6 +25,9 @@ interface DoctorCategoryType {
 }
 
 const DoctorCategory: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [categories, setCategories] = React.useState<DoctorCategoryType[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isAddingCategory, setIsAddingCategory] = React.useState(false);

@@ -19,7 +19,7 @@ import {
   User,
   RefreshCcw,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Plus,
   FileText,
   Clock,
@@ -27,7 +27,6 @@ import {
   Save,
   Calendar,
   Trash2,
-  IndianRupee
 } from 'lucide-react';
 import '@/styles/global-crm-design.css';
 import '@/styles/global-modal-design.css';
@@ -986,7 +985,7 @@ const DoctorAdvancePage: React.FC = () => {
                       <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Salary</div>
@@ -1029,7 +1028,7 @@ const DoctorAdvancePage: React.FC = () => {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
                       <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
                         <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <DollarSign className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                          <IndianRupee className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
                         </div>
                         Advance Records ({filteredAdvances.length})
                       </h3>
@@ -1074,7 +1073,7 @@ const DoctorAdvancePage: React.FC = () => {
                     
                     {filteredAdvances.length === 0 ? (
                       <div className="text-center py-8">
-                        <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                        <IndianRupee className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                         <p className="text-slate-500">
                           No advance records found for {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                         </p>

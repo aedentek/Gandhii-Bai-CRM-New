@@ -18,6 +18,7 @@ import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Up
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
+import usePageTitle from '@/hooks/usePageTitle';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '@/styles/global-crm-design.css';
@@ -232,6 +233,9 @@ const FileUploadField: React.FC<FileUploadFieldProps> = ({
 
 const PatientList: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Set page title
+  usePageTitle();
   
   // Month/year constants
   const months = [
@@ -560,11 +564,14 @@ const PatientList: React.FC = () => {
       );
     }
 
+    // Status filtering - show all patients if "All" is selected, otherwise filter by specific status
     if (statusFilter !== 'All') {
       filtered = filtered.filter(patient => patient.status === statusFilter);
     }
 
-    // Month/Year filtering by admission date
+    // Remove month/year filtering by admission date - show all patients regardless of joining date
+    // The month/year picker is now only for reference/organization, not filtering
+    /* 
     if (filterMonth !== null && filterYear !== null) {
       filtered = filtered.filter(patient => {
         if (!patient.admissionDate) return false;
@@ -572,6 +579,7 @@ const PatientList: React.FC = () => {
         return admissionDate.getMonth() === (filterMonth - 1) && admissionDate.getFullYear() === filterYear;
       });
     }
+    */
 
     // Sort by Patient ID (P0001 format)
     filtered.sort((a, b) => {
@@ -1448,7 +1456,7 @@ const PatientList: React.FC = () => {
               }} />
               
               <ActionButtons.MonthYear
-                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
+                text={`All Patients (${months[(filterMonth || 1) - 1]} ${filterYear})`}
                 onClick={() => setShowMonthYearDialog(true)}
               />
               

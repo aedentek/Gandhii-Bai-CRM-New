@@ -34,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface MedicineCategory {
   id: string;
@@ -45,7 +46,10 @@ interface MedicineCategory {
 }
 
 const MedicineCategories: React.FC = () => {
-const [categories, setCategories] = useState<MedicineCategory[]>([]);
+  // Set custom page title
+  usePageTitle('Medicine Categories');
+
+  const [categories, setCategories] = useState<MedicineCategory[]>([]);
 const [doctors, setDoctors] = useState<any[]>([]);
 const [loadingDoctors, setLoadingDoctors] = useState(true);
 const [loading, setLoading] = useState(true);

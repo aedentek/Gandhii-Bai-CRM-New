@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { DatabaseService } from '@/services/databaseService';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface Doctor {
@@ -30,6 +31,9 @@ interface Doctor {
 }
 
 const DeletedDoctors: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [deletedDoctors, setDeletedDoctors] = useState<Doctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');

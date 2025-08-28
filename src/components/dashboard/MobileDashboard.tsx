@@ -22,7 +22,7 @@ import {
   Star,
   TrendingUp,
   Heart,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
 
 interface MobileDashboardProps {
@@ -33,7 +33,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const stats = [
-    { label: 'Earning', value: '$628', color: 'blue', icon: DollarSign },
+    { label: 'Earning', value: '₹62,800', color: 'blue', icon: IndianRupee },
     { label: 'Share', value: '2434', color: 'orange', icon: TrendingUp },
     { label: 'Likes', value: '1259', color: 'yellow', icon: Heart },
     { label: 'Rating', value: '8.5', color: 'green', icon: Star }

@@ -236,13 +236,13 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                     )}
                   >
                     <Icon className={cn(
-                      "h-5 w-5 flex-shrink-0 transition-colors mr-3",
+                      "h-5 w-5 flex-shrink-0 transition-colors",
                       isSubmenuOpen ? "text-white" : "text-blue-200 group-hover:text-white"
                     )} strokeWidth={1.5} />
                     
                     {!isCollapsed && (
                       <>
-                        <span className="font-medium flex-1 ml-0">{item.title}</span>
+                        <span className="font-medium flex-1 ml-3">{item.title}</span>
                         <ChevronDown className={cn(
                           "h-4 w-4 transition-transform duration-200",
                           isSubmenuOpen ? "rotate-180" : ""
@@ -261,13 +261,13 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                     )}
                   >
                     <Icon className={cn(
-                      "h-5 w-5 flex-shrink-0 transition-colors mr-3",
+                      "h-5 w-5 flex-shrink-0 transition-colors",
                       active ? "text-white" : "text-blue-200 group-hover:text-white"
                     )} strokeWidth={1.5} />
                     
                     {!isCollapsed && (
                       <>
-                        <span className="font-medium flex-1 ml-0">{item.title}</span>
+                        <span className="font-medium flex-1 ml-3">{item.title}</span>
                         {item.badge && (
                           <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
                             {item.badge}
@@ -301,7 +301,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                             <Link
                               to={subItem.href}
                               className={cn(
-                                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group text-sm relative",
+                                "flex items-center px-3 py-2 rounded-lg transition-all duration-200 group text-sm relative",
                                 subActive 
                                   ? "bg-white/15 text-white shadow-md" 
                                   : "text-blue-100 hover:bg-white/10 hover:text-white"
@@ -311,7 +311,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ user, onLogout, onCollaps
                                 "h-4 w-4 transition-colors",
                                 subActive ? "text-white" : "text-blue-200 group-hover:text-white"
                               )} />
-                              <span className="font-medium">{subItem.title}</span>
+                              <span className="font-medium ml-3">{subItem.title}</span>
                               
                               {/* Active indicator for submenu */}
                               {subActive && (

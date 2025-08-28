@@ -31,9 +31,10 @@ import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, DollarSign, BarChart3, History, X, User, Pill, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, UserCheck } from 'lucide-react';
+import { Package, Search, Edit2, Eye, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, TrendingDown, IndianRupee, BarChart3, History, X, User, Pill, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 // Helper to format any date string as DD/MM/YYYY
@@ -71,6 +72,9 @@ interface MedicineStockItem {
 }
 
 const MedicineStock: React.FC = () => {
+  // Set custom page title
+  usePageTitle('Medicine Stock Management');
+
   const [medicines, setMedicines] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
@@ -123,6 +127,10 @@ const MedicineStock: React.FC = () => {
   const [editQuantity, setEditQuantity] = useState(0);
   const [editMinStock, setEditMinStock] = useState(10);
   const [editStatus, setEditStatus] = useState<MedicineStockItem['status']>('in_stock');
+  
+  // General Stock Management type edit state variables
+  const [editUsedStock, setEditUsedStock] = useState(0);
+  const [editBalance, setEditBalance] = useState(0);
 
   // Month and year state for filtering
   const months = [
@@ -137,6 +145,22 @@ const MedicineStock: React.FC = () => {
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
+
+  // Helper function to get available balance (like General Stock Management)
+  const getAvailableBalance = (item: MedicineStockItem): number => {
+    const currentStock = item.current_stock || item.quantity || 0;
+    const usedStock = item.used_stock || 0;
+    return currentStock - usedStock;
+  };
+
+  // Update edit balance when used stock changes (like General Stock Management)
+  React.useEffect(() => {
+    if (editItem) {
+      // Show the remaining balance after deducting the new used stock
+      const availableBalance = getAvailableBalance(editItem);
+      setEditBalance(availableBalance - editUsedStock);
+    }
+  }, [editUsedStock, editItem]);
 
   // Map medicines to stock items
   const stockItems: MedicineStockItem[] = medicines.map((med: any) => {
@@ -213,6 +237,8 @@ const MedicineStock: React.FC = () => {
     setEditQuantity(item.quantity);
     setEditMinStock(item.minStock);
     setEditStatus(item.status);
+    setEditUsedStock(0); // Always reset to 0 for new entry (like General Stock Management)
+    setEditBalance(getAvailableBalance(item));
   };
 
   const handleViewStock = (item: MedicineStockItem) => {
@@ -220,35 +246,103 @@ const MedicineStock: React.FC = () => {
   };
 
   const saveEdit = async () => {
+    // General Stock Management edit logic - EXACT IMPLEMENTATION
     if (!editItem) return;
     
+    console.log('Edit item:', editItem);
+    console.log('Edit used stock:', editUsedStock);
+    console.log('Edit status:', editStatus);
+    
+    // Additional validation before saving (like General Stock Management)
+    const availableBalance = getAvailableBalance(editItem);
+    console.log('Available balance:', availableBalance);
+    
+    if (editUsedStock > availableBalance) {
+      console.log('Validation failed: Used stock exceeds available balance');
+      toast({
+        title: "Error",
+        description: `Cannot use more than available balance stock (${availableBalance})`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (editUsedStock < 0) {
+      console.log('Validation failed: Used stock is negative');
+      toast({
+        title: "Error", 
+        description: "Used stock cannot be negative",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Starting save operation...');
+    setSubmitting(true);
     try {
-      setSubmitting(true);
+      // Calculate the new total used stock (current used stock + new usage) - LIKE GENERAL STOCK
+      const currentUsedStock = editItem.used_stock || 0;
+      const newTotalUsedStock = currentUsedStock + editUsedStock;
       
+      console.log('Current used stock:', currentUsedStock);
+      console.log('New total used stock:', newTotalUsedStock);
+      
+      // Record the stock change in history before updating (ONLY if editUsedStock > 0)
+      if (editUsedStock > 0) {
+        console.log('Adding stock history record...');
+        try {
+          await DatabaseService.addMedicineStockHistoryRecord({
+            product_id: editItem.id,
+            stock_change: editUsedStock,
+            stock_type: 'used',
+            current_stock_before: (editItem.current_stock || editItem.quantity || 0) - currentUsedStock,
+            current_stock_after: (editItem.current_stock || editItem.quantity || 0) - newTotalUsedStock,
+            update_date: new Date().toISOString().split('T')[0],
+            description: `Stock usage: ${editUsedStock} units used`
+          });
+          console.log('Stock history record added successfully');
+        } catch (historyError) {
+          console.warn('History record creation failed, but continuing with stock update:', historyError);
+          // Continue with stock update even if history fails
+        }
+      }
+      
+      // Update product stock fields in backend
+      console.log('Updating medicine stock...');
       const updateData = {
-        quantity: editQuantity,
-        current_stock: editQuantity,
-        balance_stock: editQuantity,
-        stock_status: editQuantity === 0 ? 'out_of_stock' : editQuantity <= editMinStock ? 'low_stock' : 'in_stock'
+        used_stock: newTotalUsedStock,
+        stock_status: editStatus,
+        last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
       };
+      console.log('Update data:', updateData);
       
       await DatabaseService.updateMedicineProduct(editItem.id, updateData);
+      console.log('Medicine stock updated successfully');
       
       toast({
         title: "Success",
-        description: "Stock updated successfully"
+        description: "Stock updated successfully",
+        variant: "default"
       });
       
+      // Close popup
+      console.log('Closing edit popup...');
       setEditItem(null);
+      
+      // Refresh data
+      console.log('Refreshing data...');
       handleRefresh();
+      console.log('Data refresh completed');
+      
     } catch (error) {
-      console.error('Error updating stock:', error);
+      console.error('Error saving stock:', error);
       toast({
         title: "Error",
-        description: "Failed to update stock",
+        description: `Failed to save stock changes: ${error.message || error}`,
         variant: "destructive"
       });
     } finally {
+      console.log('Save operation finished, setting submitting to false');
       setSubmitting(false);
     }
   };
@@ -758,82 +852,131 @@ const MedicineStock: React.FC = () => {
             </DialogHeader>
             
             {editItem && (
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  saveEdit();
-                }}
-                className="editpopup form crm-edit-form-content"
-              >
-                <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+              <div className="editpopup form crm-edit-form-content">
+                {/* Product Info */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Product
+                  </Label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-sm font-medium text-blue-900">{editItem.name}</div>
+                  </div>
+                </div>
+                
+                <div className="editpopup form crm-edit-form-grid grid-cols-2">
+                  {/* Current Stock */}
                   <div className="editpopup form crm-edit-form-group">
                     <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
-                      <Pill className="h-4 w-4" />
-                      Product Name
+                      <Warehouse className="h-4 w-4" />
+                      Current Stock
                     </Label>
-                    <div className="editpopup form crm-edit-form-input p-3 bg-gray-50 rounded border text-sm">{editItem.name}</div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-lg font-bold text-blue-600">{editItem.current_stock || editItem.quantity || 0}</div>
+                    </div>
                   </div>
+                  
+                  {/* Available Balance */}
                   <div className="editpopup form crm-edit-form-group">
                     <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
-                      <Tag className="h-4 w-4" />
-                      Category
-                    </Label>
-                    <div className="editpopup form crm-edit-form-input p-3 bg-gray-50 rounded border text-sm">{editItem.category}</div>
-                  </div>
-                  <div className="editpopup form crm-edit-form-group">
-                    <Label htmlFor="editQuantity" className="editpopup form crm-edit-form-label flex items-center gap-2">
                       <Package2 className="h-4 w-4" />
-                      Current Stock <span className="text-red-500">*</span>
+                      Available Balance
                     </Label>
-                    <Input
-                      id="editQuantity"
-                      type="number"
-                      min={0}
-                      value={editQuantity}
-                      onChange={(e) => {
-                        let val = Number(e.target.value);
-                        if (val < 0) val = 0;
-                        setEditQuantity(val);
-                      }}
-                      className="editpopup form crm-edit-form-input text-center"
-                      required
-                    />
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="text-lg font-bold text-green-600">{getAvailableBalance(editItem)}</div>
+                    </div>
                   </div>
-                  <div className="editpopup form crm-edit-form-group">
-                    <Label htmlFor="editMinStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      Min Stock Level
-                    </Label>
-                    <Input
-                      id="editMinStock"
-                      type="number"
-                      min={0}
-                      value={editMinStock}
-                      onChange={(e) => {
-                        let val = Number(e.target.value);
-                        if (val < 0) val = 0;
-                        setEditMinStock(val);
-                      }}
-                      className="editpopup form crm-edit-form-input text-center"
-                    />
+                </div>
+                
+                {/* Additional Used Stock Input */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Additional Used Stock
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={getAvailableBalance(editItem)}
+                    value={editUsedStock}
+                    onChange={e => {
+                      let val = Number(e.target.value);
+                      const availableBalance = getAvailableBalance(editItem);
+                      
+                      // Validation: Don't allow negative values
+                      if (val < 0) val = 0;
+                      
+                      // Validation: Don't allow more than available balance stock
+                      if (val > availableBalance) {
+                        val = availableBalance;
+                        console.warn(`Cannot use more than available balance stock (${availableBalance})`);
+                      }
+                      
+                      setEditUsedStock(val);
+                    }}
+                    className="editpopup form crm-edit-form-input text-center"
+                  />
+                  <div className="text-xs text-gray-500">
+                    Maximum available: {getAvailableBalance(editItem)} units
                   </div>
-                  <div className="editpopup form crm-edit-form-group md:col-span-2">
-                    <Label htmlFor="editStatus" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
-                      Status
-                    </Label>
-                    <Select value={editStatus} onValueChange={(value) => setEditStatus(value as any)}>
-                      <SelectTrigger className="editpopup form crm-edit-form-select">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="in_stock">In Stock</SelectItem>
-                        <SelectItem value="low_stock">Low Stock</SelectItem>
-                        <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                        <SelectItem value="expired">Expired</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="text-xs text-blue-600">
+                    Enter additional stock to mark as used (will be added to current used stock: {editItem.used_stock || 0})
                   </div>
+                  {editUsedStock > getAvailableBalance(editItem) && (
+                    <div className="text-xs text-red-500">
+                      Cannot exceed available balance stock
+                    </div>
+                  )}
+                </div>
+                
+                {/* Balance After Edit */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Balance After Edit
+                  </Label>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="text-lg font-bold text-yellow-700">{editBalance} units</div>
+                  </div>
+                </div>
+                
+                {/* Status Selection */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Stock Status
+                  </Label>
+                  <Select value={editStatus} onValueChange={v => setEditStatus(v as any)}>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          In Stock
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="low_stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          Low Stock
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="out_of_stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Out of Stock
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="expired">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                          Expired
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
@@ -848,7 +991,7 @@ const MedicineStock: React.FC = () => {
                     Cancel
                   </Button>
                   <Button 
-                    type="submit" 
+                    onClick={saveEdit}
                     disabled={submitting}
                     className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                   >
@@ -865,7 +1008,7 @@ const MedicineStock: React.FC = () => {
                     )}
                   </Button>
                 </DialogFooter>
-              </form>
+              </div>
             )}
           </DialogContent>
         </Dialog>
@@ -974,7 +1117,7 @@ const MedicineStock: React.FC = () => {
                       <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Price</div>

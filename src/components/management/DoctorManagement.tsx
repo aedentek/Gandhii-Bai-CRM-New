@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Stethoscope, User, Phone, Mail, MapPin, Calendar, DollarSign, X } from 'lucide-react';
+import { Search, Eye, Edit2, Trash2, Users, Plus, Filter, Download, FileText, Upload, RefreshCw, UserCheck, Activity, TrendingUp, Clock, Stethoscope, User, Phone, Mail, MapPin, Calendar, IndianRupee, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 import '@/styles/global-crm-design.css';
@@ -114,6 +115,9 @@ interface DoctorCategory {
 }
 
 const DoctorManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const navigate = useNavigate();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
@@ -936,7 +940,7 @@ const DoctorManagement: React.FC = () => {
                       <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Salary</div>
@@ -1094,7 +1098,7 @@ const DoctorManagement: React.FC = () => {
                 
                 <div className="editpopup form crm-edit-form-group">
                   <Label htmlFor="edit-salary" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
+                    <IndianRupee className="h-4 w-4" />
                     Salary
                   </Label>
                   <Input

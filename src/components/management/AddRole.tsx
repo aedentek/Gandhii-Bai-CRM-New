@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, Shield, Users, UserCheck, UserX, Plus, Pencil, Eye, Trash2, RefreshCw, Activity, Calendar, Download, Lock, TrendingUp, Clock, Tag, FileText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 // Helper to format any date string as DD/MM/YYYY
 function formatDateDDMMYYYY(dateStr?: string): string {
@@ -62,6 +63,9 @@ interface UserRole {
 }
 
 const AddRole: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);

@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Users, UserCheck, Activity, Pencil, Trash2, TrendingUp, Clock, RefreshCw, Download, Plus, Search, Eye, Edit2, Filter, X, EyeOff, Edit, UserPlus, Shield, Lock } from 'lucide-react';
 import '@/styles/global-crm-design.css';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ const formatDateDisplay = (dateString: string) => {
 };
 
 const Administration: React.FC = () => {
+	usePageTitle();
 	const [users, setUsers] = useState<User[]>([]);
 	const [roles, setRoles] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);

@@ -33,6 +33,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, FolderOpen, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, Eye, UserCheck, Clock, X, Users, FileText, Tag, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface GeneralCategory {
   id: string;
@@ -44,6 +45,9 @@ interface GeneralCategory {
 }
 
 const GeneralCategories: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [categories, setCategories] = useState<GeneralCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);

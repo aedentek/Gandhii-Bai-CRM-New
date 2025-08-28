@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import EnhancedDashboard from './components/dashboard/EnhancedDashboard';
+import Dashboard from './components/dashboard/Dashboard';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -150,8 +150,8 @@ function ModernApp() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/demo" element={<DemoShowcase />} />
-                    <Route path="/dashboard" element={<EnhancedDashboard user={user} />} />
-                    <Route path="/home" element={<EnhancedDashboard user={user} />} />
+                    <Route path="/dashboard" element={<Dashboard user={user} />} />
+                    <Route path="/home" element={<Dashboard user={user} />} />
                     <Route path="/files" element={<div className="p-6"><h1 className="text-2xl font-bold">Files</h1><p>Files management coming soon...</p></div>} />
                     <Route path="/messages" element={<div className="p-6"><h1 className="text-2xl font-bold">Messages</h1><p>Messages functionality coming soon...</p></div>} />
                     <Route path="/notifications" element={<div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p>Notifications center coming soon...</p></div>} />

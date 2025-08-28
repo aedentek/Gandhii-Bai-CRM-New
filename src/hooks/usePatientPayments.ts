@@ -1,330 +1,232 @@
 import { useState, useEffect } from 'react';
-import { DatabaseService } from '@/services/databaseService';
 
-export interface PaymentRecord {
-  id: string;
-  patientId: string;
-  date: string;
-  amount: number;
-  comment: string;
-  paymentMode: string;
-  balanceRemaining: number;
-  createdBy: string;
-  createdAt: string;
+export interface PatientPaymentRecord {
+  id: number;
+  patient_id: string;
+  patient_name: string;
+  phone?: string;
+  admissionDate?: string;
+  photo?: string;
+  test_report_amount: number;
+  carry_forward: number;
+  total_amount: number;
+  amount_paid: number;
+  amount_pending: number;
+  payment_method: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
+  payment_status: 'pending' | 'partial' | 'completed';
+  month: number;
+  year: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface PatientPaymentData {
-  patientId: string;
-  name: string;
-  registrationId: string;
-  totalFees: number;
-  advancePaid: number;
-  payments: PaymentRecord[];
+export interface PatientPaymentHistory {
+  id: number;
+  patient_id: string;
+  amount_paid: number;
+  payment_method: string;
+  payment_date: string;
+  notes: string;
+  created_at: string;
 }
 
-export const usePatientPayments = () => {
-  const [patientPayments, setPatientPayments] = useState<PatientPaymentData[]>([]);
-  const [loading, setLoading] = useState(false);
+export interface PatientPaymentStats {
+  totalPatients: number;
+  totalTestReportAmount: number;
+  totalPaid: number;
+  totalPending: number;
+}
+
+export interface UsePatientPaymentsResult {
+  patientPayments: PatientPaymentRecord[];
+  stats: PatientPaymentStats;
+  loading: boolean;
+  error: string | null;
+  currentPage: number;
+  totalPages: number;
+  selectedMonth: number;
+  selectedYear: number;
+  setCurrentPage: (page: number) => void;
+  setSelectedMonth: (month: number) => void;
+  setSelectedYear: (year: number) => void;
+  refreshData: () => Promise<void>;
+  applyFilter: () => Promise<void>;
+  saveMonthlyRecords: () => Promise<void>;
+  recordPayment: (patientId: string, amount: number, method: string, notes?: string) => Promise<void>;
+  getPaymentHistory: (patientId: string) => Promise<PatientPaymentHistory[]>;
+}
+
+const usePatientPayments = (): UsePatientPaymentsResult => {
+  const [patientPayments, setPatientPayments] = useState<PatientPaymentRecord[]>([]);
+  const [stats, setStats] = useState<PatientPaymentStats>({
+    totalPatients: 0,
+    totalTestReportAmount: 0,
+    totalPaid: 0,
+    totalPending: 0,
+  });
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const recordsPerPage = 10;
+
+  const fetchPatientPayments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        month: selectedMonth.toString(),
+        year: selectedYear.toString(),
+        page: currentPage.toString(),
+        limit: recordsPerPage.toString(),
+      });
+
+      const response = await fetch(`/api/patient-payments/all?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      setPatientPayments(data.payments || []);
+      setStats(data.stats || {
+        totalPatients: 0,
+        totalTestReportAmount: 0,
+        totalPaid: 0,
+        totalPending: 0,
+      });
+      setTotalPages(data.totalPages || 0);
+    } catch (err) {
+      console.error('Error fetching patient payments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch patient payments');
+      setPatientPayments([]);
+      setStats({
+        totalPatients: 0,
+        totalTestReportAmount: 0,
+        totalPaid: 0,
+        totalPending: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshData = async () => {
+    await fetchPatientPayments();
+  };
+
+  const applyFilter = async () => {
+    setCurrentPage(1); // Reset to first page when applying filter
+    await fetchPatientPayments();
+  };
+
+  const saveMonthlyRecords = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/patient-payments/save-monthly-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          month: selectedMonth,
+          year: selectedYear,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save monthly records');
+      }
+
+      await refreshData();
+    } catch (err) {
+      console.error('Error saving monthly records:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save monthly records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recordPayment = async (patientId: string, amount: number, method: string, notes?: string) => {
+    try {
+      const response = await fetch('/api/patient-payments/record-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patient_id: patientId,
+          amount_paid: amount,
+          payment_method: method,
+          notes: notes || '',
+          month: selectedMonth,
+          year: selectedYear,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to record payment');
+      }
+
+      await refreshData();
+    } catch (err) {
+      console.error('Error recording payment:', err);
+      setError(err instanceof Error ? err.message : 'Failed to record payment');
+    }
+  };
+
+  const getPaymentHistory = async (patientId: string): Promise<PatientPaymentHistory[]> => {
+    try {
+      const response = await fetch(`/api/patient-payments/history/${patientId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment history');
+      }
+      
+      const data = await response.json();
+      return data.history || [];
+    } catch (err) {
+      console.error('Error fetching payment history:', err);
+      return [];
+    }
+  };
 
   useEffect(() => {
-    loadPatientPayments();
+    setCurrentPage(1); // Reset to first page when month/year changes
+  }, [selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    fetchPatientPayments();
+  }, [currentPage]);
+
+  // Initial load
+  useEffect(() => {
+    fetchPatientPayments();
   }, []);
-
-  const loadPatientPayments = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Load patients from database with localStorage fallback
-      let patientsData = [];
-      try {
-        patientsData = await DatabaseService.getAllPatients();
-      } catch (dbError) {
-        console.warn('Database error, falling back to localStorage:', dbError);
-        const storedPatients = localStorage.getItem('patients');
-        if (storedPatients) {
-          patientsData = JSON.parse(storedPatients);
-        }
-      }
-      
-      // Load payment records from database with localStorage fallback
-      let paymentRecords = [];
-      try {
-        paymentRecords = await DatabaseService.getAllPatientPayments();
-      } catch (dbError) {
-        console.warn('Database error for payments, falling back to localStorage:', dbError);
-        const storedPayments = localStorage.getItem('patientPaymentRecords');
-        if (storedPayments) {
-          paymentRecords = JSON.parse(storedPayments);
-        }
-      }
-      
-      // Create payment data structure
-      const paymentData = patientsData.map((patient: any) => {
-        // Filter payments for this patient
-        const patientPaymentRecords = paymentRecords.filter((record: any) => 
-          record.patientId == patient.id || record.patientId === patient.id
-        );
-        
-        // Calculate fees from patient data using correct field names
-        const monthlyFees = Number(patient.fees || patient.monthlyFees || patient.totalFees || 0);
-        const bloodTest = Number(patient.bloodTest || patient.blood_test || 0);
-        const pickupCharge = Number(patient.pickupCharge || patient.pickup_charge || 0);
-        const totalFees = monthlyFees + bloodTest + pickupCharge;
-        const advancePaid = Number(patient.payAmount || patient.pay_amount || 0);
-        
-        // If no payment records exist but patient has payAmount, create initial record
-        if (patientPaymentRecords.length === 0 && advancePaid > 0) {
-          const initialPayment: PaymentRecord = {
-            id: `${patient.id}-initial`,
-            patientId: patient.id.toString(),
-            date: patient.admissionDate || patient.created_at || new Date().toISOString().split('T')[0],
-            amount: advancePaid,
-            comment: 'Initial payment',
-            paymentMode: patient.paymentType || 'Cash',
-            balanceRemaining: Math.max(0, totalFees - advancePaid),
-            createdBy: 'System',
-            createdAt: new Date().toISOString()
-          };
-          patientPaymentRecords.push(initialPayment);
-        }
-        
-        return {
-          patientId: patient.id.toString(),
-          name: patient.name,
-          registrationId: patient.registrationId || patient.id.toString(),
-          totalFees,
-          advancePaid,
-          payments: patientPaymentRecords.map((record: any) => ({
-            ...record,
-            patientId: record.patientId.toString(),
-            id: record.id.toString()
-          }))
-        };
-      });
-      
-      setPatientPayments(paymentData);
-    } catch (error) {
-      console.error('Error loading patient payments:', error);
-      setError('Failed to load patient payments');
-      // Fallback to localStorage
-      try {
-        const storedPatients = localStorage.getItem('patients');
-        const storedPayments = localStorage.getItem('patientPaymentRecords');
-        if (storedPatients) {
-          const patientsData = JSON.parse(storedPatients);
-          const paymentRecords = JSON.parse(storedPayments || '[]');
-          
-          const paymentData = patientsData.map((patient: any) => {
-            const patientPaymentRecords = paymentRecords.filter((record: PaymentRecord) => record.patientId === patient.id);
-            const monthlyFees = Number(patient.fees || patient.monthlyFees || patient.totalFees || 0);
-            const bloodTest = Number(patient.bloodTest || patient.blood_test || 0);
-            const pickupCharge = Number(patient.pickupCharge || patient.pickup_charge || 0);
-            const totalFees = monthlyFees + bloodTest + pickupCharge;
-            const advancePaid = Number(patient.payAmount || patient.pay_amount || 0);
-            
-            return {
-              patientId: patient.id,
-              name: patient.name,
-              registrationId: patient.registrationId || patient.id,
-              totalFees,
-              advancePaid,
-              payments: patientPaymentRecords
-            };
-          });
-          
-          setPatientPayments(paymentData);
-        }
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-        setPatientPayments([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addPayment = async (patientId: string, paymentData: Omit<PaymentRecord, 'id' | 'patientId' | 'createdBy' | 'createdAt'>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('healthcare_user') || '{}');
-      const newPayment = {
-        patientId: parseInt(patientId),
-        ...paymentData,
-        createdBy: currentUser.name || 'Unknown',
-        createdAt: new Date().toISOString()
-      };
-
-      // Try to save to database first
-      let savedPayment;
-      try {
-        savedPayment = await DatabaseService.addPatientPayment(newPayment);
-      } catch (dbError) {
-        console.warn('Database error, saving to localStorage:', dbError);
-        // Fallback to localStorage
-        const existingRecords = JSON.parse(localStorage.getItem('patientPaymentRecords') || '[]');
-        savedPayment = {
-          id: `${patientId}-${Date.now()}`,
-          ...newPayment,
-          patientId: patientId
-        };
-        existingRecords.push(savedPayment);
-        localStorage.setItem('patientPaymentRecords', JSON.stringify(existingRecords));
-      }
-
-      // Update state
-      setPatientPayments(prev => prev.map(patient => 
-        patient.patientId === patientId 
-          ? { 
-              ...patient, 
-              payments: [...patient.payments, {
-                ...savedPayment,
-                id: savedPayment.id.toString(),
-                patientId: savedPayment.patientId.toString()
-              }] 
-            }
-          : patient
-      ));
-
-      // Update patient record balance - ENHANCED VERSION
-      try {
-        const patientData = patientPayments.find(p => p.patientId === patientId);
-        if (patientData) {
-          const newTotalPaid = [...patientData.payments, savedPayment].reduce((sum, p) => sum + Number(p.amount), 0);
-          const newBalance = Math.max(0, patientData.totalFees - newTotalPaid);
-          
-          console.log(`💰 Updating patient balance for ${patientId}:`, {
-            totalFees: patientData.totalFees,
-            previousPaid: patientData.payments.reduce((sum, p) => sum + Number(p.amount), 0),
-            newPayment: savedPayment.amount,
-            newTotalPaid,
-            newBalance
-          });
-          
-          try {
-            // Update patient record in database
-            await DatabaseService.updatePatient(patientId, {
-              payAmount: newTotalPaid,
-              balance: newBalance
-            });
-            console.log(`✅ Successfully updated patient balance in database`);
-            
-            // Also update the patient in patients state if you have it
-            // This ensures immediate UI refresh
-            const event = new CustomEvent('patientBalanceUpdated', {
-              detail: { patientId, newTotalPaid, newBalance }
-            });
-            window.dispatchEvent(event);
-            
-          } catch (dbError) {
-            console.warn('⚠️ Failed to update patient balance in database, using localStorage fallback:', dbError);
-            // Update localStorage fallback
-            const patients = JSON.parse(localStorage.getItem('patients') || '[]');
-            const updatedPatients = patients.map((patient: any) => {
-              if (patient.id == patientId) {
-                console.log(`💾 Updating localStorage for patient ${patientId}`);
-                return {
-                  ...patient,
-                  payAmount: newTotalPaid,
-                  balance: newBalance
-                };
-              }
-              return patient;
-            });
-            localStorage.setItem('patients', JSON.stringify(updatedPatients));
-          }
-        }
-      } catch (error) {
-        console.error('Error updating patient balance:', error);
-      }
-
-      return savedPayment;
-    } catch (error) {
-      console.error('Error adding payment:', error);
-      setError('Failed to add payment');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updatePatientPaymentConfig = (patientId: string, totalFees: number, advancePaid: number) => {
-    try {
-      const configs = JSON.parse(localStorage.getItem('patientPaymentConfigs') || '[]');
-      const existingConfigIndex = configs.findIndex((config: any) => config.patientId === patientId);
-      
-      const newConfig = {
-        patientId,
-        totalFees,
-        advancePaid,
-        updatedAt: new Date().toISOString()
-      };
-
-      if (existingConfigIndex >= 0) {
-        configs[existingConfigIndex] = newConfig;
-      } else {
-        configs.push(newConfig);
-      }
-
-      localStorage.setItem('patientPaymentConfigs', JSON.stringify(configs));
-
-      // Update state
-      setPatientPayments(prev => prev.map(patient => 
-        patient.patientId === patientId 
-          ? { ...patient, totalFees, advancePaid }
-          : patient
-      ));
-
-      // Also update the main patient record
-      const patients = JSON.parse(localStorage.getItem('patients') || '[]');
-      const updatedPatients = patients.map((patient: any) => 
-        patient.id === patientId 
-          ? { ...patient, totalAmount: totalFees, payAmount: advancePaid }
-          : patient
-      );
-      localStorage.setItem('patients', JSON.stringify(updatedPatients));
-
-    } catch (error) {
-      console.error('Error updating patient payment config:', error);
-      throw error;
-    }
-  };
-
-  const getPatientPaymentSummary = () => {
-    return patientPayments.map(patient => {
-      const totalCollected = patient.payments.reduce((sum, payment) => sum + payment.amount, 0);
-      const balancePending = Math.max(0, patient.totalFees - totalCollected);
-      
-      return {
-        ...patient,
-        totalCollected,
-        balancePending,
-        status: balancePending <= 0 ? 'Paid' : balancePending < patient.totalFees ? 'Partial' : 'Pending'
-      };
-    });
-  };
-
-  const getOverallTotals = () => {
-    const summary = getPatientPaymentSummary();
-    return summary.reduce(
-      (totals, patient) => ({
-        totalPaid: totals.totalPaid + patient.totalCollected,
-        totalDue: totals.totalDue + patient.totalFees,
-        totalPending: totals.totalPending + patient.balancePending
-      }),
-      { totalPaid: 0, totalDue: 0, totalPending: 0 }
-    );
-  };
 
   return {
     patientPayments,
+    stats,
     loading,
     error,
-    addPayment,
-    updatePatientPaymentConfig,
-    getPatientPaymentSummary,
-    getOverallTotals,
-    refreshData: loadPatientPayments
+    currentPage,
+    totalPages,
+    selectedMonth,
+    selectedYear,
+    setCurrentPage,
+    setSelectedMonth,
+    setSelectedYear,
+    refreshData,
+    applyFilter,
+    saveMonthlyRecords,
+    recordPayment,
+    getPaymentHistory,
   };
 };
+
+export default usePatientPayments;

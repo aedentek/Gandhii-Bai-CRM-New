@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DatabaseService } from '@/services/databaseService';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface Patient {
   id: string;
@@ -20,6 +21,9 @@ interface Patient {
 }
 
 const PatientFullyHistory: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();

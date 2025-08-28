@@ -8,9 +8,10 @@ import { Label } from '../../components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { toast } from '../../hooks/use-toast';
-import { FileText, Search, Download, Edit2, Loader2, Play, Pause, RefreshCw, Trash2, Eye, Pencil, Mic, Square, File as FileIcon, User, Phone, Calendar, X } from 'lucide-react';
+import { FileText, Search, Download, Edit2, Loader2, Play, Pause, RefreshCw, Trash2, Eye, Pencil, Mic, Square, File as FileIcon, User, Phone, Calendar, X, Users, Contact } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -134,6 +135,24 @@ const PatientCallRecord: React.FC = () => {
     return `P${numericId.toString().padStart(4, '0')}`;
   };
 
+  // Helper function to get patient image URL with proxy
+  const getPatientImageUrl = (photo: string | undefined | null): string => {
+    if (!photo) return '';
+    
+    // If it's base64 data, return as is
+    if (photo.startsWith('data:image/')) {
+      return photo;
+    }
+    
+    // If it's already a full URL, return as is
+    if (photo.startsWith('http')) {
+      return photo;
+    }
+    
+    // Use the existing getFileUrl service for consistent URL handling
+    return getFileUrl(photo);
+  };
+
   // Audio file upload handler (like PatientHistory)
   const handleAudioFileUpload = (files: FileList | null) => {
     if (files) {
@@ -164,6 +183,14 @@ const PatientCallRecord: React.FC = () => {
       audioFiles: prev.audioFiles.filter((_, i) => i !== index)
     }));
   };
+
+  // Auto-set patient ID when viewing patient details
+  useEffect(() => {
+    if (viewRecord && viewRecord.patientId) {
+      console.log('🎯 Auto-setting patient ID for view dialog:', viewRecord.patientId);
+      setFormData(prev => ({ ...prev, patientId: String(viewRecord.patientId) }));
+    }
+  }, [viewRecord]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -772,13 +799,13 @@ const PatientCallRecord: React.FC = () => {
   };
 
   const confirmDelete = async () => {
-    if (deleteRecord) {
-      await handleDelete(deleteRecord);
-      setShowDeleteConfirm(false);
-      setDeleteRecord(null);
-      // Refresh the viewed patient records
-      setRefreshCounter(prev => prev + 1);
-    }
+    if (!deleteRecord) return;
+    
+    await handleDelete(deleteRecord);
+    setDeleteRecord(null);
+    setShowDeleteConfirm(false);
+    // Refresh the viewed patient records
+    setRefreshCounter(prev => prev + 1);
   };
 
   const handleSubmit = async () => {
@@ -980,163 +1007,226 @@ const PatientCallRecord: React.FC = () => {
 
   return (
     <div className="crm-page-bg">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
         <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="crm-header-icon">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patients Call Record</h1>
-              </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="flex items-center gap-3">
+            <div className="crm-header-icon">
+              <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <ActionButtons.Refresh 
-                onClick={async () => {
-                  setIsUpdatingRecords(true);
-                  await Promise.all([loadPatients(), loadCallRecords()]);
-                  setIsUpdatingRecords(false);
-                  setRefreshCounter(prev => prev + 1);
-                }}
-                loading={isUpdatingRecords}
-                disabled={isUpdatingRecords}
-              />
-              
-              <Button 
-                onClick={() => setShowAddDialog(true)}
-                className="global-btn global-btn-primary"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                <span className="font-medium">Add Record</span>
-              </Button>
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patients Call Record</h1>
             </div>
           </div>
-        </div>
-
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-6">
           
-          {/* Total Records Card */}
-          <Card className="crm-stat-card crm-stat-card-blue">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Records</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{filteredRecords?.length || 0}</p>
-                  <div className="flex items-center text-xs text-blue-600">
-                    <FileText className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Call records</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-blue">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Active Patients Card */}
-          <Card className="crm-stat-card crm-stat-card-green">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Active Patients</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
-                    {new Set(filteredRecords?.filter(record => !record.id.startsWith('patient_')).map(record => record.patientId)).size || 0}
-                  </p>
-                  <div className="flex items-center text-xs text-green-600">
-                    <User className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">With calls</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-green">
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Audio Files Card */}
-          <Card className="crm-stat-card crm-stat-card-purple">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Audio Files</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
-                    {(() => {
-                      const totalAudioCount = filteredRecords?.reduce((total, record) => {
-                        const patientAudioCount = callRecords.filter(callRecord => {
-                          return callRecord.patientId === record.patientId && callRecord.audioRecording;
-                        }).length;
-                        return total + patientAudioCount;
-                      }, 0) || 0;
-                      return totalAudioCount;
-                    })()}
-                  </p>
-                  <div className="flex items-center text-xs text-purple-600">
-                    <Mic className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Recordings</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-purple">
-                  <Mic className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filter Controls */}
-        <div className="crm-controls-container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search by patient name, ID, contact, UHID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ActionButtons.Refresh onClick={() => {
+              console.log('🔄 Manual refresh triggered - refreshing entire page');
+              window.location.reload();
+            }} />
             
-            <div className="flex space-x-2">
-              <Button 
-                onClick={() => handleExportExcel()} 
-                className="global-btn global-btn-secondary flex-1"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Button 
-                onClick={() => handleExportPDF()} 
-                className="global-btn global-btn-secondary flex-1"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
-
             <ActionButtons.MonthYear
               text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
               onClick={() => setShowMonthYearDialog(true)}
             />
+            
+            <Button 
+              onClick={() => {
+                console.log('🔵 Add Record button clicked');
+                setShowAddDialog(true);
+              }}
+              className="global-btn global-btn-primary flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+            >
+              <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add Record</span>
+              <span className="sm:hidden">+</span>
+            </Button>
           </div>
         </div>
+      </div>
 
-
-        {/* Records Table */}
-        <div className="crm-table-container">
-          <div className="crm-table-header">
-            <div className="crm-table-title">
-              <FileText className="crm-table-title-icon" />
-              <h2 className="crm-table-title-text">Patients List</h2>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-6">
+        
+        {/* Active Patients Card */}
+        <Card className="crm-stat-card crm-stat-card-blue">
+          <CardContent className="relative p-3 sm:p-4 lg:p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Active Patients</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">
+                  {(() => {
+                    // Filter active patients based on call records that match the month/year filter
+                    let activePatientIds = new Set();
+                    let filteredCallRecords = callRecords;
+                    
+                    // Apply month & year filtering
+                    if (filterMonth !== null && filterYear !== null) {
+                      filteredCallRecords = filteredCallRecords.filter(record => {
+                        const recordDate = new Date(record.date);
+                        return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
+                      });
+                    }
+                    
+                    // Get unique patient IDs from filtered call records
+                    filteredCallRecords.forEach(record => {
+                      const patient = patients.find(p => String(p.id) === String(record.patientId));
+                      if (patient && patient.status === 'Active') {
+                        activePatientIds.add(record.patientId);
+                      }
+                    });
+                    
+                    return activePatientIds.size;
+                  })()}
+                </p>
+                <div className="flex items-center text-xs text-blue-600">
+                  <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">With calls</span>
+                </div>
+              </div>
+              <div className="crm-stat-icon crm-stat-icon-blue">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Audio Files Card */}
+        <Card className="crm-stat-card crm-stat-card-green">
+          <CardContent className="relative p-3 sm:p-4 lg:p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Audio Files</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">
+                  {(() => {
+                    let totalAudioCount = 0;
+                    // Count audio files from call records
+                    let filteredCallRecords = callRecords;
+                    
+                    // Apply same filtering as main table
+                    if (searchTerm) {
+                      const searchLower = searchTerm.toLowerCase();
+                      filteredCallRecords = filteredCallRecords.filter(record =>
+                        record.description.toLowerCase().includes(searchLower) ||
+                        record.patientName.toLowerCase().includes(searchLower) ||
+                        String(record.patientId).toLowerCase().includes(searchLower)
+                      );
+                    }
+
+                    // Month & Year filtering
+                    if (filterMonth !== null && filterYear !== null) {
+                      filteredCallRecords = filteredCallRecords.filter(record => {
+                        const recordDate = new Date(record.date);
+                        return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
+                      });
+                    }
+
+                    // Filter to show only active patients
+                    filteredCallRecords = filteredCallRecords.filter(record => {
+                      const patient = patients.find(p => String(p.id) === String(record.patientId));
+                      return patient && patient.status === 'Active';
+                    });
+
+                    filteredCallRecords.forEach(record => {
+                      // Count audio recordings
+                      if (record.audioRecording) {
+                        totalAudioCount += 1;
+                      } else if (record.audioFiles && record.audioFiles.length > 0) {
+                        totalAudioCount += record.audioFiles.length;
+                      }
+                    });
+                    return totalAudioCount;
+                  })()}
+                </p>
+                <div className="flex items-center text-xs text-green-600">
+                  <Mic className="w-3 h-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">Recordings</span>
+                </div>
+              </div>
+              <div className="crm-stat-icon crm-stat-icon-green">
+                <Mic className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Records Card */}
+        <Card className="crm-stat-card crm-stat-card-purple">
+          <CardContent className="relative p-3 sm:p-4 lg:p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Call Records</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
+                  {(() => {
+                    // Count call records
+                    let filteredCallRecords = callRecords;
+                    
+                    // Apply same filtering as main table
+                    if (searchTerm) {
+                      const searchLower = searchTerm.toLowerCase();
+                      filteredCallRecords = filteredCallRecords.filter(record =>
+                        record.description.toLowerCase().includes(searchLower) ||
+                        record.patientName.toLowerCase().includes(searchLower) ||
+                        String(record.patientId).toLowerCase().includes(searchLower)
+                      );
+                    }
+
+                    // Month & Year filtering
+                    if (filterMonth !== null && filterYear !== null) {
+                      filteredCallRecords = filteredCallRecords.filter(record => {
+                        const recordDate = new Date(record.date);
+                        return recordDate.getMonth() + 1 === filterMonth && recordDate.getFullYear() === filterYear;
+                      });
+                    }
+
+                    // Filter to show only active patients
+                    filteredCallRecords = filteredCallRecords.filter(record => {
+                      const patient = patients.find(p => String(p.id) === String(record.patientId));
+                      return patient && patient.status === 'Active';
+                    });
+
+                    return filteredCallRecords.length;
+                  })()}
+                </p>
+                <div className="flex items-center text-xs text-purple-600">
+                  <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">Total calls</span>
+                </div>
+              </div>
+              <div className="crm-stat-icon crm-stat-icon-purple">
+                <Phone className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="crm-controls-container">
+        <div className="w-full">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search call records..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full"
+            />
           </div>
-          
-          <div className="p-4 sm:p-6">
+        </div>
+      </div>
+
+      {/* Records Table */}
+      <div className="crm-table-container">
+        <div className="crm-table-header">
+          <div className="crm-table-title">
+            <Phone className="crm-table-title-icon" />
+            <h2 className="crm-table-title-text">Patients Call Records</h2>
+          </div>
+        </div>
+        
+        <div className="p-4 sm:p-6">
           {/* Loading Indicator */}
           {(!isLoadingComplete && (isLoadingPatients || isLoadingRecords)) && (
             <div className="flex items-center justify-center py-8">
@@ -1183,71 +1273,24 @@ const PatientCallRecord: React.FC = () => {
                           <TableRow key={record.id}>
                             <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                             <TableCell className="text-center">
-                              <div className="flex justify-center items-center">
-                                {(() => {
-                                  // Construct proper photo URL
-                                  let imageUrl = '';
-                                  
-                                  if (patient?.photo) {
-                                    // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                                    if (patient.photo.startsWith('http')) {
-                                      imageUrl = patient.photo;
-                                    } else {
-                                      // Photos are stored in: server/Photos/patient Admission/{patientId}/
-                                      // Database stores: Photos/patient Admission/{patientId}/{filename}
-                                      // Static serving at: /Photos/patient%20Admission/{patientId}/{filename}
-                                      if (patient.photo.includes('Photos/patient Admission/')) {
-                                        // Photo path is already in correct format from database
-                                        imageUrl = `/${patient.photo.replace(/\s/g, '%20')}`;
-                                      } else {
-                                        // Assume it's just filename and build full path
-                                        imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photo}`;
-                                      }
-                                    }
-                                  } else if (patient?.photoUrl) {
-                                    if (patient.photoUrl.startsWith('http')) {
-                                      imageUrl = patient.photoUrl;
-                                    } else if (patient.photoUrl.includes('Photos/patient Admission/')) {
-                                      imageUrl = `/${patient.photoUrl.replace(/\s/g, '%20')}`;
-                                    } else {
-                                      imageUrl = `/Photos/patient%20Admission/${record.patientId}/${patient.photoUrl}`;
-                                    }
-                                  }
-
-                                  return imageUrl ? (
-                                    <>
-                                      <img
-                                        src={imageUrl}
-                                        alt={`${record.patientName}'s photo`}
-                                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                                        onError={(e) => {
-                                          console.log('❌ Image failed for:', record.patientName);
-                                          console.log('   Failed URL:', imageUrl);
-                                          
-                                          // Show fallback avatar
-                                          const target = e.target as HTMLImageElement;
-                                          target.style.display = 'none';
-                                          const avatarDiv = target.nextElementSibling as HTMLElement;
-                                          if (avatarDiv) avatarDiv.style.display = 'flex';
-                                        }}
-                                        onLoad={() => {
-                                          console.log('✅ Image loaded successfully for patient:', record.patientName, 'URL:', imageUrl);
-                                        }}
-                                      />
-                                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                                        <span className="text-sm font-semibold text-white">
-                                          {(record.patientName || 'P').charAt(0).toUpperCase()}
-                                        </span>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
-                                      <span className="text-sm font-semibold text-white">
-                                        {(record.patientName || 'P').charAt(0).toUpperCase()}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
+                              <div className="flex justify-center">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage 
+                                    src={getPatientImageUrl(patient?.photo || patient?.photoUrl)} 
+                                    alt={record.patientName}
+                                  />
+                                  <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                                    {(() => {
+                                      // Try multiple sources for the patient name
+                                      const name = record.patientName || patient?.name || `Patient${record.patientId}`;
+                                      // Ensure we have a valid string and get the first character
+                                      const firstChar = typeof name === 'string' && name.length > 0 
+                                        ? name.charAt(0).toUpperCase() 
+                                        : 'P';
+                                      return firstChar;
+                                    })()}
+                                  </AvatarFallback>
+                                </Avatar>
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
@@ -1301,22 +1344,7 @@ const PatientCallRecord: React.FC = () => {
                                 >
                                   <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    const isPatientRecord = record.id.toString().startsWith('patient_');
-                                    if (isPatientRecord) {
-                                      // For patient placeholder records, open dialog with pre-selected patient
-                                      openAddDialogForPatient(record.patientId);
-                                    } else {
-                                      // For actual call records, edit the record
-                                      handleEdit(record);
-                                    }
-                                  }}
-                                  className="action-btn-lead action-btn-edit h-8 w-8 sm:h-9 sm:w-9 p-0 inline-flex items-center justify-center"
-                                  title={record.id.toString().startsWith('patient_') ? 'Add Call Record' : 'Edit Call Record'}
-                                >
-                                  <Mic className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </button>
+                                
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1664,6 +1692,174 @@ const PatientCallRecord: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Add New Call Record Form Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-green-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    Add New Call Record
+                  </h3>
+
+                  <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4 sm:space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Call Date */}
+                      <div className="space-y-2">
+                        <Label htmlFor="add-call-date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          Call Date <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="add-call-date"
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                          className="w-full bg-white/90 backdrop-blur-sm border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                          required
+                        />
+                      </div>
+
+                      {/* Patient Selection - Read Only */}
+                      <div className="space-y-2">
+                        <Label htmlFor="add-call-patient" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <User className="h-4 w-4 text-indigo-600" />
+                          Patient <span className="text-green-500">*</span>
+                        </Label>
+                        <Input
+                          id="add-call-patient"
+                          type="text"
+                          value={`${viewRecord.patientName} (${formatPatientId(viewRecord.patientId)})`}
+                          readOnly
+                          className="w-full bg-gray-50/90 backdrop-blur-sm border-indigo-200 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Call Description */}
+                    <div className="space-y-2">
+                      <Label htmlFor="add-call-description" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        Call Description <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="add-call-description"
+                        value={formData.description}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full bg-white/90 backdrop-blur-sm border border-orange-200 focus:border-orange-400 focus:ring-orange-300 min-h-[100px] resize-y"
+                        placeholder="Enter detailed description of the call..."
+                        required
+                      />
+                    </div>
+
+                    {/* Audio Upload Section */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Mic className="h-4 w-4 text-red-600" />
+                        Upload Audio Files <span className="text-gray-500">(Optional)</span>
+                      </Label>
+                      
+                      <div className="bg-white/90 backdrop-blur-sm border-2 border-dashed border-red-200 rounded-lg p-4 hover:border-red-300 transition-colors">
+                        {/* File Upload Input */}
+                        <Input
+                          type="file"
+                          accept="audio/*"
+                          multiple
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            const maxSize = 999 * 1024 * 1024; // 999MB in bytes
+                            
+                            // Check file sizes
+                            const validFiles = files.filter(file => {
+                              if (file.size > maxSize) {
+                                toast({
+                                  title: "File Too Large",
+                                  description: `${file.name} is larger than 999MB. Please select a smaller file.`,
+                                  variant: "destructive",
+                                });
+                                return false;
+                              }
+                              return true;
+                            });
+                            
+                            if (validFiles.length > 0) {
+                              setFormData(prev => ({
+                                ...prev,
+                                audioFiles: [...prev.audioFiles, ...validFiles]
+                              }));
+                            }
+                          }}
+                          className="mb-3 bg-white/80 border-red-200 focus:border-red-400 focus:ring-red-300"
+                        />
+                        
+                        <p className="text-xs text-gray-500 mb-3">
+                          Select audio files (MP3, WAV, M4A, etc.) - Maximum 999MB per file
+                        </p>
+
+                        {/* Uploaded Audio Files */}
+                        {formData.audioFiles.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-red-700">Uploaded Audio Files ({formData.audioFiles.length}):</Label>
+                            {formData.audioFiles.map((audioFile, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded border">
+                                <div className="flex items-center space-x-3">
+                                  <Mic className="w-4 h-4 text-red-600" />
+                                  <div>
+                                    <span className="text-sm font-medium">{audioFile.name}</span>
+                                    <div className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded inline-block ml-2">
+                                      {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                                    </div>
+                                  </div>
+                                  <audio controls className="h-8">
+                                    <source src={URL.createObjectURL(audioFile)} type={audioFile.type} />
+                                    Your browser does not support the audio element.
+                                  </audio>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeAudioFile(index)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                          <p className="text-xs text-blue-700">
+                            <strong>Supported formats:</strong> MP3, WAV, M4A, AAC, OGG, FLAC
+                          </p>
+                          <p className="text-xs text-blue-700 mt-1">
+                            <strong>File size limit:</strong> 999MB per file
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submit Button for Call Record Form */}
+                    <div className="flex justify-end pt-6 pb-2 border-t border-gray-200 mt-6">
+                      <Button
+                        type="submit"
+                        disabled={isLoadingRecords || !formData.date || !formData.description.trim()}
+                        className="px-8 py-3 text-base font-bold bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                      >
+                        {isLoadingRecords ? (
+                          <>
+                            <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Adding Call Record...
+                          </>
+                        ) : (
+                          <>
+                            <Phone className="w-5 h-5 mr-2" />
+                            Add Call Record
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+
                 {/* Call History Section */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
@@ -1876,7 +2072,25 @@ const PatientCallRecord: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Month/Year Filter Dialog */}
+      <MonthYearPickerDialog
+        open={showMonthYearDialog}
+        onOpenChange={setShowMonthYearDialog}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onMonthChange={setSelectedMonth}
+        onYearChange={setSelectedYear}
+        onApply={() => {
+          setFilterMonth(selectedMonth);
+          setFilterYear(selectedYear);
+          setShowMonthYearDialog(false);
+        }}
+        title="Filter Records"
+        description="Select month and year to filter call records"
+        previewText="records"
+      />
+
+      {/* Delete Confirmation Dialog - Centered */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="crm-modal-container">
           <DialogHeader className="editpopup form dialog-header">
@@ -1903,16 +2117,27 @@ const PatientCallRecord: React.FC = () => {
                   <span className="font-medium text-gray-900">{deleteRecord.patientName}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Contact className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Patient ID: {deleteRecord.patientId}</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">{format(new Date(deleteRecord.date), 'dd/MM/yyyy')}</span>
+                  <span className="text-gray-600">{format(new Date(deleteRecord.date), 'PPP')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">{deleteRecord.description || 'No description'}</span>
+                  <span className="text-gray-600">{deleteRecord.description}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">Duration: {deleteRecord.audioRecording?.duration ? `${Math.round(deleteRecord.audioRecording.duration)}s` : 'N/A'}</span>
+              </div>
+              
+              <div className="mt-3 p-3 bg-red-50 rounded border border-red-200">
+                <div className="text-sm text-red-800">
+                  <p className="font-medium mb-2">⚠️ This will permanently delete:</p>
+                  <ul className="text-xs space-y-1">
+                    <li>• Call record details and description</li>
+                    <li>• Associated audio recordings</li>
+                    <li>• All related metadata</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -1922,10 +2147,7 @@ const PatientCallRecord: React.FC = () => {
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                setDeleteRecord(null);
-              }}
+              onClick={() => setShowDeleteConfirm(false)}
               className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
             >
               <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1937,29 +2159,11 @@ const PatientCallRecord: React.FC = () => {
               className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
             >
               <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              Delete Call Record
+              Delete Record
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Month/Year Filter Dialog */}
-      <MonthYearPickerDialog
-        open={showMonthYearDialog}
-        onOpenChange={setShowMonthYearDialog}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onMonthChange={setSelectedMonth}
-        onYearChange={setSelectedYear}
-        onApply={() => {
-          setFilterMonth(selectedMonth);
-          setFilterYear(selectedYear);
-          setShowMonthYearDialog(false);
-        }}
-        title="Filter Records"
-        description="Select month and year to filter call records"
-        previewText="records"
-      />
       
       </div>
     </div>

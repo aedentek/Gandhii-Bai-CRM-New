@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 
@@ -30,6 +31,9 @@ interface DoctorAttendance {
 }
 
 const DoctorAttendance: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

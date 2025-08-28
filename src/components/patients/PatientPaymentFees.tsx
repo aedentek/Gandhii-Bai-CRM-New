@@ -1,23 +1,27 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Eye, Edit, Plus, Search, Download, Printer, User, CreditCard, CheckCircle, RefreshCw, Receipt, Trash2, X, Phone, Mail, MapPin, Calendar, DollarSign, Activity, Users, BarChart3, History, Building } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User, Activity, Eye, Save, IndianRupee, History, X, AlertCircle, Stethoscope, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { usePatientPayments } from '@/hooks/usePatientPayments';
-import { useNavigate } from 'react-router-dom';
-import { DatabaseService } from '@/services/databaseService';
-import { patientsAPI } from '@/utils/api';
+import { cn } from '@/lib/utils';
+import * as XLSX from 'xlsx';
+import LoadingScreen from '@/components/shared/LoadingScreen';
+import { PatientPaymentAPI } from '@/services/patientPaymentAPI';
+import usePageTitle from '@/hooks/usePageTitle';
+import { getPatientPhotoUrl, PatientPhoto } from '@/utils/photoUtils';
+import '@/styles/global-crm-design.css';
 
 interface Patient {
   id: string;
@@ -33,8 +37,8 @@ interface Patient {
   bloodTest?: number;
   blood_test?: number;
   blood?: number;
-  otherFees?: number; // New field for auto-calculated other fees
-  totalAmount?: number; // Database total amount field
+  otherFees?: number;
+  totalAmount?: number;
   admissionDate?: string;
   admission_date?: string;
   created_at?: string;
@@ -45,903 +49,556 @@ interface Patient {
   registration_id?: string;
   photo?: string;
   photoUrl?: string;
+  total_paid?: string;
+  advance_amount?: string;
+  carry_forward?: string;
+  payment_mode?: string;
+  status?: string;
+  join_date?: string;
 }
 
-export default function PatientPaymentFees() {
-  // Update payment logic (stub)
-  const handleUpdatePayment = async () => {
-    toast({
-      title: "Success",
-      description: "Payment updated successfully (not implemented)",
-    });
-    setIsEditPaymentOpen(false);
-  };
-  // All state and handlers must be defined before the return statement
+interface PaymentHistory {
+  id: string;
+  payment_date: string;
+  payment_amount: string;
+  payment_mode: string;
+  type: string;
+  notes: string;
+  created_at: string;
+}
+
+const PatientPaymentFees: React.FC = () => {
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const monthNames = [
-    'january', 'february', 'march', 'april', 'may', 'june',
-    'july', 'august', 'september', 'october', 'november', 'december'
-  ];
-  const today = new Date();
-  const currentMonthValue = monthNames[today.getMonth()];
-  const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   
-  // Month and year state for filtering
+  // New states for enhanced functionality (mirroring Staff Salary)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    type: 'fee_payment'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
+  const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(new Date().getFullYear());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
+  const [deletingPayment, setDeletingPayment] = useState(false);
+
+  const itemsPerPage = 10;
+
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const currentYear = new Date().getFullYear();
-  const [dialogSelectedMonth, setDialogSelectedMonth] = useState(new Date().getMonth());
-  const [dialogSelectedYear, setDialogSelectedYear] = useState(currentYear);
-  const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(null);
-  const [filterYear, setFilterYear] = useState<number | null>(null);
-  
-  const [viewingPatient, setViewingPatient] = useState<any>(null);
-  const [editingPatient, setEditingPatient] = useState<any>(null);
-  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
-  const [isAddFeesOpen, setIsAddFeesOpen] = useState(false);
-  const [selectedPatientForFees, setSelectedPatientForFees] = useState<any>(null);
-  const [fees, setFees] = useState([]);
-  const [newFee, setNewFee] = useState({
-    fee: '',
-    date: '',
-    amount: ''
+
+  // State management (replacing hook)
+  const [patientPayments, setPatientPayments] = useState<Patient[]>([]);
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    totalTestReportAmount: 0,
+    totalPaid: 0,
+    totalPending: 0,
   });
-  const [editingFee, setEditingFee] = useState<any>(null);
-  const [isEditFeeOpen, setIsEditFeeOpen] = useState(false);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [localStorageVersion, setLocalStorageVersion] = useState(0);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
-  const [newPayment, setNewPayment] = useState({
-    patientId: '',
-    patientName: '',
-    amount: '',
-    comment: '',
-    paymentMode: ''
-  });
-  const [editPayment, setEditPayment] = useState({
-    amount: '',
-    comment: '',
-    paymentMode: ''
-  });
-  const { toast } = useToast();
-  const { 
-    patientPayments, 
-    loading,
-    error,
-    addPayment, 
-    updatePatientPaymentConfig,
-    getPatientPaymentSummary, 
-    getOverallTotals,
-    refreshData 
-  } = usePatientPayments();
-  const navigate = useNavigate();
+  const [totalPages, setTotalPages] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Function to format patient ID as P0001
-  const formatPatientId = (id: string | number): string => {
-    // Convert to number, removing any existing P prefix and leading zeros
-    const numericId = typeof id === 'string' ? parseInt(id.replace(/^P0*/, '')) : id;
-    return `P${numericId.toString().padStart(4, '0')}`;
-  };
+  const recordsPerPage = 10;
 
-  // Helper function to calculate exact balance for any month
-  const calculateMonthBalance = (patientData: any, patient: any, admission: Date, monthIndex: number, yearValue: number) => {
-    if (!patientData || !patient.payments || !admission) return 0;
-
-    // Safety check: Don't go back more than 24 months or before admission date
-    const admissionMonth = admission.getMonth();
-    const admissionYear = admission.getFullYear();
-    
-    // If requested month is before admission, return 0
-    if (yearValue < admissionYear || (yearValue === admissionYear && monthIndex < admissionMonth)) {
-      return 0;
-    }
-
-    // Monthly Fees (constant every month)
-    const monthlyFees = Number(patientData?.fees || 0);
-    
-    // Other Fees (only in joining month)
-    let otherFees = 0;
-    if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
-      // Use the database otherFees column if available, otherwise calculate manually
-      otherFees = Number(patientData?.otherFees || 0);
-      if (otherFees === 0) {
-        // Fallback to manual calculation for existing data
-        const pickup = Number(patientData?.pickupCharge || 0);
-        const blood = Number(patientData?.bloodTest || 0);
-        otherFees = pickup + blood;
-      }
-    }
-
-    // Carry Forward (previous month's balance, 0 for joining month)
-    let carryForward = 0;
-    if (!(admission.getFullYear() === yearValue && admission.getMonth() === monthIndex)) {
-      // Calculate previous month
-      let prevMonth = monthIndex - 1;
-      let prevYear = yearValue;
-      if (prevMonth < 0) {
-        prevMonth = 11;
-        prevYear -= 1;
-      }
-      
-      // Only recurse if the previous month is not before admission
-      if (prevYear > admissionYear || (prevYear === admissionYear && prevMonth >= admissionMonth)) {
-        carryForward = calculateMonthBalance(patientData, patient, admission, prevMonth, prevYear);
-      }
-    }
-
-    // Paid Amount: Only for joining month
-    let paidAmount = 0;
-    
-    // Only use paid amount for joining month
-    if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
-      paidAmount = Number(patientData?.payAmount || 0);
-    }
-    // For subsequent months, no current paid amount (paidAmount remains 0)
-
-    // Calculate total balance based on month type
-    let totalBalance = 0;
-    if (admission.getMonth() === monthIndex && admission.getFullYear() === yearValue) {
-      // JOINING MONTH: Monthly Fees + Other Fees - Paid Amount (no carry forward)
-      totalBalance = Math.max(0, monthlyFees + otherFees - paidAmount);
-    } else {
-      // SUBSEQUENT MONTHS: Monthly Fees + Carry Forward (no other fees, no paid amount)
-      totalBalance = Math.max(0, monthlyFees + carryForward);
-    }
-    
-    return totalBalance;
-  };
-
-  // Select patient from dropdown
-  const handleSelectPatient = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setNewPayment(prev => ({
-      ...prev,
-      patientId: patient.id,
-      patientName: patient.name
-    }));
-    setIsPatientDropdownOpen(false);
-  };
-
-  // Add payment logicg
-  const handleAddPayment = async () => {
-    // Always get patientId and patientName from selectedPatient if present
-    let patientId = newPayment.patientId;
-    let patientName = newPayment.patientName;
-    if (selectedPatient) {
-      patientId = selectedPatient.id;
-      patientName = selectedPatient.name;
-    }
-    // If still not set, error
-    if (!patientId || !newPayment.amount || !newPayment.comment || !newPayment.paymentMode) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      const amount = parseFloat(newPayment.amount);
-      await addPayment(patientId, {
-        date: format(new Date(), 'yyyy-MM-dd'),
-        amount: amount,
-        comment: newPayment.comment,
-        paymentMode: newPayment.paymentMode,
-        balanceRemaining: 0 // Will be calculated in the hook
-      });
-      setIsAddPaymentOpen(false);
-      setNewPayment({
-        patientId: '',
-        patientName: '',
-        amount: '',
-        comment: '',
-        paymentMode: ''
-      });
-      toast({
-        title: "Success",
-        description: "Payment added successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add payment",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Load patients using the same logic as PatientList for consistency
+  // Direct API functions (replacing hook methods)
   const loadPatients = async () => {
     try {
-      console.log('🔗 Loading patients via unified API...');
-      // Try unified API first, fall back to DatabaseService if needed
-      let data;
-      try {
-        data = await patientsAPI.getAll();
-        console.log('✅ Patients loaded via unified API:', data.length, 'patients');
-      } catch (apiError) {
-        console.warn('⚠️ Unified API failed, falling back to DatabaseService:', apiError.message);
-        data = await DatabaseService.getAllPatients();
-        console.log('✅ Patients loaded via DatabaseService:', data.length, 'patients');
-      }
+      setLoading(true);
+      setError(null);
+      const response = await PatientPaymentAPI.getAll(selectedMonth, selectedYear, currentPage, recordsPerPage);
       
-      if (!data || !Array.isArray(data)) {
-        console.warn('⚠️ Invalid patient data received:', data);
-        setPatients([]);
-        toast({
-          title: "Warning",
-          description: "No patient data received from server",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Transform the API response data to match the UI expectations
+      const transformedPatients = (response.payments || []).map((payment: any) => ({
+        id: payment.patient_id,
+        name: payment.patient_name,
+        phone: payment.phone || '',
+        email: payment.email || '',
+        photo: payment.photo || '',
+        admissionDate: payment.admissionDate || payment.admission_date || '',
+        monthlyFees: payment.fees || 0,  // Monthly consultation fees
+        otherFees: payment.month_specific_other_fees || 0, // Month-specific other fees from test reports
+        totalAmount: payment.total_amount || 0,
+        balance: payment.amount_pending || 0,
+        advance_amount: (payment.amount_paid || 0).toString(),
+        carry_forward: (payment.carry_forward || 0).toString(),
+        total_paid: (payment.amount_paid || 0).toString(),
+        payment_mode: payment.payment_method || '',
+        status: payment.payment_status === 'completed' ? 'Paid' : 'Pending'
+      }));
 
-      // Parse dates using the same logic as PatientList
-      const parseDateFromDDMMYYYY = (dateStr: any): Date | null => {
-        if (!dateStr) return null;
-        
-        if (dateStr instanceof Date) {
-          if (isNaN(dateStr.getTime())) return null;
-          const year = dateStr.getFullYear();
-          if (year < 1900 || year > 2100) return null;
-          return dateStr;
-        }
-        
-        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
-          const [day, month, year] = dateStr.split('-');
-          const parsedYear = parseInt(year);
-          if (parsedYear < 1900 || parsedYear > 2100) return null;
-          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
-        }
-        
-        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-          const [year, month, day] = dateStr.split('-');
-          const parsedYear = parseInt(year);
-          if (parsedYear < 1900 || parsedYear > 2100) return null;
-          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
-        }
-        
-        try {
-          const parsed = new Date(dateStr);
-          if (isNaN(parsed.getTime())) return null;
-          const year = parsed.getFullYear();
-          if (year < 1900 || year > 2100) return null;
-          return parsed;
-        } catch {
-          return null;
-        }
-      };
-
-      const parsedPatients = data.map((p: any) => {
-        const patientId = p.id && String(p.id).startsWith('P') 
-          ? p.id 
-          : `P${(p.originalId || p.id || 1).toString().padStart(4, '0')}`;
-        
-        const fees = parseFloat(p.fees) || 0;
-        const bloodTest = parseFloat(p.bloodTest) || 0;
-        const pickupCharge = parseFloat(p.pickupCharge) || 0;
-        const otherFees = parseFloat(p.otherFees) || (bloodTest + pickupCharge); // Use DB value or fallback to calculation
-        const payAmount = parseFloat(p.payAmount) || 0;
-        const totalAmount = parseFloat(p.totalAmount) || (fees + otherFees);
-        const balance = parseFloat(p.balance) || (totalAmount - payAmount);
-        
-        return {
-          id: patientId,
-          name: p.name,
-          phone: p.phone || '',
-          email: p.email || '',
-          fees: fees,
-          monthlyFees: fees,
-          totalFees: totalAmount,
-          pickupCharge: pickupCharge,
-          pickup_charge: pickupCharge,
-          pickup: pickupCharge,
-          bloodTest: bloodTest,
-          blood_test: bloodTest,
-          blood: bloodTest,
-          otherFees: otherFees, // Add the otherFees field from database
-          admissionDate: formatDateForBackend(parseDateFromDDMMYYYY(p.admissionDate)),
-          admission_date: formatDateForBackend(parseDateFromDDMMYYYY(p.admissionDate)),
-          created_at: p.created_at,
-          payAmount: payAmount,
-          pay_amount: payAmount,
-          balance: balance, // Use database balance value
-          totalAmount: totalAmount, // Use database totalAmount
-          registrationId: p.originalId || parseInt(String(p.id || patientId).replace(/\D/g, '')) || 1,
-          registration_id: p.originalId || parseInt(String(p.id || patientId).replace(/\D/g, '')) || 1,
-          photo: p.photo || '',
-          photoUrl: p.photo || '',
-          status: p.status || 'Active'
-        };
+      setPatientPayments(transformedPatients);
+      setStats(response.stats || {
+        totalPatients: 0,
+        totalTestReportAmount: 0,
+        totalPaid: 0,
+        totalPending: 0,
       });
-
-      // Filter to only show active patients
-      const activePatients = parsedPatients.filter(patient => 
-        patient.status === 'Active' || !patient.status || patient.status === ''
-      );
-      
-      setPatients(activePatients);
-      setCurrentPage(1);
-      console.log(`✅ Loaded ${activePatients.length} active patients out of ${parsedPatients.length} total patients`);
-      
+      setTotalPages(Math.ceil((response.totalCount || 0) / recordsPerPage));
     } catch (error) {
-      console.error('❌ Error loading patients:', error);
-      setPatients([]);
+      console.error('Error loading patients:', error);
+      setError('Failed to load patient data');
       toast({
         title: "Error",
-        description: `Failed to load patients: ${error.message}`,
-        variant: "destructive"
+        description: "Failed to load patient payment data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshData = async () => {
+    await loadPatients();
+  };
+
+  const applyFilter = async () => {
+    setCurrentPage(1);
+    await loadPatients();
+  };
+
+  const recordPayment = async (patientId: string, amount: number, method: string, notes?: string) => {
+    try {
+      await PatientPaymentAPI.recordPayment({ patientId, amount, method, notes });
+      toast({
+        title: "Success",
+        description: "Payment recorded successfully",
+      });
+      await refreshData();
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment",
+        variant: "destructive",
       });
     }
   };
 
-  // Utility function to format date for backend (DD-MM-YYYY)
-  const formatDateForBackend = (date: Date | null): string => {
-    if (!date) return '';
-    if (date instanceof Date && !isNaN(date.getTime())) {
-      const year = date.getFullYear();
-      if (year < 1900 || year > 2100) return '';
-      return format(date, 'dd-MM-yyyy');
+  const getPaymentHistory = async (patientId: string) => {
+    try {
+      const response = await PatientPaymentAPI.getPaymentHistory(patientId);
+      return response.history || [];
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+      return [];
     }
-    return '';
   };
 
+  // Handle page changes
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Handle month/year changes
+  const handleMonthChange = (month: number) => {
+    setSelectedMonth(month);
+    setCurrentPage(1); // Reset to first page when changing month
+  };
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setCurrentPage(1); // Reset to first page when changing year
+  };
+
+  // Set custom page title
+  usePageTitle('Patient Payment Management');
+
+  // Load data on component mount
   useEffect(() => {
     loadPatients();
   }, []);
 
-  // Refresh data when window gains focus (user returns from another tab/page)
+  // Load data when page changes (but NOT when month/year changes)
   useEffect(() => {
-    const handleFocus = () => {
-      console.log('🔄 PatientPaymentFees: Window focused, refreshing patient data...');
+    if (currentPage > 1) { // Only reload when page changes, not on initial load
       loadPatients();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
-  // Auto-refresh every 30 seconds to stay synchronized with PatientList
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 PatientPaymentFees: Auto-refreshing patient data...');
-      loadPatients();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Add effect to refresh data when component becomes visible or localStorage changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('PatientPaymentFees: Page became visible, refreshing data...');
-        setLocalStorageVersion(prev => prev + 1); // Force useMemo recalculation
-        refreshData();
-        loadPatients(); // Also refresh patients list
-      }
-    };
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'patients' || e.key === 'patientPaymentRecords') {
-        console.log('PatientPaymentFees: localStorage changed, refreshing data...');
-        setLocalStorageVersion(prev => prev + 1); // Trigger useMemo recalculation
-        refreshData();
-        // Also reload patients list using the same logic
-        loadPatients();
-      }
-    };
-
-    // Add event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [refreshData]);
-
-  // Enhanced patient summary with month/carry forward logic
-  const enhancedPatientSummary = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    // Use the patients state instead of getPatientPaymentSummary to include all active patients
-    return patients.map(patientData => {
-      // Parse admission date with multiple format support
-      const parseDateFromMultipleFormats = (dateStr: any): Date | null => {
-        if (!dateStr) return null;
-        
-        if (dateStr instanceof Date) {
-          if (isNaN(dateStr.getTime())) return null;
-          const year = dateStr.getFullYear();
-          if (year < 1900 || year > 2100) return null;
-          return dateStr;
-        }
-        
-        // Handle DD-MM-YYYY format
-        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
-          const [day, month, year] = dateStr.split('-');
-          const parsedYear = parseInt(year);
-          if (parsedYear < 1900 || parsedYear > 2100) return null;
-          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
-        }
-        
-        // Handle DD/MM/YYYY format
-        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-          const [day, month, year] = dateStr.split('/');
-          const parsedYear = parseInt(year);
-          if (parsedYear < 1900 || parsedYear > 2100) return null;
-          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
-        }
-        
-        // Handle YYYY-MM-DD format
-        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-          const [year, month, day] = dateStr.split('-');
-          const parsedYear = parseInt(year);
-          if (parsedYear < 1900 || parsedYear > 2100) return null;
-          return new Date(parsedYear, parseInt(month) - 1, parseInt(day));
-        }
-        
-        try {
-          const parsed = new Date(dateStr);
-          if (isNaN(parsed.getTime())) return null;
-          const year = parsed.getFullYear();
-          if (year < 1900 || year > 2100) return null;
-          return parsed;
-        } catch {
-          return null;
-        }
-      };
-
-      const admissionDate = patientData.admissionDate || patientData.created_at || patientData.admission_date;
-      const admission = parseDateFromMultipleFormats(admissionDate);
-      const admissionMonth = admission ? admission.getMonth() : null;
-      const admissionYear = admission ? admission.getFullYear() : null;
-      
-      // Find any existing payment summary for this patient
-      const existingPaymentSummary = getPatientPaymentSummary().find(p => 
-        p.patientId === patientData.id || 
-        p.patientId === patientData.registrationId ||
-        p.name === patientData.name
-      );
-
-      // Get fees and costs from database values
-      const monthlyFees = Number(patientData.fees || 0);
-      const bloodTest = Number(patientData.bloodTest || 0);
-      const pickupCharge = Number(patientData.pickupCharge || 0);
-      const otherFees = Number(patientData.otherFees || 0) || (bloodTest + pickupCharge); // Use DB value or fallback
-      const totalFees = Number(patientData.totalAmount || 0) || (monthlyFees + otherFees); // Use DB value or fallback
-      const balance = Number(patientData.balance || 0);
-      const payAmount = Number(patientData.payAmount || 0); // Use database payAmount directly
-
-      return {
-        patientId: patientData.id,
-        registrationId: patientData.registrationId || patientData.id,
-        name: patientData.name,
-        phone: patientData.phone,
-        admissionDate: admission ? admission.toISOString().split('T')[0] : '',
-        admissionMonth,
-        admissionYear,
-        monthlyFees,
-        bloodTest,
-        pickupCharge,
-        otherFees,
-        totalFees,
-        balance,
-        paidAmount: payAmount, // Use database payAmount directly
-        payments: existingPaymentSummary?.payments || [],
-        status: 'Active'
-      };
-    });
-  }, [patients, getPatientPaymentSummary, monthNames, patientPayments, localStorageVersion]);
-
-  // Filter and search logic for enhanced summary
-  const filteredPatients = useMemo(() => {
-    // Determine selected month index and year
-    let selectedMonthIndex = null;
-    let selectedYear = today.getFullYear();
-    
-    // Use filter dialog selections if set
-    if (filterMonth !== null && filterYear !== null) {
-      selectedMonthIndex = filterMonth;
-      selectedYear = filterYear;
-    } else if (selectedMonth && selectedMonth !== 'all') {
-      selectedMonthIndex = monthNames.indexOf(selectedMonth.toLowerCase());
     }
+  }, [currentPage]);
 
-    return enhancedPatientSummary.filter(patient => {
-      // Search filter
-      const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (patient.registrationId && patient.registrationId.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      // If no month/year filter is selected, show all patients that match search
-      if (selectedMonthIndex === null) {
-        return matchesSearch;
-      }
-      
-      console.log(`🔍 Filtering by month ${selectedMonthIndex} (${months[selectedMonthIndex]}) and year ${selectedYear}`);
-      console.log(`📅 Will show all patients from beginning up to ${months[selectedMonthIndex]} ${selectedYear}`);
-      
-      // If month/year filter is selected, show patients who were admitted from beginning up to the selected month/year
-      let includePatient = true;
-      let admissionDate = patient.admissionDate;
-      if (admissionDate) {
-        const admission = new Date(admissionDate);
-        console.log(`👤 ${patient.name}: Admitted ${admission.getMonth()}/${admission.getFullYear()} vs Filter up to ${selectedMonthIndex}/${selectedYear}`);
-        
-        // Include if admission is on or before the selected month/year
-        if (
-          admission.getFullYear() > selectedYear ||
-          (admission.getFullYear() === selectedYear && admission.getMonth() > selectedMonthIndex)
-        ) {
-          includePatient = false;
-          console.log(`❌ ${patient.name}: Excluded - admitted after ${months[selectedMonthIndex]} ${selectedYear}`);
-        } else {
-          console.log(`✅ ${patient.name}: Included - admitted on or before ${months[selectedMonthIndex]} ${selectedYear}`);
-        }
-      } else {
-        // If no admission date, exclude from filtered results when month filter is active
-        includePatient = false;
-        console.log(`❌ ${patient.name}: Excluded - no admission date`);
-      }
-      
-      return includePatient && matchesSearch;
-    }).sort((a, b) => {
-      // Sort by Patient ID in ascending order (handle P0001, P001, or numeric format)
-      const patientIdA = String(a.patientId || '').trim();
-      const patientIdB = String(b.patientId || '').trim();
-      
-      // Extract numeric part from Patient ID and compare
-      const getNumericPart = (id: string): number => {
-        // Handle P0001, P001, or plain numeric format
-        if (id.toUpperCase().startsWith('P')) {
-          const numericPart = id.substring(1);
-          return parseInt(numericPart) || 0;
-        }
-        // Handle plain numeric IDs
-        return parseInt(id) || 0;
-      };
-      
-      const numA = getNumericPart(patientIdA);
-      const numB = getNumericPart(patientIdB);
-      
-      // Primary sort: by numeric value
-      if (numA !== numB) {
-        return numA - numB;
-      }
-      
-      // Secondary sort: by original string (in case of ties)
-      return patientIdA.localeCompare(patientIdB);
-    });
-  }, [enhancedPatientSummary, searchTerm, selectedMonth, monthNames, today, filterMonth, filterYear]);
+  // Remove automatic refresh on month/year change
+  // useEffect(() => {
+  //   loadPatients();
+  // }, [selectedMonth, selectedYear]);
 
-  // Reset to first page when filters change
+  // Effect to automatically check carry forward when month/year changes
+  useEffect(() => {
+    if (patientPayments.length > 0) {
+      console.log('🔄 Auto-triggering carry forward for month/year change:', selectedMonth, selectedYear);
+      checkCarryForward();
+    }
+  }, [selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    filterPatients();
+  }, [patientPayments, searchTerm]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedMonth, filterMonth, filterYear]);
+  }, [searchTerm, patientPayments]);
 
-  // Calculate total pages for pagination
-  const totalPages = Math.ceil(filteredPatients.length / rowsPerPage);
+  const filterPatients = () => {
+    let filtered = patientPayments;
 
-  // Totals for new table - calculated based on selected month/year
-  const totals = useMemo(() => {
-    // Get the selected month/year for calculations
-    let selectedMonthIndex = filterMonth;
-    let selectedYear = filterYear;
-    
-    if (selectedMonthIndex === null || selectedYear === null) {
-      // If no filter selected, use current month/year
-      selectedMonthIndex = today.getMonth();
-      selectedYear = today.getFullYear();
-    }
-    
-    return filteredPatients.reduce((acc, patient) => {
-      // Get patient data from loaded patients state
-      const patientData = patients.find((p) =>
-        (p.id && p.id === patient.patientId) ||
-        (p.registrationId && p.registrationId === patient.patientId) ||
-        (p.name && p.name === patient.name)
+    if (searchTerm) {
+      filtered = filtered.filter(patient =>
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
-
-      if (!patientData || !patient.payments) {
-        return acc;
-      }
-
-      // Admission date
-      const admissionDateRaw = patientData?.admissionDate || patientData?.created_at || patientData?.admission_date;
-      const admission = admissionDateRaw ? new Date(admissionDateRaw) : null;
-
-      if (!admission) {
-        return acc;
-      }
-
-      // Monthly Fees
-      const monthlyFees = Number(patientData?.fees || patientData?.monthlyFees || patientData?.totalFees || 0);
-
-      // Other Fees (only for joining month)
-      let otherFeesValue = 0;
-      if (
-        admission.getMonth() === selectedMonthIndex &&
-        admission.getFullYear() === selectedYear
-      ) {
-        // Use the database otherFees column if available, otherwise calculate manually
-        otherFeesValue = Number(patientData?.otherFees || 0);
-        if (otherFeesValue === 0) {
-          // Fallback to manual calculation for existing data
-          const pickup = Number(patientData?.pickupCharge || 0);
-          const blood = Number(patientData?.bloodTest || 0);
-          otherFeesValue = pickup + blood;
-        }
-      }
-
-      // Carry Forward (previous month's balance)
-      let carryForward = 0;
-      if (!(admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex)) {
-        // Calculate previous month
-        let prevMonth = selectedMonthIndex - 1;
-        let prevYear = selectedYear;
-        if (prevMonth < 0) {
-          prevMonth = 11;
-          prevYear -= 1;
-        }
-        
-        // Use the calculateMonthBalance function
-        carryForward = calculateMonthBalance(patientData, patient, admission, prevMonth, prevYear);
-      }
-
-      // Paid Amount for selected month
-      let paidAmount = 0;
-      if (
-        admission.getMonth() === selectedMonthIndex &&
-        admission.getFullYear() === selectedYear
-      ) {
-        // Joining month: include all payments + PatientList Pay Amount
-        const joinMonthPayments = patient.payments.filter((p) => {
-          const d = new Date(p.date);
-          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
-        });
-        paidAmount = joinMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-        
-        const payAmount = Number(patientData?.payAmount || 0);
-        if (payAmount > 0) {
-          const alreadyIncluded = joinMonthPayments.some((p) => Number(p.amount) === payAmount);
-          if (!alreadyIncluded) {
-            paidAmount += payAmount;
-          }
-        }
-      } else {
-        // Other months: only payments in selected month
-        const currPayments = patient.payments.filter((p) => {
-          const d = new Date(p.date);
-          return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
-        });
-        paidAmount = currPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-      }
-
-      // Balance calculation
-      const balance = Math.max(0, monthlyFees + otherFeesValue + carryForward - paidAmount);
-      
-      return {
-        totalFees: acc.totalFees + monthlyFees + otherFeesValue,
-        totalBalance: acc.totalBalance + balance,
-        total: acc.total + monthlyFees + otherFeesValue + carryForward
+    }
+    
+    // Sort patients by ID in ascending order
+    filtered.sort((a, b) => {
+      const getNum = (id: string) => {
+        if (!id) return 0;
+        const match = id.match(/P(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
       };
-    }, { totalFees: 0, totalBalance: 0, total: 0 });
-  }, [filteredPatients, filterMonth, filterYear, today, patients, calculateMonthBalance]);
-
-  const handleViewPayments = (patient: any) => {
-    setViewingPatient(patient);
-    setIsViewDialogOpen(true);
+      return getNum(a.id) - getNum(b.id);
+    });
+    
+    setFilteredPatients(filtered);
   };
 
-  const handleAddFees = async (patient: any) => {
-    setSelectedPatientForFees(patient);
-    setIsAddFeesOpen(true);
-    // Fetch existing fees for this patient
-    await fetchFees(patient.patientId);
+  const refreshDataHandler = async () => {
+    await refreshData();
+    toast({
+      title: "Data Refreshed",
+      description: "Patient payment data updated successfully",
+    });
   };
 
-  const fetchFees = async (patientId: string) => {
+  // Save monthly records and carry forward balances
+  const saveMonthlyRecords = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/fees?patientId=${patientId}`);
-      if (response.ok) {
-        const feesData = await response.json();
-        setFees(feesData);
-      } else {
-        console.error('Failed to fetch fees');
-        setFees([]);
-      }
+      await PatientPaymentAPI.saveMonthlyRecords(selectedMonth, selectedYear);
+      toast({
+        title: "Success",
+        description: "Monthly records saved successfully",
+      });
+      await refreshData();
     } catch (error) {
-      console.error('Error fetching fees:', error);
-      setFees([]);
+      console.error('Error saving monthly records:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save monthly records",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleAddFee = async () => {
-    if (!newFee.fee.trim() || !newFee.date || !newFee.amount) {
+  // Check carry forward amounts for current month
+  const checkCarryForward = async (showSuccessToast = false) => {
+    try {
+      console.log('🔄 Checking carry forward for:', selectedMonth, selectedYear);
+      await PatientPaymentAPI.checkCarryForward(selectedMonth, selectedYear);
+      if (showSuccessToast) {
+        toast({
+          title: "Success",
+          description: "Carry forward balances updated successfully",
+        });
+      }
+      // Don't automatically reload patients to prevent loops - let the user refresh manually if needed
+    } catch (error) {
+      console.error('Error checking carry forward:', error);
       toast({
-        title: "Validation Error",
+        title: "Error",
+        description: "Failed to update carry forward balances",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle record payment modal
+  const handleRecordPayment = (patient: Patient) => {
+    console.log('🔍 Patient selected for payment:', patient);
+    setSelectedPatient(patient);
+    setPaymentModalSelectedMonth(selectedMonth);
+    setPaymentModalSelectedYear(selectedYear);
+    setPaymentFormData({
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
+      type: 'fee_payment'
+    });
+    setShowPaymentModal(true);
+    
+    // Load payment history for selected patient
+    fetchPaymentHistory(patient.id);
+  };
+
+  // Fetch payment history
+  const fetchPaymentHistory = async (patientId: string) => {
+    try {
+      setHistoryLoading(true);
+      const response = await PatientPaymentAPI.getPaymentHistory(patientId);
+      setPaymentHistory(response.history || []);
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Numeric parsing helper
+  const parseNumeric = (value: string | number | undefined): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[^\d.-]/g, '');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
+  // Submit payment
+  const handleSubmitPayment = async () => {
+    if (!selectedPatient || !paymentFormData.amount || !paymentFormData.date) {
+      toast({
+        title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/fees`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...newFee,
-          patientId: selectedPatientForFees?.patientId,
-          amount: parseFloat(newFee.amount)
-        }),
-      });
+      await recordPayment(
+        selectedPatient.id,
+        parseFloat(paymentFormData.amount),
+        'bank_transfer',
+        `Payment for ${paymentFormData.type}`
+      );
 
-      if (response.ok) {
-        const newFeeEntry = await response.json();
-        setFees(prev => [...prev, newFeeEntry]);
-        setNewFee({ fee: '', date: '', amount: '' });
-        toast({
-          title: "Success",
-          description: "Fee added successfully",
-        });
-      } else {
-        throw new Error('Failed to add fee');
+      toast({
+        title: "Success",
+        description: "Payment recorded successfully",
+      });
+      setPaymentFormData({
+        date: new Date().toISOString().split('T')[0],
+        amount: '',
+        type: 'fee_payment'
+      });
+      setShowPaymentModal(false);
+      
+      loadPatients();
+      if (selectedPatient) {
+        fetchPaymentHistory(selectedPatient.id);
       }
     } catch (error) {
-      console.error('Error adding fee:', error);
+      console.error('Error recording payment:', error);
       toast({
         title: "Error",
-        description: "Failed to add fee",
+        description: "Failed to record payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete payment
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete) return;
+    
+    setDeletingPayment(true);
+    try {
+      await PatientPaymentAPI.deletePayment(paymentToDelete.id);
+
+      toast({
+        title: "Success",
+        description: "Payment deleted successfully",
+      });
+      
+      loadPatients();
+      if (selectedPatient) {
+        fetchPaymentHistory(selectedPatient.id);
+      }
+      
+      setShowDeleteDialog(false);
+      setPaymentToDelete(null);
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete payment",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPayment(false);
+    }
+  };
+
+  // Save monthly records handler (mirroring Staff Salary functionality)
+  const handleSaveMonthlyRecords = async () => {
+    try {
+      await saveMonthlyRecords();
+      
+      toast({
+        title: "Success",
+        description: `Monthly records saved successfully! Patient records processed with carry-forward`,
+      });
+    } catch (error) {
+      console.error('Error saving monthly records:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to save monthly records. Please check your connection and try again.',
         variant: "destructive",
       });
     }
   };
 
-  const handleEditFee = (fee: any) => {
-    setEditingFee(fee);
-    setIsEditFeeOpen(true);
+  const exportToExcel = () => {
+    const exportData = filteredPatients.map((patient, index) => ({
+      'S.No': index + 1,
+      'Patient ID': patient.id,
+      'Name': patient.name,
+      'Phone': patient.phone,
+      'Email': patient.email,
+      'Monthly Fees': `₹${parseNumeric(patient.monthlyFees).toLocaleString()}`,
+      'Total Paid': `₹${parseNumeric(patient.total_paid).toLocaleString()}`,
+      'Advance Amount': `₹${parseNumeric(patient.advance_amount).toLocaleString()}`,
+      'Balance': `₹${parseNumeric(patient.balance).toLocaleString()}`,
+      'Status': patient.status,
+      'Admission Date': patient.admissionDate,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Patient Payment Report");
+    
+    const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    XLSX.writeFile(wb, `Patient_Payment_Report_${monthName.replace(' ', '_')}.xlsx`);
   };
 
-  const handleUpdateFee = async (updatedFee: any) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/fees/${updatedFee.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...updatedFee,
-          amount: parseFloat(updatedFee.amount)
-        }),
-      });
+  // Use stats from hook instead of calculating locally
 
-      if (response.ok) {
-        setFees(prev => prev.map(fee => fee.id === updatedFee.id ? updatedFee : fee));
-        setIsEditFeeOpen(false);
-        setEditingFee(null);
-        toast({
-          title: "Success",
-          description: "Fee updated successfully",
-        });
-      } else {
-        throw new Error('Failed to update fee');
-      }
-    } catch (error) {
-      console.error('Error updating fee:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update fee",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteFee = async (feeId: number) => {
-    if (!confirm('Are you sure you want to delete this fee?')) return;
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/fees/${feeId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setFees(prev => prev.filter(fee => fee.id !== feeId));
-        toast({
-          title: "Success",
-          description: "Fee deleted successfully",
-        });
-      } else {
-        throw new Error('Failed to delete fee');
-      }
-    } catch (error) {
-      console.error('Error deleting fee:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete fee",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditPayments = (patient: any, payment: any) => {
-
-    setEditingPatient(patient);
-    setEditPayment({
-      amount: payment.amount.toString(),
-      comment: payment.comment,
-      paymentMode: payment.paymentMode || 'Cash'
-    });
-    setIsEditPaymentOpen(true);
-  };
-
-  const printReport = () => {
-    window.print();
-  };
+  if (loading) {
+    return <LoadingScreen message="Loading patient payment data..." />;
+  }
 
   return (
     <div className="crm-page-bg">
-      <div className="max-w-7xl mx-auto">
-        {/* Professional Header */}
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* CRM Header */}
         <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-green-700 hover:scale-110">
-                <CreditCard className="w-6 h-6 text-white transition-transform duration-300 hover:rotate-3" />
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="crm-header-icon">
+                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 hover:text-green-600">Patient Payment Fees - Active Patients</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Showing {patients.length} active patients with payment records
-                </p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient Payment Management</h1>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <Button
+                onClick={handleSaveMonthlyRecords}
+                disabled={loading}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              >
+                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Save Monthly</span>
+                <span className="sm:hidden">Save</span>
+              </Button>
+              
+              <ActionButtons.MonthYear
+                onClick={() => setShowMonthYearDialog(true)}
+                text={`${months[selectedMonth - 1]} ${selectedYear}`}
+              />
+              
+              <Button 
+                onClick={exportToExcel}
+                className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+              
               <ActionButtons.Refresh onClick={() => {
                 console.log('🔄 Manual refresh triggered - refreshing entire page');
                 window.location.reload();
               }} />
+              
               <Button 
-                onClick={printReport}
-                className="global-btn global-btn-primary"
+                onClick={saveMonthlyRecords}
+                className="action-btn-lead bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+                title="Save Monthly Records"
               >
-                <Printer className="h-4 w-4" />
-                <span className="font-medium">Print Report</span>
+                <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Save Records</span>
+                <span className="sm:hidden">Save</span>
               </Button>
             </div>
           </div>
         </div>
-        
-        {/* Professional Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
+
+        {/* Stats Cards */}
+        <div className="crm-stats-grid">
+          <Card className="crm-stat-card crm-stat-card-blue">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Patients</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.totalPatients}</p>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Active</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-blue">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="crm-stat-card crm-stat-card-green">
             <CardContent className="relative p-3 sm:p-4 lg:p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Fees</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{totals.totalFees.toLocaleString()}</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{stats.totalTestReportAmount.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-green-600">
-                    <Receipt className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Collected fees</span>
+                    <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Monthly</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-green">
-                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Total Paid</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">₹{stats.totalPaid.toLocaleString()}</p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Completed</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -951,1426 +608,734 @@ export default function PatientPaymentFees() {
             <CardContent className="relative p-3 sm:p-4 lg:p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Balance</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">₹{totals.totalBalance.toLocaleString()}</p>
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Pending</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">₹{stats.totalPending.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-orange-600">
-                    <CreditCard className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Outstanding amount</span>
+                    <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Outstanding</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-orange">
-                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="crm-stat-card crm-stat-card-blue">
-            <CardContent className="relative p-3 sm:p-4 lg:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Total Amount</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">₹{totals.total.toLocaleString()}</p>
-                  <div className="flex items-center text-xs text-blue-600">
-                    <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Overall total</span>
-                  </div>
-                </div>
-                <div className="crm-stat-icon crm-stat-icon-blue">
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Month Filter Summary Card - Show when filter is active */}
-        {(filterMonth !== null && filterYear !== null) && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-sm border border-green-200 p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Patients up to {months[filterMonth]} {filterYear}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} admitted from start to {months[filterMonth]} {filterYear}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Cumulative Monthly Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ₹{filteredPatients.reduce((sum, p) => sum + (p.monthlyFees || 0), 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search and Filter Controls */}
+        {/* Search Controls */}
         <div className="crm-controls-container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name or registration ID..."
+                placeholder="Search patients by name or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 border-gray-200 hover:border-gray-300 transition-colors duration-300"
+                className="pl-10 w-full"
               />
-            </div>
-            
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => setShowMonthYearDialog(true)}
-                className="crm-month-year-btn flex-1"
-              >
-                {filterMonth !== null && filterYear !== null 
-                  ? `${months[filterMonth]} ${filterYear}`
-                  : 'Filter by Month'
-                }
-              </Button>
-            </div>
-            
-            <div className="flex space-x-2">
-              {(filterMonth !== null || filterYear !== null) && (
-                <Button
-                  onClick={() => {
-                    setFilterMonth(null);
-                    setFilterYear(null);
-                  }}
-                  className="global-btn global-btn-danger flex-1"
-                >
-                  Clear Filter
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Carry Forward Information Card */}
-        {filterMonth !== null && filterYear !== null && (
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-orange-600 text-sm font-semibold">💰</span>
-              </div>
-              <div>
-                <h3 className="text-orange-800 font-semibold text-sm mb-1">Carry Forward Balance System</h3>
-                <p className="text-orange-700 text-sm leading-relaxed">
-                  Unpaid amounts from previous months are automatically carried forward. 
-                  For example: If a patient joined in March and didn't pay the March fees, 
-                  that amount will be added to April's balance, and so on until payment is made.
-                </p>
-              </div>
+        {/* Patient Payment Table */}
+        <Card className="crm-table-container">
+          <CardHeader className="crm-table-header">
+            <div className="crm-table-title">
+              <CreditCard className="crm-table-title-icon" />
+              <span className="crm-table-title-text">Patient Payment Management ({filteredPatients.length})</span>
+              <span className="crm-table-title-text-mobile">Payments ({filteredPatients.length})</span>
             </div>
-          </div>
-        )}
-
-        {/* Main Patient Payment Table */}
-        <div className="crm-table-container">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="crm-table-title">
-                  <CreditCard className="crm-table-title-icon" />
-                  Patient Payment Summary
-                  {(filterMonth !== null && filterYear !== null) && (
-                    <span className="text-green-600 ml-2">
-                      - Up to {months[filterMonth]} {filterYear}
-                    </span>
-                  )}
-                </h2>
-                {(filterMonth !== null && filterYear !== null) && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Showing all patients admitted from beginning up to {months[filterMonth]} {filterYear} ({filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''})
-                  </p>
-                )}
-                {(filterMonth === null || filterYear === null) && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Showing all active patients ({filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''})
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6">
+          </CardHeader>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-b border-gray-200">
-                    <TableHead className="text-gray-700 font-semibold text-center">S NO</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Photo</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Patient ID</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Patient Name</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Admission Date</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Monthly Fees</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Other Fees</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center" title="Unpaid amounts carried forward from previous months">
-                      Carry Forward 💰
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Paid Amount</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Total Balance</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Status</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-center">Actions</TableHead>
+                  <TableRow className="bg-gray-50/80 hover:bg-gray-50">
+                    <TableHead className="text-center font-semibold text-gray-700">S.No</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Profile</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Admission Date</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Patient ID</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Patient Name</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Monthly Fees</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Other Fees</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Carry Forward</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Total Paid</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Balance</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Status</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPatients
-                    .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
-                    .map((patient, idx) => {
-                      // Use patient data directly from enhancedPatientSummary (it already has all the database values)
-                      const patientData = patient; // This already contains all the fields we need
+                  {filteredPatients.length > 0 ? (
+                    filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((patient, index) => {
+                      const balance = parseNumeric(patient.balance);
+                      const advance = parseNumeric(patient.advance_amount);
+                      const carryForward = parseNumeric(patient.carry_forward);
+                      const totalPaid = parseNumeric(patient.total_paid);
+                      const monthlyFees = parseNumeric(patient.monthlyFees);
+                      const otherFees = parseNumeric(patient.otherFees);
+                      const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
                       
-                      // Get original patient data for photo and other properties not in enhancedPatientSummary
-                      const originalPatientData = patients.find((p) =>
-                        (p.id && p.id === patient.patientId) ||
-                        (p.name && p.name === patient.name)
-                      );
-
-                      // --- Use selected month/year for all calculations ---
-                      // Get selected month/year from filter or current month/year
-                      let selectedMonthIndex = filterMonth;
-                      let selectedYear = filterYear;
-                      
-                      if (selectedMonthIndex === null || selectedYear === null) {
-                        // If no filter selected, use current month/year
-                        selectedMonthIndex = today.getMonth();
-                        selectedYear = today.getFullYear();
-                      }
-
-                      // Admission date - use the parsed date from enhancedPatientSummary
-                      let admission = null;
-                      try {
-                        if (patient.admissionDate) {
-                          admission = new Date(patient.admissionDate);
-                          if (isNaN(admission.getTime())) {
-                            admission = null;
-                          }
-                        }
-                      } catch (error) {
-                        console.error(`Admission date error for ${patient.name}:`, error);
-                        admission = null;
-                      }
-
-                      // Debug for Sabarish
-                      if (patient.name.includes('Sabarish')) {
-                        console.log(`🔍 Debug for ${patient.name} (using enhancedPatientSummary):`, {
-                          patientId: patient.patientId,
-                          name: patient.name,
-                          admissionDate: patient.admissionDate,
-                          monthlyFees: patient.monthlyFees,
-                          otherFees: patient.otherFees,
-                          pickupCharge: patient.pickupCharge,
-                          bloodTest: patient.bloodTest,
-                          paidAmount: patient.paidAmount,
-                          balance: patient.balance,
-                          filterMonth,
-                          filterYear,
-                          selectedMonthIndex,
-                          selectedYear,
-                          isJoiningMonth: admission ? (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) : false
-                        });
-                      }
-                      if (patient.name.includes('Sabarish')) {
-                        console.log(`🔍 Debug for ${patient.name}:`, {
-                          filterMonth,
-                          filterYear,
-                          selectedMonthIndex,
-                          selectedYear,
-                          admissionRaw: patient.admissionDate,
-                          admission: admission ? `${admission.getMonth()}/${admission.getFullYear()}` : 'null',
-                          isJoiningMonth: admission ? (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) : false,
-                          patientData: {
-                            otherFees: patientData?.otherFees,
-                            paidAmount: patientData?.paidAmount,
-                            pickupCharge: patientData?.pickupCharge,
-                            bloodTest: patientData?.bloodTest
-                          }
-                        });
-                      }
-
-                      // Monthly Fees: Use value from enhancedPatientSummary 
-                      const monthlyFees = patient.monthlyFees || 0;
-
-                      // Other Fees: Only show for joining month
-                      let otherFeesValue = 0;
-                      let otherFees = '₹0';
-                      
-                      // Only show Other Fees if this is the joining month
-                      if (admission && admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                        otherFeesValue = patient.otherFees || 0;
-                        otherFees = `₹${otherFeesValue.toLocaleString()}`;
-                        
-                        // Debug for Sabarish
-                        if (patient.name.includes('Sabarish')) {
-                          console.log(`💰 Other Fees calculation for ${patient.name}:`, {
-                            isJoiningMonth: true,
-                            otherFeesFromSummary: patient.otherFees,
-                            calculated: otherFeesValue,
-                            final: otherFees
-                          });
-                        }
-                      }
-
-                      // Carry Forward: previous month's total balance (0 for joining month)
-                      let carryForward = 0;
-                      if (patient && admission) {
-                        // If joining month, carry forward is 0
-                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                          carryForward = 0;
-                        } else {
-                          // Calculate continuous carry forward from joining month to current viewing month
-                          let totalCarryForward = 0;
-                          
-                          // Start from joining month and accumulate balance month by month
-                          let currentMonth = admission.getMonth();
-                          let currentYear = admission.getFullYear();
-                          
-                          // Loop through months from joining month to the month before selected month
-                          while (currentYear < selectedYear || (currentYear === selectedYear && currentMonth < selectedMonthIndex)) {
-                            let monthBalance = 0;
-                            
-                            if (currentMonth === admission.getMonth() && currentYear === admission.getFullYear()) {
-                              // Joining month: Monthly Fees + Other Fees - Paid Amount
-                              const joiningMonthOtherFees = patient.otherFees || 0;
-                              const joiningMonthPaidAmount = patient.paidAmount || 0;
-                              monthBalance = monthlyFees + joiningMonthOtherFees - joiningMonthPaidAmount;
-                            } else {
-                              // Subsequent months: Monthly Fees (no payments in subsequent months yet)
-                              monthBalance = monthlyFees;
-                            }
-                            
-                            totalCarryForward += Math.max(0, monthBalance);
-                            
-                            // Move to next month
-                            currentMonth++;
-                            if (currentMonth > 11) {
-                              currentMonth = 0;
-                              currentYear++;
-                            }
-                          }
-                          
-                          carryForward = totalCarryForward;
-                          
-                          // Debug for Sabarish
-                          if (patient.name.includes('Sabarish')) {
-                            console.log(`📊 Continuous Carry Forward for ${patient.name}:`, {
-                              joiningMonth: `${admission.getMonth() + 1}/${admission.getFullYear()}`,
-                              viewingMonth: `${selectedMonthIndex + 1}/${selectedYear}`,
-                              monthlyFees,
-                              otherFees: patient.otherFees,
-                              paidAmount: patient.paidAmount,
-                              totalCarryForward,
-                              finalCarryForward: carryForward
-                            });
-                          }
-                        }
-                      }
-
-                      // Paid Amount: Only show for current viewing month (joining month)
-                      let paidAmount = 0;
-                      if (patient && admission) {
-                        // Only show paid amount if this is the joining month (current input month)
-                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                          paidAmount = patient.paidAmount || 0;
-                          
-                          // Debug for Sabarish
-                          if (patient.name.includes('Sabarish')) {
-                            console.log(`💳 Paid Amount for ${patient.name}:`, {
-                              isJoiningMonth: true,
-                              paidAmountFromSummary: patient.paidAmount,
-                              calculated: paidAmount
-                            });
-                          }
-                        }
-                        // For subsequent months, paid amount remains 0 (no current month input)
-                      }
-
-                      // Balance: Calculate based on month type
-                      let balance = 0;
-                      if (patient && admission) {
-                        if (admission.getFullYear() === selectedYear && admission.getMonth() === selectedMonthIndex) {
-                          // JOINING MONTH: Monthly Fees + Other Fees - Paid Amount (no carry forward)
-                          balance = Math.max(0, monthlyFees + otherFeesValue - paidAmount);
-                        } else {
-                          // SUBSEQUENT MONTHS: Monthly Fees + Carry Forward - Paid Amount (no other fees, no current paid amount)
-                          balance = Math.max(0, monthlyFees + carryForward);
-                        }
-                      } else {
-                        balance = patient.balance || 0;
-                      }
-
                       return (
-                        <TableRow key={patient.patientId} className="hover:bg-gray-50 border-b border-gray-100">
-                          <TableCell className="font-medium text-gray-900 text-center">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex justify-center items-center">
-                              {(() => {
-                                // Construct proper photo URL
-                                let imageUrl = '';
-                              
-                              // Use originalPatientData for photo
-                              if (originalPatientData?.photo) {
-                                // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                                if (originalPatientData.photo.startsWith('http')) {
-                                  imageUrl = originalPatientData.photo;
-                                } else {
-                                  // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
-                                  // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
-                                  // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
-                                  if (originalPatientData.photo.includes('Photos/patient Admission/')) {
-                                    // Photo path is already in correct format from database
-                                    imageUrl = `/${originalPatientData.photo.replace(/\s/g, '%20')}`;
-                                  } else {
-                                    // Assume it's just filename and build full path using formatted Patient ID
-                                    const formattedId = formatPatientId(patient.patientId);
-                                    imageUrl = `/Photos/patient%20Admission/${formattedId}/${originalPatientData.photo}`;
-                                  }
-                                }
-                              } else if (originalPatientData?.photoUrl) {
-                                if (originalPatientData.photoUrl.startsWith('http')) {
-                                  imageUrl = originalPatientData.photoUrl;
-                                } else if (originalPatientData.photoUrl.includes('Photos/patient Admission/')) {
-                                  imageUrl = `/${originalPatientData.photoUrl.replace(/\s/g, '%20')}`;
-                                } else {
-                                  // Use formatted Patient ID for photo URL construction
-                                  const formattedId = formatPatientId(patient.patientId);
-                                  imageUrl = `/Photos/patient%20Admission/${formattedId}/${originalPatientData.photoUrl}`;
-                                }
-                              }
-
-                              return imageUrl ? (
-                                <>
-                                  <img
-                                    src={imageUrl}
-                                    alt={`${patient.name}'s photo`}
-                                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                                    onError={(e) => {
-                                      console.log('❌ Image failed for:', patient.name);
-                                      console.log('   Failed URL:', imageUrl);
-                                      
-                                      // Show fallback avatar
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                      const avatarDiv = target.nextElementSibling as HTMLElement;
-                                      if (avatarDiv) avatarDiv.style.display = 'flex';
-                                    }}
-                                    onLoad={() => {
-                                      console.log('✅ Image loaded successfully for patient:', patient.name, 'URL:', imageUrl);
-                                    }}
-                                  />
-                                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                                    <span className="text-sm font-semibold text-white">
-                                      {(patient.name || 'P').charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
-                                  <span className="text-sm font-semibold text-white">
-                                    {(patient.name || 'P').charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="font-medium text-blue-600">{formatPatientId(patient.patientId)}</span>
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-center">{patient.name}</TableCell>
-                        <TableCell className="text-center">
-                          {(() => {
-                            if (patient.admissionDate) {
-                              try {
-                                const admissionDate = new Date(patient.admissionDate);
-                                // Check if date is valid
-                                if (isNaN(admissionDate.getTime())) {
-                                  return <span className="text-gray-400 text-sm">Invalid Date</span>;
-                                }
-                                
-                                const isWithinFilter = filterMonth !== null && filterYear !== null && (
-                                  admissionDate.getFullYear() < filterYear || 
-                                  (admissionDate.getFullYear() === filterYear && admissionDate.getMonth() <= filterMonth)
-                                );
-                                
-                                return (
-                                  <span className={`text-sm font-medium ${isWithinFilter ? 'text-green-600 bg-green-50 px-2 py-1 rounded' : 'text-gray-600'}`}>
-                                    {format(admissionDate, 'dd/MM/yyyy')}
-                                  </span>
-                                );
-                              } catch (error) {
-                                return <span className="text-gray-400 text-sm">Invalid Date</span>;
-                              }
-                            }
-                            return <span className="text-gray-400 text-sm">-</span>;
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-center">₹{monthlyFees.toLocaleString()}</TableCell>
-                        <TableCell className="text-gray-900 text-center">{otherFees}</TableCell>
-                        <TableCell className="text-center">
-                          {carryForward > 0 ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <span className="text-orange-600 font-medium">₹{carryForward.toLocaleString()}</span>
-                              <span className="text-xs text-orange-500" title="Amount carried forward from previous month(s)">⬆️</span>
+                        <TableRow 
+                          key={patient.id} 
+                          className="hover:bg-gray-50/80 transition-colors duration-200 group"
+                        >
+                          {/* S.No */}
+                          <TableCell className="py-4 px-6 text-center font-medium text-gray-900">
+                            {globalIndex}
+                          </TableCell>
+                          
+                          {/* Profile */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <div className="flex justify-center">
+                              <PatientPhoto
+                                photoPath={patient.photo}
+                                alt={patient.name}
+                                className="w-10 h-10 border-2 border-green-200 shadow-sm rounded-full object-cover"
+                                showPlaceholder={true}
+                              />
                             </div>
-                          ) : (
-                            <span className="text-gray-500">₹0</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-center">₹{paidAmount.toLocaleString()}</TableCell>
-                        <TableCell className="text-gray-900 text-center">₹{balance.toLocaleString()}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge 
-                            variant={balance <= 0 ? 'default' : balance > 0 && paidAmount > 0 ? 'secondary' : 'destructive'}
-                            className={`$
-                              ${balance <= 0 ? 'bg-green-100 text-green-800' : 
-                              balance > 0 && paidAmount > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                              'bg-red-100 text-red-800'}
-                            }`}
-                          >
-                            {balance <= 0 ? 'Paid' : paidAmount > 0 ? 'Partial' : 'Unpaid'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              size="sm"
-                              onClick={() => handleViewPayments(patient)}
-                              className="action-btn-lead action-btn-view"
-                              title="View Payments"
+                          </TableCell>
+                          
+                          {/* Admission Date */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className="text-sm text-gray-600">
+                              {patient.admissionDate ? format(new Date(patient.admissionDate), 'dd/MM/yyyy') : '-'}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Patient ID */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                              {patient.id}
+                            </Badge>
+                          </TableCell>
+                          
+                          {/* Patient Name */}
+                          <TableCell className="py-4 px-6 text-center font-medium text-gray-900">
+                            {patient.name}
+                          </TableCell>
+                          
+                          {/* Monthly Fees */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className="text-sm font-medium text-green-600">
+                              ₹{monthlyFees.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Other Fees */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className="text-sm font-medium text-orange-600">
+                              ₹{otherFees.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Carry Forward */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className="text-sm font-medium text-purple-600">
+                              ₹{carryForward.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Total Paid */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className="text-sm font-medium text-blue-600">
+                              ₹{totalPaid.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Balance */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <span className={`text-sm font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              ₹{balance.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          
+                          {/* Status */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <Badge 
+                              className={`text-xs ${balance > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleAddFees(patient)}
-                              className="action-btn-lead action-btn-success"
-                              title="Add Fees"
-                            >
-                              <Receipt className="h-4 w-4" />
-                            </Button>
-                            {/* Only enable Edit (Add Payment) for current month */}
-                            {(() => {
-                              let selectedMonthIndex = null;
-                              let selectedYear = today.getFullYear();
-                              if (selectedMonth && selectedMonth !== 'all') {
-                                selectedMonthIndex = monthNames.indexOf(selectedMonth.toLowerCase());
-                              }
-                              const isCurrentMonth = selectedMonthIndex === today.getMonth() && selectedYear === today.getFullYear();
-                              return (
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    if (!isCurrentMonth) return;
-                                    setSelectedPatient({ id: patient.patientId, name: patient.name, phone: '', email: '' });
-                                    setNewPayment({
-                                      patientId: patient.patientId,
-                                      patientName: patient.name,
-                                      amount: '',
-                                      comment: '',
-                                      paymentMode: ''
-                                    });
-                                    setIsAddPaymentOpen(true);
-                                  }}
-                                  className={`action-btn-lead ${!isCurrentMonth ? 'action-btn-disabled' : 'action-btn-edit'}`}
-                                  disabled={!isCurrentMonth}
-                                  title="Add Payment"
-                                >
-                                  <Edit className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
-                                </Button>
-                              );
-                            })()}
+                              {balance > 0 ? 'Pending' : 'Paid'}
+                            </Badge>
+                          </TableCell>
+                          
+                          {/* Actions */}
+                          <TableCell className="py-4 px-6 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleRecordPayment(patient)}
+                                className="action-btn-lead action-btn-add h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                title="Record Payment"
+                              >
+                                <CreditCard className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={12} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                          <div className="p-4 bg-gray-100 rounded-full">
+                            <Users className="h-8 w-8 text-gray-400" />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          <div className="text-center">
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No patients found</h3>
+                            <p className="text-gray-500">No patients match your search criteria.</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
-
-              {filteredPatients.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  No patients found. <Button variant="link" onClick={() => navigate('/patients/add')} className="global-btn global-btn-primary">Add a patient</Button> to get started.
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mt-4 px-6 pb-4">
-                  <div className="text-sm text-gray-700">
-                    {(() => {
-                      const start = (currentPage - 1) * rowsPerPage + 1;
-                      const end = Math.min(currentPage * rowsPerPage, filteredPatients.length);
-                      return `Showing ${start} to ${end} of ${filteredPatients.length} patients`;
-                    })()}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded px-4 py-2 font-medium text-gray-500 border-gray-300 disabled:opacity-60"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                      <Button
-                        key={i + 1}
-                        size="sm"
-                        variant={currentPage === i + 1 ? undefined : "outline"}
-                        className={
-                          (currentPage === i + 1 ? "bg-green-600 text-white border-green-600 hover:bg-green-700" : "text-gray-700 border-gray-300") +
-                          " rounded px-4 py-2 font-medium"
-                        }
-                        onClick={() => setCurrentPage(i + 1)}
-                      >
-                        {i + 1}
-                      </Button>
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded px-4 py-2 font-medium text-gray-500 border-gray-300 disabled:opacity-60"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-      {/* Add Payment Modal */}
-      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-900">Add New Payment</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedPatient && (
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex items-center space-x-4 mb-3">
-                  {(() => {
-                    // Find patient data for photo
-                    const patientData = patients.find((p) =>
-                      (p.id && p.id === selectedPatient.id) ||
-                      (p.registrationId && p.registrationId === selectedPatient.id) ||
-                      (p.name && p.name === selectedPatient.name)
-                    );
-                    
-                    // Construct proper photo URL
-                    let imageUrl = '';
-                    
-                    if (patientData?.photo) {
-                      // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                      if (patientData.photo.startsWith('http')) {
-                        imageUrl = patientData.photo;
-                      } else {
-                        // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
-                        // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
-                        // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
-                        if (patientData.photo.includes('Photos/patient Admission/')) {
-                          // Photo path is already in correct format from database
-                          imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
-                        } else {
-                          // Assume it's just filename and build full path using formatted Patient ID
-                          const formattedId = formatPatientId(selectedPatient.id);
-                          imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
-                        }
-                      }
-                    } else if (patientData?.photoUrl) {
-                      if (patientData.photoUrl.startsWith('http')) {
-                        imageUrl = patientData.photoUrl;
-                      } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
-                        imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
-                      } else {
-                        // Use formatted Patient ID for photo URL construction
-                        const formattedId = formatPatientId(selectedPatient.id);
-                        imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
-                      }
-                    }
-
-                    return imageUrl ? (
-                      <>
-                        <img
-                          src={imageUrl}
-                          alt={`${selectedPatient.name}'s photo`}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            console.log('❌ Image failed for:', selectedPatient.name);
-                            console.log('   Failed URL:', imageUrl);
-                            
-                            // Show fallback avatar
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const avatarDiv = target.nextElementSibling as HTMLElement;
-                            if (avatarDiv) avatarDiv.style.display = 'flex';
-                          }}
-                          onLoad={() => {
-                            console.log('✅ Image loaded successfully for patient:', selectedPatient.name, 'URL:', imageUrl);
-                          }}
-                        />
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                          <span className="text-sm font-semibold text-white">
-                            {(selectedPatient.name || 'P').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
-                        <span className="text-sm font-semibold text-white">
-                          {(selectedPatient.name || 'P').charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                  <div>
-                    <p className="font-semibold text-gray-900">{selectedPatient.name}</p>
-                    <p className="text-sm text-gray-600">Patient ID: {formatPatientId(selectedPatient.id)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Total Balance Field */}
-            {selectedPatient && (
-              <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                <Label className="text-green-800 font-semibold">Total Balancess</Label>
-                <Input
-                  type="text"
-                  value={(() => {
-                    console.log('🔍 Selected Patient for balance calculation:', selectedPatient);
-                    console.log('🔍 Enhanced Patient Summary:', enhancedPatientSummary);
-                    
-                    // Find the patient's current balance from enhancedPatientSummary
-                    const patientSummaryData = enhancedPatientSummary.find((p) =>
-                      (p.patientId && p.patientId === selectedPatient.id) ||
-                      (p.registrationId && p.registrationId === selectedPatient.id) ||
-                      (p.name && p.name === selectedPatient.name) ||
-                      String(p.patientId) === String(selectedPatient.id)
-                    );
-                    
-                    console.log('🔍 Found patient summary data:', patientSummaryData);
-                    
-                    if (patientSummaryData) {
-                      const balance = patientSummaryData.balance || 0;
-                      console.log('✅ Using balance from summary:', balance);
-                      return `₹${balance.toLocaleString()}`;
-                    }
-                    
-                    // Fallback calculation if not found in summary
-                    const patientData = patients.find((p) =>
-                      (p.id && p.id === selectedPatient.id) ||
-                      (p.registrationId && p.registrationId === selectedPatient.id) ||
-                      (p.name && p.name === selectedPatient.name) ||
-                      String(p.id) === String(selectedPatient.id)
-                    );
-                    
-                    console.log('🔍 Found patient data:', patientData);
-                    
-                    if (patientData) {
-                      const balance = patientData.balance || 0;
-                      console.log('✅ Using balance from patient data:', balance);
-                      return `₹${balance.toLocaleString()}`;
-                    }
-                    
-                    console.log('⚠️ No balance found, defaulting to ₹0');
-                    return '₹0';
-                  })()}
-                  readOnly
-                  className="bg-white font-bold text-lg text-green-700 border-green-300 mt-2"
-                />
-              </div>
-            )}
-            <div>
-              <Label htmlFor="amount" className="text-gray-700">Amount *</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Enter amount"
-                value={newPayment.amount}
-                onChange={(e) => setNewPayment(prev => ({ ...prev, amount: e.target.value }))}
-                className="bg-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="comment" className="text-gray-700">Command/Note *</Label>
-              <Textarea
-                id="comment"
-                placeholder="e.g., July 2025 Fees, Consultation fee"
-                value={newPayment.comment}
-                onChange={(e) => setNewPayment(prev => ({ ...prev, comment: e.target.value }))}
-                className="bg-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="paymentMode" className="text-gray-700">Payment Mode *</Label>
-              <Select value={newPayment.paymentMode} onValueChange={(value) => setNewPayment(prev => ({ ...prev, paymentMode: value }))}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-200">
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="UPI">UPI</SelectItem>
-                  <SelectItem value="Card">Card</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button onClick={() => setIsAddPaymentOpen(false)} className="global-btn global-btn-secondary">
-                Cancel
-              </Button>
-              <Button onClick={handleAddPayment} className="global-btn global-btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Payment
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Payment History Dialog - Medicine Stock Modal Style */}
-      {viewingPatient && isViewDialogOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setIsViewDialogOpen(false)}
-        >
-          <div 
-            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header - Glass Morphism Style */}
-            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
-                <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <User className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1">
-                    <div className="border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                      Active
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
-                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
-                    <span className="truncate">{viewingPatient.name}</span>
-                  </h2>
-                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
-                    <span className="text-gray-600">Patient ID:</span>
-                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
-                      {viewingPatient.registrationId || viewingPatient.patientId}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsViewDialogOpen(false)}
-                  className="text-slate-500 hover:text-slate-700"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
             </div>
 
-            {/* Modal Body - Glass Morphism Style */}
-            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
-              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
-                
-                {/* Patient Information Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <User className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
-                    </div>
-                    Patient Information
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                    
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Patient Name</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewingPatient.name}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Receipt className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Registration ID</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewingPatient.registrationId || viewingPatient.patientId}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Total Fees</div>
-                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewingPatient.totalFees?.toLocaleString() || '0'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                  </div>
+            {/* Pagination */}
+            {Math.ceil(filteredPatients.length / itemsPerPage) > 1 && (
+              <div className="crm-pagination-container">
+                <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+                  <span className="hidden sm:inline">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPatients.length)} of {filteredPatients.length} patients
+                  </span>
+                  <span className="sm:hidden">
+                    {currentPage} / {Math.ceil(filteredPatients.length / itemsPerPage)}
+                  </span>
                 </div>
-
-                {/* Payment Summary Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
-                    </div>
-                    Payment Summary
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-                    
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">₹{viewingPatient.totalFees?.toLocaleString() || '0'}</div>
-                      <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Fees</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">₹{viewingPatient.paidAmount?.toLocaleString() || '0'}</div>
-                      <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Paid Amount</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-orange-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-orange-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-orange-600" />
-                      </div>
-                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-orange-600">₹{viewingPatient.balance?.toLocaleString() || '0'}</div>
-                      <div className="text-xs sm:text-sm font-medium text-orange-600 uppercase tracking-wide">Balance</div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-purple-100 text-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        (viewingPatient.balance || 0) <= 0 ? 'bg-green-100 text-green-800' :
-                        (viewingPatient.paidAmount || 0) > 0 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {(viewingPatient.balance || 0) <= 0 ? 'Paid' :
-                         (viewingPatient.paidAmount || 0) > 0 ? 'Partial' :
-                         'Unpaid'}
-                      </div>
-                      <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide mt-2">Status</div>
-                    </div>
-                    
-                  </div>
-                </div>
-
-                {/* Payment History Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-gray-600" />
-                      </div>
-                      Payment History
-                    </h3>
-                    <Button 
-                      onClick={() => {
-                        setIsViewDialogOpen(false);
-                        setSelectedPatient({ 
-                          id: viewingPatient?.patientId, 
-                          name: viewingPatient?.name, 
-                          phone: '', 
-                          email: '' 
-                        });
-                        setNewPayment(prev => ({
-                          ...prev,
-                          patientId: viewingPatient?.patientId,
-                          patientName: viewingPatient?.name
-                        }));
-                        setIsAddPaymentOpen(true);
-                      }}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Add Payment
-                    </Button>
+                <div className="flex items-center gap-2 order-1 sm:order-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    <span className="hidden sm:inline">Previous</span>
+                    <span className="sm:hidden">Prev</span>
+                  </Button>
+                  
+                  <div className="hidden sm:flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, Math.ceil(filteredPatients.length / itemsPerPage)) }, (_, i) => {
+                      const pageNumber = i + Math.max(1, currentPage - 2);
+                      if (pageNumber > Math.ceil(filteredPatients.length / itemsPerPage)) return null;
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant={currentPage === pageNumber ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNumber)}
+                          className={`w-8 h-8 p-0 text-xs ${
+                            currentPage === pageNumber 
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                              : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300'
+                          }`}
+                        >
+                          {pageNumber}
+                        </Button>
+                      );
+                    })}
                   </div>
                   
-                  {viewingPatient?.payments && viewingPatient.payments.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50/50">
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Date</TableHead>
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[90px]">Amount</TableHead>
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[100px]">Payment Mode</TableHead>
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[120px]">Comment/Note</TableHead>
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[80px]">Balance</TableHead>
-                            <TableHead className="text-center font-medium text-xs sm:text-sm min-w-[70px]">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {viewingPatient.payments.map((payment: any) => (
-                            <TableRow key={payment.id}>
-                              <TableCell className="text-center">{payment.date ? format(new Date(payment.date), 'dd/MM/yyyy') : 'Invalid Date'}</TableCell>
-                              <TableCell className="text-center text-green-600 font-semibold">₹{payment.amount.toLocaleString()}</TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant="outline" className="text-xs">
-                                  {payment.paymentMode || 'Cash'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center">{payment.comment}</TableCell>
-                              <TableCell className="text-center">₹{payment.balanceRemaining.toLocaleString()}</TableCell>
-                              <TableCell className="text-center">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleEditPayments(viewingPatient, payment)}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-gray-500">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <History className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment History</h3>
-                      <p className="text-gray-500">No payment records found for this patient</p>
-                      <p className="text-gray-400 text-sm mt-2">Payment history will appear here once payments are made</p>
-                    </div>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(Math.min(Math.ceil(filteredPatients.length / itemsPerPage), currentPage + 1))}
+                    disabled={currentPage === Math.ceil(filteredPatients.length / itemsPerPage)}
+                    className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <span className="sm:hidden">Next</span>
+                  </Button>
                 </div>
-
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Edit Payment Dialog */}
-      <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-900">Edit Payment</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="editAmount" className="text-gray-700">Balance Amount *</Label>
-              <Input
-                id="editAmount"
-                type="number"
-                placeholder="Enter balance amount"
-                value={editPayment.amount}
-                onChange={(e) => setEditPayment(prev => ({ ...prev, amount: e.target.value }))}
-                className="bg-white"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="editComment" className="text-gray-700">Update Command/Note *</Label>
-              <Textarea
-                id="editComment"
-                placeholder="Update payment note"
-                value={editPayment.comment}
-                onChange={(e) => setEditPayment(prev => ({ ...prev, comment: e.target.value }))}
-                className="bg-white"
-              />
-            </div>
+        {/* Month Year Dialog */}
+        <MonthYearPickerDialog
+          open={showMonthYearDialog}
+          onOpenChange={setShowMonthYearDialog}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={handleMonthChange}
+          onYearChange={handleYearChange}
+          onApply={async () => {
+            setShowMonthYearDialog(false);
+            await applyFilter(); // Apply filter manually only when button is clicked
+          }}
+          title="Select Month & Year"
+          description="Select month and year for patient payment data"
+          previewText="patient records"
+        />
 
-            <div>
-              <Label htmlFor="editPaymentMode" className="text-gray-700">Payment Mode *</Label>
-              <Select value={editPayment.paymentMode} onValueChange={(value) => setEditPayment(prev => ({ ...prev, paymentMode: value }))}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-200">
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="UPI">UPI</SelectItem>
-                  <SelectItem value="Card">Card</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex justify-end gap-3 pt-4">
-              <Button onClick={() => setIsEditPaymentOpen(false)} className="global-btn global-btn-secondary">
-                Cancel
-              </Button>
-              <Button onClick={handleUpdatePayment} className="global-btn global-btn-primary">
-                <Edit className="h-4 w-4 mr-2" />
-                Update Payment
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Month/Year Filter Dialog */}
-      <Dialog open={showMonthYearDialog} onOpenChange={setShowMonthYearDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter by Month & Year</DialogTitle>
-            <DialogDescription>
-              Select month and year to show all patients admitted from the beginning up to that month
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Month</Label>
-              <select
-                value={dialogSelectedMonth}
-                onChange={(e) => setDialogSelectedMonth(Number(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {months.map((month, index) => (
-                  <option key={index} value={index}>{month}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Year</Label>
-              <select
-                value={dialogSelectedYear}
-                onChange={(e) => setDialogSelectedYear(Number(e.target.value))}
-                className="w-full p-2 border rounded-md"
-              >
-                {Array.from({ length: 10 }, (_, i) => currentYear - i).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setShowMonthYearDialog(false)} className="global-btn global-btn-secondary">
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              setFilterMonth(dialogSelectedMonth);
-              setFilterYear(dialogSelectedYear);
-              setShowMonthYearDialog(false);
-            }} className="global-btn global-btn-primary">
-              Apply Filter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Fees Modal */}
-      <Dialog open={isAddFeesOpen} onOpenChange={setIsAddFeesOpen}>
-        <DialogContent className="max-w-4xl bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-900">Add New Fees</DialogTitle>
-          </DialogHeader>
-          
-          {selectedPatientForFees && (
-            <div className="space-y-6">
-              {/* Patient Info */}
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex items-center space-x-4 mb-3">
-                  {(() => {
-                    // Find patient data for photo
-                    const patientData = patients.find((p) =>
-                      (p.id && p.id === selectedPatientForFees.patientId) ||
-                      (p.registrationId && p.registrationId === selectedPatientForFees.patientId) ||
-                      (p.name && p.name === selectedPatientForFees.name)
-                    );
-                    
-                    // Construct proper photo URL
-                    let imageUrl = '';
-                    
-                    if (patientData?.photo) {
-                      // If photo starts with http, use as-is, otherwise build the URL based on AddPatient storage format
-                      if (patientData.photo.startsWith('http')) {
-                        imageUrl = patientData.photo;
-                      } else {
-                        // Photos are stored in: server/Photos/patient Admission/{formattedPatientId}/
-                        // Database stores: Photos/patient Admission/{formattedPatientId}/{filename}
-                        // Static serving at: /Photos/patient%20Admission/{formattedPatientId}/{filename}
-                        if (patientData.photo.includes('Photos/patient Admission/')) {
-                          // Photo path is already in correct format from database
-                          imageUrl = `/${patientData.photo.replace(/\s/g, '%20')}`;
-                        } else {
-                          // Assume it's just filename and build full path using formatted Patient ID
-                          const formattedId = formatPatientId(selectedPatientForFees.patientId);
-                          imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photo}`;
-                        }
-                      }
-                    } else if (patientData?.photoUrl) {
-                      if (patientData.photoUrl.startsWith('http')) {
-                        imageUrl = patientData.photoUrl;
-                      } else if (patientData.photoUrl.includes('Photos/patient Admission/')) {
-                        imageUrl = `/${patientData.photoUrl.replace(/\s/g, '%20')}`;
-                      } else {
-                        // Use formatted Patient ID for photo URL construction
-                        const formattedId = formatPatientId(selectedPatientForFees.patientId);
-                        imageUrl = `/Photos/patient%20Admission/${formattedId}/${patientData.photoUrl}`;
-                      }
-                    }
-
-                    return imageUrl ? (
-                      <>
-                        <img
-                          src={imageUrl}
-                          alt={`${selectedPatientForFees.name}'s photo`}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            console.log('❌ Image failed for:', selectedPatientForFees.name);
-                            console.log('   Failed URL:', imageUrl);
-                            
-                            // Show fallback avatar
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const avatarDiv = target.nextElementSibling as HTMLElement;
-                            if (avatarDiv) avatarDiv.style.display = 'flex';
-                          }}
-                          onLoad={() => {
-                            console.log('✅ Image loaded successfully for patient:', selectedPatientForFees.name, 'URL:', imageUrl);
-                          }}
-                        />
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-gray-200" style={{display: 'none'}}>
-                          <span className="text-sm font-semibold text-white">
-                            {(selectedPatientForFees.name || 'P').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center border-2 border-gray-200">
-                        <span className="text-sm font-semibold text-white">
-                          {(selectedPatientForFees.name || 'P').charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                  <div>
-                    <p className="font-semibold text-gray-900">{selectedPatientForFees.name}</p>
-                    <p className="text-sm text-gray-600">Patient ID: {formatPatientId(selectedPatientForFees.patientId)}</p>
+        {/* Payment Modal - Beautiful Design with Portal (mirroring Staff Salary) */}
+        {showPaymentModal && selectedPatient && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+            style={{ 
+              zIndex: 9999,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Beautiful Design */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                        Payment Management
+                      </h2>
+                      <p className="text-sm sm:text-base text-gray-600">
+                        Patient: <span className="font-semibold text-blue-600">{selectedPatient.name}</span> • ID: {selectedPatient.id}
+                      </p>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        New Transaction
+                      </span>
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
 
-              {/* Add Fee Form */}
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-900">Add New Fee</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div>
-                      <Label htmlFor="fee" className="text-gray-700">Fees *</Label>
-                      <Input
-                        id="fee"
-                        type="text"
-                        placeholder="Enter fee description"
-                        value={newFee.fee}
-                        onChange={(e) => setNewFee(prev => ({ ...prev, fee: e.target.value }))}
-                        className="bg-white"
-                      />
+              {/* Modal Body - Beautiful Design */}
+              <div className="overflow-y-auto max-h-[calc(95vh-120px)] custom-scrollbar">
+                <div className="p-4 lg:p-6 space-y-6">
+                  
+                  {/* Patient Information Section - Beautiful Card Layout */}
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-blue-200 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-4 border-white shadow-lg flex-shrink-0">
+                        <PatientPhoto 
+                          photoPath={selectedPatient.photo || ''}
+                          alt={selectedPatient.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{selectedPatient.name}</h3>
+                        <p className="text-base text-gray-600 mb-3">Patient ID: {selectedPatient.id}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className="bg-blue-100 text-blue-800 text-sm">
+                            📞 {selectedPatient.phone || 'N/A'}
+                          </Badge>
+                          {selectedPatient.email && (
+                            <Badge className="bg-green-100 text-green-800 text-sm">
+                              📧 {selectedPatient.email}
+                            </Badge>
+                          )}
+                          {selectedPatient.admissionDate && (
+                            <Badge className="bg-purple-100 text-purple-800 text-sm">
+                              📅 {new Date(selectedPatient.admissionDate).toLocaleDateString('en-IN')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="date" className="text-gray-700">Date *</Label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={newFee.date}
-                        onChange={(e) => setNewFee(prev => ({ ...prev, date: e.target.value }))}
-                        className="bg-white"
-                      />
+
+                    {/* Financial Summary Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Monthly Fees Card */}
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <IndianRupee className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Monthly Fees</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-bold text-green-900">₹{parseNumeric(selectedPatient.monthlyFees || 0).toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Other Fees Card */}
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Activity className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Other Fees</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-bold text-orange-900">₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Total Paid Card */}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <CheckCircle className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Total Paid</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-bold text-blue-900">₹{parseNumeric(selectedPatient.total_paid || 0).toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Balance Card */}
+                      <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <XCircle className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Balance</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-bold text-red-900">₹{parseNumeric(selectedPatient.balance || 0).toLocaleString('en-IN')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="amount" className="text-gray-700">Amount *</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        placeholder="Enter amount"
-                        value={newFee.amount}
-                        onChange={(e) => setNewFee(prev => ({ ...prev, amount: e.target.value }))}
-                        className="bg-white"
-                      />
+                  </div>
+
+                  {/* Payment Form Section - Beautiful Design */}
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-blue-200 shadow-lg">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Plus className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Record New Payment
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100">
+                        <Label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+                          Payment Date *
+                        </Label>
+                        <Input
+                          type="date"
+                          value={paymentFormData.date}
+                          onChange={(e) => setPaymentFormData(prev => ({ ...prev, date: e.target.value }))}
+                          className="w-full border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                        />
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border border-green-100">
+                        <Label className="block text-sm font-medium text-green-600 mb-2 uppercase tracking-wide">
+                          Amount (₹) *
+                        </Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter payment amount"
+                          value={paymentFormData.amount}
+                          onChange={(e) => setPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                          className="w-full border-green-200 focus:border-green-400 focus:ring-green-400"
+                        />
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-4 rounded-xl border border-purple-100">
+                        <Label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
+                          Payment Type *
+                        </Label>
+                        <Select
+                          value={paymentFormData.type}
+                          onValueChange={(value) => setPaymentFormData(prev => ({ ...prev, type: value }))}
+                        >
+                          <SelectTrigger className="w-full border-purple-200 focus:border-purple-400">
+                            <SelectValue placeholder="Select payment type" />
+                          </SelectTrigger>
+                          <SelectContent 
+                            className="z-[99999]" 
+                            style={{ 
+                              zIndex: 2147483647,
+                              position: 'relative'
+                            }}
+                          >
+                            <SelectItem value="fee_payment">Fee Payment</SelectItem>
+                            <SelectItem value="advance_payment">Advance Payment</SelectItem>
+                            <SelectItem value="partial_payment">Partial Payment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
+
+                    <div className="flex gap-4">
                       <Button 
-                        onClick={handleAddFee}
-                        className="bg-green-600 hover:bg-green-700 text-white w-full"
+                        onClick={handleSubmitPayment}
+                        disabled={isSubmitting || !paymentFormData.amount || !paymentFormData.date}
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold shadow-lg"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Fee
+                        {isSubmitting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Recording Payment...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-5 w-5 mr-2" />
+                            Record Payment
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Fees Table */}
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-900">Fee Entries</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b border-gray-200">
-                          <TableHead className="text-gray-700 font-semibold">S.No</TableHead>
-                          <TableHead className="text-gray-700 font-semibold">Fee</TableHead>
-                          <TableHead className="text-gray-700 font-semibold">Date</TableHead>
-                          <TableHead className="text-gray-700 font-semibold">Amount</TableHead>
-                          <TableHead className="text-gray-700 font-semibold">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {fees.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                              No fees found for this patient
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          fees.map((fee, index) => (
-                            <TableRow key={fee.id} className="hover:bg-gray-50 border-b border-gray-100">
-                              <TableCell className="font-medium text-gray-900">{index + 1}</TableCell>
-                              <TableCell className="text-gray-900">{fee.fee}</TableCell>
-                              <TableCell className="text-gray-900">{new Date(fee.date).toLocaleDateString()}</TableCell>
-                              <TableCell className="text-gray-900">₹{Number(fee.amount).toLocaleString()}</TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleEditFee(fee)}
-                                    className="h-8 w-8 p-0 hover:bg-gray-100"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleDeleteFee(fee.id)}
-                                    className="h-8 w-8 p-0 hover:bg-gray-100 text-red-600"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Total */}
-                  {fees.length > 0 && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-gray-700">Total Fees:</span>
-                        <span className="font-bold text-lg text-green-600">
-                          ₹{fees.reduce((sum, fee) => sum + Number(fee.amount), 0).toLocaleString()}
-                        </span>
+                  {/* Payment Calculation Display */}
+                  {paymentModalSelectedMonth !== null && paymentModalSelectedYear !== null && (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-blue-200 shadow-lg">
+                      <h4 className="font-bold text-gray-900 mb-4 text-center text-lg">
+                        Payment Calculation for {months[paymentModalSelectedMonth - 1]} {paymentModalSelectedYear}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        {/* Monthly Fees Total */}
+                        <div className="bg-white p-4 rounded-lg border border-blue-200 text-center">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Monthly Fees</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            ₹{parseNumeric(selectedPatient.monthlyFees || 0).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        
+                        {/* Other Fees */}
+                        <div className="bg-white p-4 rounded-lg border border-orange-200 text-center">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Other Fees</p>
+                          <p className="text-xl font-bold text-orange-600">
+                            ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        
+                        {/* Total Amount */}
+                        <div className="bg-white p-4 rounded-lg border border-green-200 text-center">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Total Amount</p>
+                          <p className="text-xl font-bold text-green-600">
+                            ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Calculation Formula - Mobile Responsive */}
+                      <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
+                        <div className="flex items-center justify-center gap-3 text-lg">
+                          <span className="font-semibold text-blue-600">
+                            ₹{parseNumeric(selectedPatient.monthlyFees || 0).toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-gray-500">+</span>
+                          <span className="font-semibold text-orange-600">
+                            ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-gray-500">=</span>
+                          <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
+                            ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
+                          </Badge>
+                        </div>
+                        
+                        <p className="text-center text-xs text-gray-500 mt-2">
+                          Monthly Fees + Other Fees = Total Amount
+                        </p>
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      {/* Edit Fee Modal */}
-      <Dialog open={isEditFeeOpen} onOpenChange={setIsEditFeeOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-900">Edit Fee</DialogTitle>
-          </DialogHeader>
-          {editingFee && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="editFee" className="text-gray-700">Fees *</Label>
-                <Input
-                  id="editFee"
-                  type="text"
-                  value={editingFee.fee}
-                  onChange={(e) => setEditingFee(prev => ({ ...prev, fee: e.target.value }))}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editDate" className="text-gray-700">Date *</Label>
-                <Input
-                  id="editDate"
-                  type="date"
-                  value={editingFee.date}
-                  onChange={(e) => setEditingFee(prev => ({ ...prev, date: e.target.value }))}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editAmount" className="text-gray-700">Amount *</Label>
-                <Input
-                  id="editAmount"
-                  type="number"
-                  value={editingFee.amount}
-                  onChange={(e) => setEditingFee(prev => ({ ...prev, amount: e.target.value }))}
-                  className="bg-white"
-                />
-              </div>
-              
-              <div className="flex justify-end gap-3 pt-4">
-                <Button onClick={() => setIsEditFeeOpen(false)} className="global-btn global-btn-secondary">
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => handleUpdateFee(editingFee)}
-                  className="global-btn global-btn-primary"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Update Fee
-                </Button>
+                  {/* Payment History Section */}
+                  {paymentHistory.length > 0 && (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-blue-200 shadow-lg">
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <History className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
+                        </div>
+                        Payment History
+                      </h3>
+                      
+                      {/* Payment History Table */}
+                      <div className="w-full overflow-x-auto">
+                        <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                          <thead>
+                            <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
+                              <th className="px-4 py-3 text-center text-sm font-semibold">S.No</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Date</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Amount (₹)</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Type</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Payment Mode</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Notes</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Created At</th>
+                              <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {paymentHistory.map((payment, index) => (
+                              <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center font-medium">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                  {new Date(payment.payment_date).toLocaleDateString('en-IN')}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-bold text-green-600 text-center">
+                                  ₹{parseNumeric(payment.payment_amount).toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Badge 
+                                    className={`text-xs font-medium px-2 py-1 rounded-full border
+                                      ${payment.type === 'fee_payment' ? 'border-blue-200 text-blue-700 bg-blue-50' : ''}
+                                      ${payment.type === 'advance_payment' ? 'border-orange-200 text-orange-700 bg-orange-50' : ''}
+                                      ${payment.type === 'partial_payment' ? 'border-purple-200 text-purple-700 bg-purple-50' : ''}
+                                    `}
+                                  >
+                                    {payment.type?.replace('_', ' ') || 'fee payment'}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.payment_mode || 'Bank Transfer'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.notes || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 text-center">
+                                  {new Date(payment.created_at).toLocaleDateString('en-IN')} {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setPaymentToDelete(payment);
+                                      setShowDeleteDialog(true);
+                                    }}
+                                    className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                    title="Delete payment record"
+                                  >
+                                    <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>,
+          document.body
+        )}
+
+        {/* Delete Payment Confirmation Dialog */}
+        {showDeleteDialog && createPortal(
+          <div 
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black bg-opacity-50"
+            style={{ 
+              zIndex: 2147483647,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setPaymentToDelete(null);
+            }}
+          >
+            <div 
+              className="relative z-[100000] w-full max-w-md mx-auto"
+              style={{ zIndex: 2147483647 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-lg shadow-2xl border-0 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <Trash2 className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-700">
+                        Delete Payment Record
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Are you sure you want to delete this payment record? This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {paymentToDelete && (
+                    <div className="my-4 p-4 bg-gray-50 rounded-lg border">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-700">Amount:</span>
+                          <p className="font-bold text-green-600">₹{parseNumeric(paymentToDelete.payment_amount).toLocaleString('en-IN')}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Date:</span>
+                          <p className="text-gray-900">{new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Type:</span>
+                          <p className="text-gray-900">{paymentToDelete.type?.replace('_', ' ') || 'fee payment'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Mode:</span>
+                          <p className="text-gray-900">{paymentToDelete.payment_mode || 'Bank Transfer'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowDeleteDialog(false);
+                        setPaymentToDelete(null);
+                      }}
+                      disabled={deletingPayment}
+                      className="px-4 py-2"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeletePayment}
+                      disabled={deletingPayment}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700"
+                    >
+                      {deletingPayment ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Payment
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default PatientPaymentFees;

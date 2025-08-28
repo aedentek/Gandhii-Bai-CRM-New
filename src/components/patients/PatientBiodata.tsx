@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import usePageTitle from '@/hooks/usePageTitle';
 import { 
   User, 
   Phone, 
@@ -121,6 +122,9 @@ interface PatientTest {
 }
 
 const PatientBiodata: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   

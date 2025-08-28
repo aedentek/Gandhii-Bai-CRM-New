@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { settingsAPI } from '@/utils/api';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface Setting {
   id: number;
@@ -49,6 +50,9 @@ interface Setting {
 }
 
 const Settings: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

@@ -60,8 +60,16 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="month" className="text-sm font-medium text-gray-700">Month</Label>
-              <Select value={selectedMonth.toString()} onValueChange={(value) => onMonthChange(Number(value))}>
-                <SelectTrigger className="w-full border-primary/30 focus:border-primary">
+              <Select 
+                value={selectedMonth.toString()} 
+                onValueChange={(value) => {
+                  onMonthChange(Number(value));
+                }}
+              >
+                <SelectTrigger 
+                  className="w-full border-primary/30 focus:border-primary"
+                  onClick={(e) => e.preventDefault()}
+                >
                   <SelectValue placeholder="Select month" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
@@ -76,8 +84,16 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
             
             <div className="space-y-2">
               <Label htmlFor="year" className="text-sm font-medium text-gray-700">Year</Label>
-              <Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(Number(value))}>
-                <SelectTrigger className="w-full border-primary/30 focus:border-primary">
+              <Select 
+                value={selectedYear.toString()} 
+                onValueChange={(value) => {
+                  onYearChange(Number(value));
+                }}
+              >
+                <SelectTrigger 
+                  className="w-full border-primary/30 focus:border-primary"
+                  onClick={(e) => e.preventDefault()}
+                >
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
@@ -117,7 +133,10 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
           </Button>
           <Button 
             type="button" 
-            onClick={onApply}
+            onClick={(e) => {
+              e.preventDefault();
+              onApply();
+            }}
             className="w-full sm:w-auto global-btn"
           >
             Apply Filter

@@ -761,18 +761,27 @@
 .crm-page-bg {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 50%, #f3e8ff 100%);
-  padding: 1rem;
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 @media (min-width: 640px) {
   .crm-page-bg {
-    padding: 1.5rem;
+    padding-left: 2.25rem;
+    padding-right: 2.25rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
   }
 }
 
 @media (min-width: 1024px) {
   .crm-page-bg {
-    padding: 2rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
   }
 }
 
@@ -1473,4 +1482,42 @@
   color: #1d4ed8;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06);
+}
+
+/* ================================================================= */
+/* GLOBAL TABLE ALIGNMENT AND TYPOGRAPHY OVERRIDES */
+/* ================================================================= */
+
+/* Ensure all table headers are center-aligned and semi-bold */
+table th,
+.modern-table-header-cell,
+[role="columnheader"] {
+  text-align: center !important;
+  font-weight: 600 !important; /* semi-bold */
+}
+
+/* Ensure all table cells are center-aligned */
+table td,
+.modern-table-cell,
+[role="gridcell"] {
+  text-align: center !important;
+}
+
+/* Override any existing text alignment classes in tables */
+table .text-left {
+  text-align: center !important;
+}
+
+table .text-right {
+  text-align: center !important;
+}
+
+/* Specific overrides for UI library components */
+[data-radix-collection-item] th {
+  text-align: center !important;
+  font-weight: 600 !important;
+}
+
+[data-radix-collection-item] td {
+  text-align: center !important;
 }

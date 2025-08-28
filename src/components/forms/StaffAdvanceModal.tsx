@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StaffAdvanceFormData, StaffListItem, StaffAdvance } from '@/types/staffAdvance';
 import { StaffAdvanceAPI } from '@/services/staffAdvanceAPI';
 import { toast } from 'sonner';
-import { Calendar, DollarSign, FileText, User, X, Save, Plus, Edit } from 'lucide-react';
+import { Calendar, IndianRupee, FileText, User, X, Save, Plus, Edit } from 'lucide-react';
 import '@/styles/global-modal-design.css';
 
 interface StaffAdvanceModalProps {
@@ -185,7 +185,7 @@ const StaffAdvanceModal: React.FC<StaffAdvanceModalProps> = ({
           {/* Amount */}
           <div className="editpopup form crm-edit-form-group">
             <Label htmlFor="amount" className="editpopup form crm-edit-form-label required flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <IndianRupee className="h-4 w-4" />
               Amount (₹)
             </Label>
             <Input

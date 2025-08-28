@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Search, Edit2, Trash2, Users, User, UserCheck, Shield, Lock, Activity, X } from 'lucide-react';
 import { usersAPI, rolesAPI } from '@/utils/api';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface User {
@@ -23,6 +24,9 @@ interface User {
 }
 
 const UserManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -229,7 +233,7 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="pl-1 pr-3 sm:pl-2 sm:pr-4 lg:pl-3 lg:pr-6 py-4 sm:py-6">
       <div className="mb-6">
         <div className="flex items-center space-x-3 mb-4">
           <div className="p-2 bg-primary rounded-lg">

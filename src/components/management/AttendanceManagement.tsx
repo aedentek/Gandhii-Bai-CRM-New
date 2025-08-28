@@ -7,6 +7,7 @@ import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, UserCheck, Activity, TrendingUp, RefreshCw, Calendar as CalendarLucide, UserPlus, Stethoscope, Plus, CalendarDays } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 
@@ -30,6 +32,27 @@ interface StaffAttendance {
 }
 
 const AttendanceManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
+  // Helper function to get staff image URL with proxy
+  const getStaffImageUrl = (photo: string | undefined | null): string => {
+    if (!photo) return '';
+    
+    // If it's base64 data, return as is
+    if (photo.startsWith('data:image/')) {
+      return photo;
+    }
+    
+    // If it's a file path, use proxy for image processing
+    if (photo.startsWith('/') || photo.startsWith('http')) {
+      return `http://localhost:4000${photo.startsWith('/') ? '' : '/'}${photo}`;
+    }
+    
+    // Default proxy path
+    return `http://localhost:4000/${photo}`;
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -337,18 +360,6 @@ const AttendanceManagement: React.FC = () => {
 
   const stats = getAttendanceStats();
 
-  // Get staff photo URL function
-  const getStaffPhotoUrl = (photoPath: string) => {
-    if (!photoPath) return '/api/placeholder/40/40';
-    
-    // Handle both old and new path formats
-    if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
-      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
-    }
-    
-    return `http://localhost:4000/${photoPath}`;
-  };
-
   return (
     <div className="crm-page-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -608,17 +619,15 @@ const AttendanceManagement: React.FC = () => {
                             <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{startIndex + idx + 1}</TableCell>
                             <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
                               <div className="flex justify-center">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-100 ring-2 ring-blue-100">
-                                  <img
-                                    src={getStaffPhotoUrl(member.photo)}
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage 
+                                    src={getStaffImageUrl(member.photo)} 
                                     alt={member.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.src = '/api/placeholder/40/40';
-                                    }}
                                   />
-                                </div>
+                                  <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                                    {member.name.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
                               </div>
                             </TableCell>
                             <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm font-medium text-blue-600 whitespace-nowrap">

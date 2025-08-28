@@ -14,9 +14,13 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { uploadStaffFile, getStaffFileUrl } from '@/services/staffFileUpload';
 import { Staff, StaffFormData, StaffDocuments, StaffCategory } from '@/types/staff';
+import usePageTitle from '@/hooks/usePageTitle';
 import '../../styles/selective-header-buttons-new.css';
 
 const AddStaff: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [joinDate, setJoinDate] = useState<Date>();
@@ -484,7 +488,7 @@ const AddStaff: React.FC = () => {
 
 // Always show the form, even if there are no categories
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pl-1 pr-3 sm:pl-2 sm:pr-4 lg:pl-3 lg:pr-6 py-4 sm:py-6">
       <div className="max-w-6xl mx-auto">
         {/* Modern Floating Header */}
         <div className="bg-white/95 backdrop-blur-lg border border-white/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl mb-4 sm:mb-6 lg:mb-8 relative overflow-hidden">

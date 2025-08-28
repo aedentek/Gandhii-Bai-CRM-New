@@ -37,6 +37,7 @@ import { getFileUrl, uploadMedicalHistoryFile } from '@/services/simpleFileUploa
 import { PatientPhoto } from '@/utils/photoUtils';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface DocumentWithData {
   name: string;
@@ -115,6 +116,9 @@ interface Doctor {
 }
 
 const PatientHistory: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   // ...existing useState declarations...
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,6 +187,7 @@ const PatientHistory: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     doctor: '',
     recordType: '',
+    category: '',
     description: '',
     audioFiles: [] as File[]
   });
@@ -1260,6 +1265,7 @@ const PatientHistory: React.FC = () => {
         date: new Date().toISOString().split('T')[0],
         doctor: '',
         recordType: '',
+        category: '',
         description: '',
         audioFiles: []
       });
@@ -1380,7 +1386,9 @@ const PatientHistory: React.FC = () => {
     if (filterMonth !== null && filterYear !== null) {
       patientMedicalRecords = patientMedicalRecords.filter(record => {
         const recordDate = new Date(record.date || record.createdAt);
-        return recordDate.getMonth() === filterMonth && recordDate.getFullYear() === filterYear;
+        const recordMonth = recordDate.getMonth() + 1; // Convert to 1-12
+        const recordYear = recordDate.getFullYear();
+        return recordMonth === filterMonth && recordYear === filterYear;
       });
     }
 
@@ -1467,31 +1475,29 @@ const PatientHistory: React.FC = () => {
 
     return (
       <div className="crm-page-bg">
-        {/* Header */}
-        <div className="crm-header-container">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="crm-header-icon">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+          {/* Header Section */}
+          <div className="crm-header-container">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+              <div className="flex items-center gap-3">
+                <div className="crm-header-icon">
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient History</h1>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Patient History</h1>
-              </div>
-            </div>
-            
-            <div className="flex flex-row gap-1 sm:gap-3 w-full sm:w-auto">
+              
+              <div className="flex items-center gap-2 sm:gap-3">
               <ActionButtons.Refresh onClick={() => {
                 console.log('🔄 Manual refresh triggered - refreshing entire page');
                 window.location.reload();
               }} />
               
-              <Button 
+              <ActionButtons.MonthYear
+                text={`${months[selectedMonth - 1]} ${selectedYear}`}
                 onClick={() => setIsMonthYearDialogOpen(true)}
-                className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                {months[selectedMonth - 1]} {selectedYear}
-              </Button>
+              />
               
               <Button 
                 onClick={() => {
@@ -2542,18 +2548,14 @@ const PatientHistory: React.FC = () => {
                         <FileText className="h-4 w-4 text-orange-600" />
                         Category
                       </Label>
-                      <select
+                      <Input
                         id="add-record-category"
-                        className="w-full bg-white/90 backdrop-blur-sm border-orange-200 focus:border-orange-400 focus:ring-orange-300 px-3 py-2 rounded-md text-sm"
-                      >
-                        <option value="">Select category</option>
-                        <option value="consultation">Consultation</option>
-                        <option value="prescription">Prescription</option>
-                        <option value="lab-report">Lab Report</option>
-                        <option value="imaging">Imaging</option>
-                        <option value="procedure">Procedure</option>
-                        <option value="follow-up">Follow-up</option>
-                      </select>
+                        type="text"
+                        value={newRecord.category}
+                        onChange={(e) => setNewRecord({ ...newRecord, category: e.target.value })}
+                        className="w-full bg-white/90 backdrop-blur-sm border-orange-200 focus:border-orange-400 focus:ring-orange-300"
+                        placeholder="Enter category (e.g., Consultation, Prescription, Lab Report)"
+                      />
                     </div>
                   </div>
 
@@ -3364,6 +3366,8 @@ const PatientHistory: React.FC = () => {
         description="Filter patient history records by specific month and year"
         previewText="history records"
       />
+      
+      </div>
     </div>
   );
 };

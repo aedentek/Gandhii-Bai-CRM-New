@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, Pill, RefreshCw, Activity, TrendingUp, AlertTriangle, Calendar, Download, Eye, Package, BarChart3, History, X, Tag, DollarSign, Clock, Building, Warehouse, Package2, TrendingDown, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface Medicine {
   id: string;
@@ -56,6 +57,9 @@ interface Medicine {
 }
 
 const MedicineManagement: React.FC = () => {
+  // Set custom page title
+  usePageTitle('Medicine Management');
+
 const [medicines, setMedicines] = useState<Medicine[]>([]);
 const [doctors, setDoctors] = useState<any[]>([]);
 const [loading, setLoading] = useState(true);

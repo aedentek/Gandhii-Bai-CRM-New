@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import LoadingScreen from '@/components/shared/LoadingScreen';
 import { Plus, Search, Edit2, Trash2, FolderOpen, ChevronLeft, ChevronRight, RefreshCw, Download, Users, Activity, Calendar, TrendingUp, Clock, FolderPlus, Tag, FileText, X } from 'lucide-react';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
@@ -27,6 +28,9 @@ interface LeadCategory {
 }
 
 const AddLeadCategory: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [categories, setCategories] = React.useState<LeadCategory[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);

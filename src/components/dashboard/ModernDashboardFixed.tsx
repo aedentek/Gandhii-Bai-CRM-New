@@ -19,7 +19,7 @@ import {
   UserPlus,
   ClipboardCheck,
   Download,
-  DollarSign,
+  IndianRupee,
   Eye,
   Star,
   Settings,
@@ -143,7 +143,7 @@ const ModernDashboard: React.FC<DashboardProps> = ({ user }) => {
                 <p className="text-2xl font-bold">$ {mockData.stats.earning}</p>
               </div>
               <div className="p-3 bg-white/20 rounded-lg">
-                <DollarSign className="h-6 w-6" />
+                <IndianRupee className="h-6 w-6" />
               </div>
             </div>
           </CardContent>

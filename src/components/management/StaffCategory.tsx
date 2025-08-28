@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit, Trash2, FolderOpen, RefreshCw, Activity, Clock, Eye, X, Calendar, User } from 'lucide-react';
 import { DatabaseService } from '@/services/databaseService';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface StaffCategory {
@@ -24,6 +25,9 @@ interface StaffCategory {
 }
 
 const StaffCategoryManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [categories, setCategories] = React.useState<StaffCategory[]>([]);
   const [loading, setLoading] = React.useState(true);
   

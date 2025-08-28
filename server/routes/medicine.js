@@ -1,7 +1,7 @@
 import express from 'express';
 import db from '../db/config.js'; // Assuming you have a db.js file for database connection
 
-
+console.log('💊 Medicine routes module loaded!');
 
 const router = express.Router()
 
@@ -347,6 +347,68 @@ router.delete('/medicine-settlement-history/:id', async (req, res) => {
   }
 });
 
+// --- Medicine Stock History Endpoints ---
 
+// Get medicine stock history for a product
+router.get('/medicine-stock-history/:productId', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM medicine_stock_history WHERE product_id = ? ORDER BY update_date DESC, id DESC',
+      [req.params.productId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching medicine stock history:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a medicine stock history record
+router.post('/medicine-stock-history', async (req, res) => {
+  try {
+    const { 
+      product_id, 
+      stock_change, 
+      stock_type, 
+      current_stock_before, 
+      current_stock_after, 
+      update_date, 
+      description 
+    } = req.body;
+
+    if (!product_id || !stock_change || !stock_type) {
+      return res.status(400).json({ error: 'product_id, stock_change, and stock_type are required' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO medicine_stock_history 
+       (product_id, stock_change, stock_type, current_stock_before, current_stock_after, update_date, description) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [product_id, stock_change, stock_type, current_stock_before, current_stock_after, update_date, description]
+    );
+
+    const [rows] = await db.query('SELECT * FROM medicine_stock_history WHERE id = ?', [result.insertId]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Error adding medicine stock history record:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a medicine stock history record
+router.delete('/medicine-stock-history/:id', async (req, res) => {
+  try {
+    const [result] = await db.query('DELETE FROM medicine_stock_history WHERE id = ?', [req.params.id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Medicine stock history record not found' });
+    }
+    
+    res.json({ message: 'Medicine stock history record deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting medicine stock history record:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;

@@ -154,7 +154,12 @@ export const PatientPhoto = ({
   // If no photo path provided or invalid path
   if (!photoUrl || !photoPath || photoPath.trim() === '' || photoPath === 'null' || photoPath === null || photoPath === undefined) {
     return showPlaceholder ? (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+      <div 
+        className={`${className} bg-gray-200 flex items-center justify-center`}
+        style={{ 
+          borderRadius: className.includes('rounded-full') ? '50%' : undefined 
+        }}
+      >
         <span className="text-gray-400 text-xs">No Photo</span>
       </div>
     ) : null;
@@ -163,7 +168,12 @@ export const PatientPhoto = ({
   // If image failed to load, show placeholder but allow retry
   if (imageError && retryCount >= 3) {
     return showPlaceholder ? (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+      <div 
+        className={`${className} bg-gray-200 flex items-center justify-center`}
+        style={{ 
+          borderRadius: className.includes('rounded-full') ? '50%' : undefined 
+        }}
+      >
         <span className="text-gray-400 text-xs">No Photo</span>
       </div>
     ) : null;
@@ -176,6 +186,10 @@ export const PatientPhoto = ({
         src={photoUrl}
         alt={alt}
         className={className}
+        style={{ 
+          display: imageLoaded ? 'block' : 'none',
+          borderRadius: className.includes('rounded-full') ? '50%' : undefined
+        }}
         onLoad={() => {
           console.log('✅ Image loaded successfully:', photoUrl);
           setImageLoaded(true);
@@ -203,10 +217,14 @@ export const PatientPhoto = ({
             setImageError(true);
           }
         }}
-        style={{ display: imageLoaded ? 'block' : 'none' }}
       />
       {!imageLoaded && !imageError && (
-        <div className={`${className} bg-gray-100 flex items-center justify-center animate-pulse`}>
+        <div 
+          className={`${className} bg-gray-100 flex items-center justify-center animate-pulse`}
+          style={{ 
+            borderRadius: className.includes('rounded-full') ? '50%' : undefined 
+          }}
+        >
           <span className="text-gray-400 text-xs">...</span>
         </div>
       )}

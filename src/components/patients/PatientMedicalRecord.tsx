@@ -18,6 +18,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { uploadMedicalHistoryFile, uploadPatientHistoryFile } from '../../services/simpleFileUpload';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import { PatientPhoto } from '../../utils/photoUtils';
+import usePageTitle from '@/hooks/usePageTitle';
 
 type AudioRecording = {
   blob: Blob;
@@ -66,6 +67,9 @@ interface MedicalRecord {
 }
 
 const PatientMedicalRecord: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   // State management
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;

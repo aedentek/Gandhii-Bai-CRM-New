@@ -16,7 +16,7 @@ import {
   Plus, 
   Search, 
   Users, 
-  DollarSign,
+  IndianRupee,
   CheckCircle,
   AlertCircle,
   CreditCard,
@@ -35,6 +35,7 @@ import { DoctorSalaryAPI } from '@/services/doctorSalaryAPI';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface Doctor {
@@ -52,6 +53,9 @@ interface Doctor {
 }
 
 const DoctorSalary: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,14 +79,7 @@ const DoctorSalary: React.FC = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
   const [deletingPayment, setDeletingPayment] = useState(false);
 
-  // Payment modal month/year filter states (initialized with current filter values)
-  const [paymentModalSelectedMonth, setPaymentModalSelectedMonth] = useState(() => {
-    const currentFilterMonth = new Date().getMonth(); // 0-based
-    return currentFilterMonth + 1; // Convert to 1-based
-  });
-  const [paymentModalSelectedYear, setPaymentModalSelectedYear] = useState(() => {
-    return new Date().getFullYear();
-  });
+  // Payment filtering now uses main page month/year filter
   const [filteredPaymentHistory, setFilteredPaymentHistory] = useState<any[]>([]);
   const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0);
 
@@ -91,11 +88,10 @@ const DoctorSalary: React.FC = () => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
+  const currentMonth = new Date().getMonth() + 1; // 1-based
   const currentYear = new Date().getFullYear();
-  const [filterSelectedMonth, setFilterSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
-  const [filterSelectedYear, setFilterSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
+  const [filterMonth, setFilterMonth] = useState<number | null>(currentMonth); // Also 1-based
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const rowsPerPage = 10;
@@ -159,30 +155,27 @@ const DoctorSalary: React.FC = () => {
     }
   }, [filterMonth, filterYear]);
 
-  // Sync payment modal month/year with header filter month/year
-  useEffect(() => {
-    const selectedMonth = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1; // filterMonth is 0-based, convert to 1-based
-    const selectedYear = filterYear !== null ? filterYear : new Date().getFullYear();
-    setPaymentModalSelectedMonth(selectedMonth);
-    setPaymentModalSelectedYear(selectedYear);
-  }, [filterMonth, filterYear]);
-
-  // Filter payment history by selected month/year (similar to Doctor Advance)
+  // Filter payment history by main page month/year filter
   useEffect(() => {
     if (paymentHistory.length > 0) {
-      const filtered = paymentHistory.filter(payment => {
-        const paymentDate = new Date(payment.payment_date);
-        const paymentMonth = paymentDate.getMonth() + 1; // 1-12
-        const paymentYear = paymentDate.getFullYear();
-        
-        return paymentMonth === paymentModalSelectedMonth && paymentYear === paymentModalSelectedYear;
-      });
+      let filtered = paymentHistory;
+      
+      // Apply main page month/year filtering if set
+      if (filterMonth !== null && filterYear !== null) {
+        filtered = paymentHistory.filter(payment => {
+          const paymentDate = new Date(payment.payment_date);
+          const paymentMonth = paymentDate.getMonth() + 1; // 1-12
+          const paymentYear = paymentDate.getFullYear();
+          
+          return paymentMonth === filterMonth && paymentYear === filterYear;
+        });
+      }
       
       setFilteredPaymentHistory(filtered);
     } else {
       setFilteredPaymentHistory([]);
     }
-  }, [paymentHistory, paymentModalSelectedMonth, paymentModalSelectedYear]);
+  }, [paymentHistory, filterMonth, filterYear]);
 
   // Debug logging for filter changes
   useEffect(() => {
@@ -195,7 +188,7 @@ const DoctorSalary: React.FC = () => {
         let matchesJoinDate = true;
         if (filterMonth !== null && filterYear !== null && doctor.join_date) {
           const joinDate = new Date(doctor.join_date);
-          const selectedDate = new Date(filterYear, filterMonth, 31);
+          const selectedDate = new Date(filterYear, filterMonth - 1, 31); // Convert 1-based month to 0-based for Date constructor
           matchesJoinDate = joinDate <= selectedDate;
           console.log(`Doctor ${doctor.name}: join_date=${doctor.join_date}, joinDate=${joinDate.toDateString()}, selectedDate=${selectedDate.toDateString()}, matches=${matchesJoinDate}`);
         }
@@ -211,8 +204,8 @@ const DoctorSalary: React.FC = () => {
       console.log('📅 Filter Month/Year:', filterMonth, filterYear);
       
       // Pass the selected month and year to the API
-      // filterMonth is 0-based (0-11), but API expects 1-based (1-12)
-      const apiMonth = filterMonth !== null ? filterMonth + 1 : null;
+      // filterMonth is 1-based (1-12), same as API expects
+      const apiMonth = filterMonth;
       const apiYear = filterYear;
       
       console.log('📅 API Month/Year:', apiMonth, apiYear);
@@ -251,7 +244,7 @@ const DoctorSalary: React.FC = () => {
     let matchesJoinDate = true;
     if (filterMonth !== null && filterYear !== null && doctor.join_date) {
       const joinDate = new Date(doctor.join_date);
-      const selectedDate = new Date(filterYear, filterMonth, 31); // Last day of selected month
+      const selectedDate = new Date(filterYear, filterMonth - 1, 31); // Convert 1-based month to 0-based for Date constructor
       matchesJoinDate = joinDate <= selectedDate;
     }
     
@@ -312,7 +305,7 @@ const DoctorSalary: React.FC = () => {
     // Generate filename with month/year filter if applied
     let filename = 'doctor-salary';
     if (filterMonth !== null && filterYear !== null) {
-      filename += `-${months[filterMonth]}-${filterYear}`;
+      filename += `-${months[filterMonth - 1]}-${filterYear}`;
     }
     filename += `-${new Date().toISOString().split('T')[0]}.csv`;
     
@@ -327,7 +320,7 @@ const DoctorSalary: React.FC = () => {
       setLoading(true);
       
       // Get current month and year from the filter or use current date
-      const month = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1;
+      const month = filterMonth !== null ? filterMonth : new Date().getMonth() + 1;
       const year = filterYear !== null ? filterYear : new Date().getFullYear();
       
       const response = await fetch('http://localhost:4000/api/doctor-salaries/save-monthly-records', {
@@ -384,12 +377,6 @@ const DoctorSalary: React.FC = () => {
       amount: '',
       type: 'salary'
     });
-    
-    // Set modal month/year to the selected filter month/year from header
-    const selectedMonth = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1; // filterMonth is 0-based, convert to 1-based
-    const selectedYear = filterYear !== null ? filterYear : new Date().getFullYear();
-    setPaymentModalSelectedMonth(selectedMonth);
-    setPaymentModalSelectedYear(selectedYear);
     
     fetchPaymentHistory(doctor.id);
   };
@@ -535,7 +522,7 @@ const DoctorSalary: React.FC = () => {
   // Check carry forward amounts for current month
   const checkCarryForward = async () => {
     try {
-      const month = filterMonth !== null ? filterMonth + 1 : new Date().getMonth() + 1;
+      const month = filterMonth !== null ? filterMonth : new Date().getMonth() + 1;
       const year = filterYear !== null ? filterYear : new Date().getFullYear();
       
       const response = await fetch(`http://localhost:4000/api/doctor-salaries/carry-forward/${month}/${year}`);
@@ -590,11 +577,8 @@ const DoctorSalary: React.FC = () => {
               </Button>
               
               <ActionButtons.MonthYear
+                text={`Doctor Salary (${months[(filterMonth || 1) - 1]} ${filterYear})`}
                 onClick={() => setShowMonthYearDialog(true)}
-                text={filterMonth !== null && filterYear !== null 
-                  ? months[filterMonth - 1] // Convert 1-based to 0-based for array access
-                  : months[filterSelectedMonth - 1] // Convert 1-based to 0-based for array access
-                }
               />
               
               <Button
@@ -646,12 +630,12 @@ const DoctorSalary: React.FC = () => {
                   <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Salary</p>
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{totalSalary.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-green-600">
-                    <DollarSign className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
                     <span className="truncate">Monthly</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-green">
-                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -887,18 +871,15 @@ const DoctorSalary: React.FC = () => {
     <MonthYearPickerDialog
       open={showMonthYearDialog}
       onOpenChange={setShowMonthYearDialog}
-      selectedMonth={filterSelectedMonth}
-      selectedYear={filterSelectedYear}
-      onMonthChange={setFilterSelectedMonth}
-      onYearChange={setFilterSelectedYear}
+      selectedMonth={filterMonth || currentMonth}
+      selectedYear={filterYear || currentYear}
+      onMonthChange={setFilterMonth}
+      onYearChange={setFilterYear}
       onApply={() => {
-        setFilterMonth(filterSelectedMonth);
-        setFilterYear(filterSelectedYear);
         setShowMonthYearDialog(false);
-        fetchDoctors(); // Refresh data with new filter
       }}
       title="Select Month & Year"
-      description="Filter doctor salary by specific month and year"
+      description="Filter doctors by join date"
       previewText="doctors"
     />
     
@@ -1031,7 +1012,7 @@ const DoctorSalary: React.FC = () => {
                   <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 sm:p-4 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 sm:w-8 sm:h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
-                        <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                        <IndianRupee className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm sm:text-xs font-semibold text-orange-700 uppercase tracking-wide">Salary</p>
@@ -1169,41 +1150,15 @@ const DoctorSalary: React.FC = () => {
                     Payment History ({filteredPaymentHistory.length})
                   </h3>
                   
-                  {/* Month/Year Selector */}
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={paymentModalSelectedMonth}
-                      onChange={(e) => setPaymentModalSelectedMonth(parseInt(e.target.value))}
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={1}>January</option>
-                      <option value={2}>February</option>
-                      <option value={3}>March</option>
-                      <option value={4}>April</option>
-                      <option value={5}>May</option>
-                      <option value={6}>June</option>
-                      <option value={7}>July</option>
-                      <option value={8}>August</option>
-                      <option value={9}>September</option>
-                      <option value={10}>October</option>
-                      <option value={11}>November</option>
-                      <option value={12}>December</option>
-                    </select>
-                    
-                    <select
-                      value={paymentModalSelectedYear}
-                      onChange={(e) => setPaymentModalSelectedYear(parseInt(e.target.value))}
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {Array.from({ length: 5 }, (_, i) => {
-                        const year = new Date().getFullYear() - 2 + i;
-                        return (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        );
-                      })}
-                    </select>
+                  {/* Display Main Page Month/Year Filter */}
+                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">
+                      {filterMonth !== null && filterYear !== null 
+                        ? `${months[filterMonth - 1]} ${filterYear}`
+                        : 'All Months'
+                      }
+                    </span>
                   </div>
                 </div>
                 
@@ -1216,7 +1171,7 @@ const DoctorSalary: React.FC = () => {
                   <div className="text-center py-8">
                     <div className="text-center py-8 text-slate-500">
                       <CreditCard className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>No payment records found for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                      <p>No payment records found{filterMonth !== null && filterYear !== null ? ` for ${months[filterMonth - 1]} ${filterYear}` : ''}</p>
                     </div>
                   </div>
                 ) : (
@@ -1224,7 +1179,7 @@ const DoctorSalary: React.FC = () => {
                     {/* Calculation Display Section - Mobile Optimized */}
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 sm:p-4 rounded-xl border border-green-100 mb-4">
                       <h4 className="font-bold text-gray-900 mb-4 text-center text-sm sm:text-base">
-                        Payment Calculation for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        Payment Calculation{filterMonth !== null && filterYear !== null ? ` for ${months[filterMonth - 1]} ${filterYear}` : ''}
                       </h4>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
@@ -1367,24 +1322,32 @@ const DoctorSalary: React.FC = () => {
       document.body
     )}
 
-    {/* Delete Confirmation Dialog */}
-    <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-      <DialogContent className="crm-modal-container">
-        <DialogHeader className="editpopup form dialog-header">
-          <div className="editpopup form icon-title-container">
-            <div className="editpopup form dialog-icon">
-              <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+    {/* Delete Confirmation Dialog - Rendered outside component tree */}
+    {createPortal(
+      <div style={{ zIndex: 10001 }}>
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent 
+            className="crm-modal-container" 
+            style={{ 
+              zIndex: 10001
+            }}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Payment Record
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this payment record? This action cannot be undone.
+                </DialogDescription>
+              </div>
             </div>
-            <div className="editpopup form title-description">
-              <DialogTitle className="editpopup form dialog-title text-red-700">
-                Delete Payment Record
-              </DialogTitle>
-              <DialogDescription className="editpopup form dialog-description">
-                Are you sure you want to delete this payment record? This action cannot be undone.
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
         
         {paymentToDelete && (
           <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
@@ -1398,7 +1361,7 @@ const DoctorSalary: React.FC = () => {
                 <span className="text-gray-600">Date: {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-gray-500" />
+                <IndianRupee className="h-4 w-4 text-gray-500" />
                 <span className="text-gray-600">Amount: ₹{parseFloat(paymentToDelete.payment_amount || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -1447,7 +1410,11 @@ const DoctorSalary: React.FC = () => {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+        </Dialog>
+      </div>, 
+    document.body
+    )}
+
     </>
   );
 };

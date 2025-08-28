@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, Truck, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, Phone, Mail, MapPin, Building, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DatabaseService } from '@/services/databaseService';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 type Supplier = {
@@ -50,6 +51,9 @@ type Supplier = {
 };
 
 const SupplierManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);

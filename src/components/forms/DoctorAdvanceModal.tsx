@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DoctorAdvanceFormData, DoctorListItem, DoctorAdvance } from '@/types/doctorAdvance';
 import { DoctorAdvanceAPI } from '@/services/doctorAdvanceAPI';
 import { toast } from 'sonner';
-import { Calendar, DollarSign, FileText, User } from 'lucide-react';
+import { Calendar, IndianRupee, FileText, User } from 'lucide-react';
 
 interface DoctorAdvanceModalProps {
   isOpen: boolean;
@@ -115,7 +115,7 @@ const DoctorAdvanceModal: React.FC<DoctorAdvanceModalProps> = ({
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <IndianRupee className="h-5 w-5 text-green-600" />
             {editData ? 'Edit Doctor Advance' : 'Add Doctor Advance'}
           </DialogTitle>
         </DialogHeader>
@@ -169,7 +169,7 @@ const DoctorAdvanceModal: React.FC<DoctorAdvanceModalProps> = ({
           {/* Amount */}
           <div className="space-y-2">
             <Label htmlFor="amount" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <IndianRupee className="h-4 w-4" />
               Amount (₹) *
             </Label>
             <Input

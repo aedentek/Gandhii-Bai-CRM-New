@@ -14,6 +14,7 @@ import { Plus, Search, Edit, Trash2, Truck, Phone, Mail, MapPin, RefreshCcw, Cal
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import usePageTitle from '@/hooks/usePageTitle';
 interface GeneralSupplier {
   id: string;
   name: string;
@@ -26,6 +27,9 @@ interface GeneralSupplier {
 }
 
 const GeneralSuppliers: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const { toast } = useToast();
   const [suppliers, setSuppliers] = useState<GeneralSupplier[]>([]);
   const [loading, setLoading] = useState(true);

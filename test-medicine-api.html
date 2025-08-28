@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Medicine API</title>
+</head>
+<body>
+    <h1>Medicine Stock History API Test</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Test GET medicine stock history
+                resultsDiv.innerHTML += '<h2>Testing GET medicine-stock-history/1</h2>';
+                const response = await fetch('http://localhost:4000/api/medicine-stock-history/1');
+                const data = await response.json();
+                resultsDiv.innerHTML += `<pre>Status: ${response.status}\nData: ${JSON.stringify(data, null, 2)}</pre>`;
+                
+                // Test POST (add history record)
+                resultsDiv.innerHTML += '<h2>Testing POST medicine-stock-history</h2>';
+                const postData = {
+                    product_id: 1,
+                    product_name: 'Test Medicine',
+                    action_type: 'Edit',
+                    old_quantity: 100,
+                    new_quantity: 90,
+                    change_quantity: -10,
+                    change_reason: 'Stock correction',
+                    user_name: 'Test User'
+                };
+                
+                const postResponse = await fetch('http://localhost:4000/api/medicine-stock-history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(postData)
+                });
+                
+                const postResult = await postResponse.json();
+                resultsDiv.innerHTML += `<pre>Status: ${postResponse.status}\nData: ${JSON.stringify(postResult, null, 2)}</pre>`;
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Run test when page loads
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

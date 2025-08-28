@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { DatabaseService } from '@/services/databaseService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface LeadCategory {
 }
 
 const LeadsList: React.FC = () => {
+  usePageTitle();
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [categories, setCategories] = useState<LeadCategory[]>([]);

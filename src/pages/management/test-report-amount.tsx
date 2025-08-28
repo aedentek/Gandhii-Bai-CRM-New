@@ -13,6 +13,8 @@ import { TestReportAmountAPI } from '@/services/testReportAmountAPI';
 import { TestReportAmount } from '@/types/testReportAmount';
 import { patientsAPI } from '@/utils/api';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import { getPatientPhotoUrl } from '@/utils/photoUtils';
+import usePageTitle from '@/hooks/usePageTitle';
 import { toast } from 'sonner';
 import '@/styles/global-crm-design.css';
 import {
@@ -22,7 +24,7 @@ import {
   User,
   RefreshCcw,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Plus,
   FileText,
   Clock,
@@ -30,7 +32,6 @@ import {
   Save,
   Calendar,
   Trash2,
-  IndianRupee,
   TestTube,
   Activity,
   Phone,
@@ -54,6 +55,9 @@ interface Patient {
 }
 
 const TestReportAmountPage: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   // Debug: Component is rendering
   console.log('🧪 TestReportAmountPage component is rendering...');
   
@@ -214,11 +218,14 @@ const TestReportAmountPage: React.FC = () => {
   const filterPatients = () => {
     let filtered = [...patients];
 
-    // Filter by selected month and year based on admission date
+    // Remove month/year filtering by admission date - show all patients regardless of joining date
+    // The month/year picker is now only for reference/organization, not filtering
+    /* 
     filtered = filtered.filter(patient => {
       const admissionDate = new Date(patient.admissionDate);
       return admissionDate.getMonth() + 1 === selectedMonth && admissionDate.getFullYear() === selectedYear;
     });
+    */
 
     if (searchTerm) {
       filtered = filtered.filter(patient =>
@@ -369,19 +376,55 @@ const TestReportAmountPage: React.FC = () => {
     }
   };
 
-  // Stats calculations - using filteredPatients to reflect selected month/year
-  const totalPatients = filteredPatients.length;
-  const activePatients = filteredPatients.filter(p => p.status === 'Active').length;
+  // Stats calculations - using month/year filtering for accurate stats
+  // Get patients that have activity (admission or test reports) in selected month
+  const patientsWithActivityInMonth = filteredPatients.filter(patient => {
+    // Check if patient has test reports in the selected month
+    const hasTestReportsInMonth = filteredReports.some(report => report.patient_id === patient.id);
+    
+    // Check if patient was admitted in the selected month
+    let wasAdmittedInMonth = false;
+    if (patient.admissionDate) {
+      const admissionDate = new Date(patient.admissionDate);
+      const admissionMonth = admissionDate.getMonth() + 1;
+      const admissionYear = admissionDate.getFullYear();
+      wasAdmittedInMonth = (selectedMonth === admissionMonth && selectedYear === admissionYear);
+    }
+    
+    return hasTestReportsInMonth || wasAdmittedInMonth;
+  });
+
+  const totalPatients = patientsWithActivityInMonth.length;
+  const activePatients = patientsWithActivityInMonth.filter(p => p.status === 'Active').length;
   const totalReports = filteredReports.length;
   const pendingReports = filteredReports.filter(r => r.status === 'Pending').length;
   
-  // Calculate Total Amount from patient test-related fees (bloodTest + otherFees)
-  // This matches the ₹6,999.91 shown in patient details instead of separate test_reports table
-  const totalAmount = filteredPatients.reduce((sum, patient) => {
-    const bloodTest = typeof patient.bloodTest === 'number' ? patient.bloodTest : parseFloat(String(patient.bloodTest || 0));
-    const otherFees = typeof patient.otherFees === 'number' ? patient.otherFees : parseFloat(String(patient.otherFees || 0));
-    const testRelatedAmount = bloodTest + otherFees;
-    return sum + (isNaN(testRelatedAmount) ? 0 : testRelatedAmount);
+  // Calculate Total Amount only for patients with activity in selected month
+  const totalAmount = patientsWithActivityInMonth.reduce((sum, patient) => {
+    // Get test report amounts for this patient in the selected month
+    const patientReports = filteredReports.filter(report => report.patient_id === patient.id);
+    const testReportTotal = patientReports.reduce((reportSum, report) => {
+      const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+      return reportSum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+    
+    // Get patient fees (bloodTest + pickupCharge) only if admitted in selected month
+    let patientFeesTotal = 0;
+    if (patient.admissionDate) {
+      const admissionDate = new Date(patient.admissionDate);
+      const admissionMonth = admissionDate.getMonth() + 1;
+      const admissionYear = admissionDate.getFullYear();
+      
+      // Only add patient fees if current month/year matches admission month/year
+      if (selectedMonth === admissionMonth && selectedYear === admissionYear) {
+        const bloodTest = typeof patient.bloodTest === 'number' ? patient.bloodTest : parseFloat(String(patient.bloodTest || 0));
+        const pickupCharge = typeof patient.pickupCharge === 'number' ? patient.pickupCharge : parseFloat(String(patient.pickupCharge || 0));
+        patientFeesTotal = (isNaN(bloodTest) ? 0 : bloodTest) + (isNaN(pickupCharge) ? 0 : pickupCharge);
+      }
+    }
+    
+    const patientTotal = testReportTotal + patientFeesTotal;
+    return sum + patientTotal;
   }, 0);
 
   // Debug logging
@@ -393,15 +436,27 @@ const TestReportAmountPage: React.FC = () => {
     patientsArrayLength: patients.length,
     filteredReportsLength: filteredReports.length,
     totalAmount: `₹${totalAmount.toFixed(2)}`,
-    calculationMethod: 'Patient bloodTest + otherFees',
+    calculationMethod: 'Test Reports + Patient Fees (for all patients)',
+    selectedMonth,
+    selectedYear,
     patientBreakdown: filteredPatients.map(p => {
+      const patientReports = filteredReports.filter(report => report.patient_id === p.id);
+      const testReportTotal = patientReports.reduce((reportSum, report) => {
+        const amount = typeof report.amount === 'string' ? parseFloat(report.amount) : report.amount;
+        return reportSum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+      
+      // Include patient fees for all patients regardless of admission date
       const bloodTest = typeof p.bloodTest === 'number' ? p.bloodTest : parseFloat(String(p.bloodTest || 0));
-      const otherFees = typeof p.otherFees === 'number' ? p.otherFees : parseFloat(String(p.otherFees || 0));
+      const pickupCharge = typeof p.pickupCharge === 'number' ? p.pickupCharge : parseFloat(String(p.pickupCharge || 0));
+      const patientFeesTotal = (isNaN(bloodTest) ? 0 : bloodTest) + (isNaN(pickupCharge) ? 0 : pickupCharge);
+      
       return { 
-        name: p.name, 
-        bloodTest: bloodTest, 
-        otherFees: otherFees, 
-        testTotal: (bloodTest + otherFees).toFixed(2)
+        name: p.name,
+        testReports: testReportTotal,
+        patientFees: patientFeesTotal,
+        total: testReportTotal + patientFeesTotal,
+        admissionDate: p.admissionDate || 'No date'
       };
     })
   });
@@ -427,7 +482,7 @@ const TestReportAmountPage: React.FC = () => {
                 className="global-btn text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
               >
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                {months[selectedMonth - 1]} {selectedYear}
+                All Patients ({months[selectedMonth - 1]} {selectedYear})
               </Button>
               <ActionButtons.Refresh onClick={() => {
                 console.log('🔄 Manual refresh triggered - refreshing entire page');
@@ -562,7 +617,9 @@ const TestReportAmountPage: React.FC = () => {
                   </p>
                   <div className="flex items-center text-xs text-purple-600">
                     <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Revenue</span>
+                    <span className="truncate">
+                      {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} Revenue
+                    </span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-purple">
@@ -652,7 +709,14 @@ const TestReportAmountPage: React.FC = () => {
                             <div className="flex justify-center">
                               <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                                 <AvatarImage 
-                                  src={patient.photo ? `http://localhost:4000${patient.photo}` : undefined}
+                                  src={patient.photo ? getPatientPhotoUrl(patient.photo) : undefined}
+                                  onError={(e) => {
+                                    console.log('❌ Image failed to load for patient:', patient.name);
+                                    console.log('   Photo path:', patient.photo);
+                                  }}
+                                  onLoad={() => {
+                                    console.log('✅ Image loaded for patient:', patient.name);
+                                  }}
                                 />
                                 <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm">
                                   {patient.name.split(' ').map(n => n[0]).join('')}
@@ -740,7 +804,14 @@ const TestReportAmountPage: React.FC = () => {
               <div className="flex items-center gap-3 mb-2">
                 <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                   <AvatarImage 
-                    src={selectedPatient?.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
+                    src={selectedPatient?.photo ? getPatientPhotoUrl(selectedPatient.photo) : undefined}
+                    onError={(e) => {
+                      console.log('❌ Modal image failed to load for patient:', selectedPatient?.name);
+                      console.log('   Photo path:', selectedPatient?.photo);
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Modal image loaded for patient:', selectedPatient?.name);
+                    }}
                   />
                   <AvatarFallback className="bg-blue-100 text-blue-600 text-sm sm:text-base">
                     {selectedPatient?.name.split(' ').map(n => n[0]).join('')}
@@ -761,27 +832,19 @@ const TestReportAmountPage: React.FC = () => {
             <form onSubmit={(e) => {
               e.preventDefault();
               handleAddReport();
-            }} className="editpopup form crm-edit-form">
-              <div className="editpopup form crm-edit-form-grid">
+            }} className="editpopup form crm-edit-form space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="editpopup form crm-edit-form-group">
                   <label className="editpopup form crm-edit-form-label required">
                     Test Type
                   </label>
-                  <select
+                  <Input
+                    type="text"
                     value={testType}
                     onChange={(e) => setTestType(e.target.value)}
-                    className="editpopup form crm-edit-form-select"
-                  >
-                    <option value="">Select test type</option>
-                    <option value="Blood Test">Blood Test</option>
-                    <option value="Urine Test">Urine Test</option>
-                    <option value="X-Ray">X-Ray</option>
-                    <option value="CT Scan">CT Scan</option>
-                    <option value="MRI">MRI</option>
-                    <option value="Ultrasound">Ultrasound</option>
-                    <option value="ECG">ECG</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    placeholder="Enter test type (e.g., Blood Test, X-Ray, CT Scan)"
+                    className="editpopup form crm-edit-form-input"
+                  />
                 </div>
                 
                 <div className="editpopup form crm-edit-form-group">
@@ -795,7 +858,9 @@ const TestReportAmountPage: React.FC = () => {
                     className="editpopup form crm-edit-form-input"
                   />
                 </div>
-                
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="editpopup form crm-edit-form-group">
                   <label className="editpopup form crm-edit-form-label required">
                     Amount (₹)
@@ -825,19 +890,19 @@ const TestReportAmountPage: React.FC = () => {
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
-                
-                <div className="editpopup form crm-edit-form-group">
-                  <label className="editpopup form crm-edit-form-label">
-                    Notes
-                  </label>
-                  <Textarea
-                    placeholder="Enter additional notes (optional)"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="editpopup form crm-edit-form-textarea"
-                    rows={3}
-                  />
-                </div>
+              </div>
+              
+              <div className="editpopup form crm-edit-form-group">
+                <label className="editpopup form crm-edit-form-label">
+                  Notes
+                </label>
+                <Textarea
+                  placeholder="Enter additional notes (optional)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="editpopup form crm-edit-form-textarea"
+                  rows={3}
+                />
               </div>
             </form>
 
@@ -890,7 +955,14 @@ const TestReportAmountPage: React.FC = () => {
                   <div className="relative flex-shrink-0">
                     <Avatar className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg">
                       <AvatarImage 
-                        src={selectedPatient.photo ? `http://localhost:4000${selectedPatient.photo}` : undefined} 
+                        src={selectedPatient.photo ? getPatientPhotoUrl(selectedPatient.photo) : undefined}
+                        onError={(e) => {
+                          console.log('❌ View modal image failed to load for patient:', selectedPatient.name);
+                          console.log('   Photo path:', selectedPatient.photo);
+                        }}
+                        onLoad={() => {
+                          console.log('✅ View modal image loaded for patient:', selectedPatient.name);
+                        }}
                       />
                       <AvatarFallback className="bg-blue-100 text-blue-600">
                         {selectedPatient.name.split(' ').map(n => n[0]).join('')}

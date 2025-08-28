@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { 
   Trash2, 
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface Staff {
@@ -50,6 +52,9 @@ interface Staff {
 }
 
 const DeletedStaff: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [deletedStaff, setDeletedStaff] = useState<Staff[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,6 +194,17 @@ const DeletedStaff: React.FC = () => {
     } catch {
       return 'Invalid Date';
     }
+  };
+
+  const getStaffImageUrl = (photoPath: string) => {
+    if (!photoPath) return '/api/placeholder/40/40';
+    
+    // Handle both old and new path formats
+    if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
+      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
+    }
+    
+    return `http://localhost:4000/${photoPath}`;
   };
 
   const getDeletedByOptions = () => {
@@ -398,6 +414,7 @@ const DeletedStaff: React.FC = () => {
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="text-center font-semibold">S No</TableHead>
+                        <TableHead className="text-center font-semibold">Photo</TableHead>
                         <TableHead className="text-center font-semibold">Staff ID</TableHead>
                         <TableHead className="text-center font-semibold">Name</TableHead>
                         <TableHead className="text-center font-semibold">Role</TableHead>
@@ -416,6 +433,19 @@ const DeletedStaff: React.FC = () => {
                         >
                           <TableCell className="text-center font-medium">
                             {startIndex + idx + 1}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage 
+                                  src={getStaffImageUrl(staff.photo || '')} 
+                                  alt={staff.name}
+                                />
+                                <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                                  {staff.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="font-mono">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,15 +10,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
-import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User, Activity, Eye, Save, DollarSign, History } from 'lucide-react';
+import { CalendarIcon, Search, Users, Download, CheckCircle, XCircle, Clock, RotateCcw, Trash2, UserCheck, UserX, Timer, ClockIcon, RefreshCw, Plus, ChevronLeft, ChevronRight, CreditCard, Edit2, User, Activity, Eye, Save, DollarSign, History, X, AlertCircle, Stethoscope } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import LoadingScreen from '@/components/shared/LoadingScreen';
 import { StaffSalaryAPI } from '@/services/staffSalaryAPI';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 interface StaffSalary {
@@ -50,6 +53,27 @@ interface PaymentHistory {
 }
 
 const SalaryPayment: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
+  // Helper function to get staff image URL with proxy
+  const getStaffImageUrl = (photo: string | undefined | null): string => {
+    if (!photo) return '';
+    
+    // If it's base64 data, return as is
+    if (photo.startsWith('data:image/')) {
+      return photo;
+    }
+    
+    // If it's a file path, use proxy for image processing
+    if (photo.startsWith('/') || photo.startsWith('http')) {
+      return `http://localhost:4000${photo.startsWith('/') ? '' : '/'}${photo}`;
+    }
+    
+    // Default proxy path
+    return `http://localhost:4000/${photo}`;
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [staff, setStaff] = useState<StaffSalary[]>([]);
@@ -381,19 +405,27 @@ const SalaryPayment: React.FC = () => {
   };
 
   const exportToExcel = () => {
-    const exportData = filteredStaff.map((staff, index) => ({
-      'S.No': index + 1,
-      'Staff ID': staff.id,
-      'Name': staff.name,
-      'Role': staff.role,
-      'Department': staff.department,
-      'Monthly Salary': `₹${parseNumeric(staff.salary).toLocaleString()}`,
-      'Total Paid': `₹${parseNumeric(staff.total_paid).toLocaleString()}`,
-      'Advance Amount': `₹${parseNumeric(staff.advance_amount).toLocaleString()}`,
-      'Balance': `₹${parseNumeric(staff.balance).toLocaleString()}`,
-      'Status': staff.status,
-      'Join Date': staff.join_date,
-    }));
+    const exportData = filteredStaff.map((staff, index) => {
+      const monthlyPaid = parseNumeric(staff.monthly_paid || 0);
+      const advance = parseNumeric(staff.advance_amount);
+      const totalPaid = monthlyPaid + advance;
+      const salary = parseNumeric(staff.salary);
+      const balance = salary - totalPaid;
+      
+      return {
+        'S.No': index + 1,
+        'Staff ID': staff.id,
+        'Name': staff.name,
+        'Role': staff.role,
+        'Department': staff.department,
+        'Monthly Salary': `₹${salary.toLocaleString()}`,
+        'Total Paid': `₹${totalPaid.toLocaleString()}`,
+        'Advance Amount': `₹${advance.toLocaleString()}`,
+        'Balance': `₹${balance.toLocaleString()}`,
+        'Status': staff.status,
+        'Join Date': staff.join_date,
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -593,11 +625,12 @@ const SalaryPayment: React.FC = () => {
                 <TableBody>
                   {filteredStaff.length > 0 ? (
                     filteredStaff.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((staffMember, index) => {
-                      const balance = parseNumeric(staffMember.balance);
                       const advance = parseNumeric(staffMember.advance_amount);
                       const carryForward = parseNumeric(staffMember.carry_forward);
-                      const totalPaid = parseNumeric(staffMember.total_paid);
+                      const monthlyPaid = parseNumeric(staffMember.monthly_paid || 0);
+                      const totalPaid = monthlyPaid + advance; // Calculate total paid as monthly + advance
                       const salary = parseNumeric(staffMember.salary);
+                      const balance = salary - totalPaid; // Calculate balance based on calculated total paid
                       const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
                       
                       return (
@@ -613,28 +646,15 @@ const SalaryPayment: React.FC = () => {
                           {/* Profile */}
                           <TableCell className="py-4 px-6 text-center">
                             <div className="flex justify-center">
-                              {staffMember.photo ? (
-                                <img
-                                  src={staffMember.photo}
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage 
+                                  src={getStaffImageUrl(staffMember.photo)}
                                   alt={staffMember.name}
-                                  className="w-10 h-10 rounded-full object-cover border-2 border-green-200 shadow-sm"
-                                  onError={(e) => {
-                                    const target = e.currentTarget as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    if (target.nextElementSibling) {
-                                      (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                                    }
-                                  }}
                                 />
-                              ) : null}
-                              <div 
-                                className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"
-                                style={{ display: staffMember.photo ? 'none' : 'flex' }}
-                              >
-                                <span className="text-sm font-semibold text-green-600">
-                                  {staffMember.name?.charAt(0)?.toUpperCase() || 'S'}
-                                </span>
-                              </div>
+                                <AvatarFallback className="bg-green-100 text-green-600 text-xs">
+                                  {staffMember.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'S'}
+                                </AvatarFallback>
+                              </Avatar>
                             </div>
                           </TableCell>
                           
@@ -799,388 +819,562 @@ const SalaryPayment: React.FC = () => {
         </Card>
 
         {/* Payment Modal - Mirroring Doctor Salary Design */}
-        {showPaymentModal && selectedStaff && (
-          <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-            <DialogContent className="max-w-6xl bg-white shadow-2xl border-0 max-h-[95vh] overflow-y-auto">
-              <DialogHeader className="border-b border-gray-200 pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center shadow-lg">
-                    {selectedStaff.photo ? (
-                      <img
-                        src={selectedStaff.photo}
-                        alt={selectedStaff.name}
-                        className="w-14 h-14 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xl font-bold text-blue-600">
-                        {selectedStaff.name?.charAt(0)?.toUpperCase()}
+        {showPaymentModal && selectedStaff && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+            style={{ 
+              zIndex: 9999,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <div 
+              className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Beautiful Design */}
+              <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-4 border-white shadow-lg overflow-hidden">
+                      {selectedStaff.photo ? (
+                        <img
+                          src={selectedStaff.photo}
+                          alt={selectedStaff.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/api/placeholder/40/40';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-green-100 flex items-center justify-center">
+                          <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <Badge className="bg-green-100 text-green-800 border-2 border-white shadow-sm text-xs">
+                        Active
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                      <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-green-600 flex-shrink-0" />
+                      <span className="truncate">{selectedStaff.name}</span>
+                    </h2>
+                    <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                      <span className="text-gray-600">
+                        Record Payment Session
                       </span>
+                      <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                        New Transaction
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Body - Beautiful Design */}
+              <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                  
+                  {/* Staff Information Section - Beautiful Card Layout */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Staff Information
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6">
+                      
+                      {/* Full Name Card */}
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-4 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Users className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-green-700 uppercase tracking-wide">Full Name</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-green-900 ml-0">{selectedStaff.name}</p>
+                      </div>
+
+                      {/* Staff ID Card */}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <span className="text-white font-bold text-base sm:text-sm">ID</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-blue-700 uppercase tracking-wide">Staff ID</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-blue-900 ml-0">{selectedStaff.id}</p>
+                      </div>
+
+                      {/* Role Card */}
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-4 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <User className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-purple-700 uppercase tracking-wide">Role</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-purple-900 ml-0">{selectedStaff.role || 'Staff Member'}</p>
+                      </div>
+
+                      {/* Department Card */}
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 sm:p-4 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Activity className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-orange-700 uppercase tracking-wide">Department</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-orange-900 ml-0">{selectedStaff.department || 'Administration'}</p>
+                      </div>
+
+                      {/* Monthly Salary Card */}
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-4 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-green-700 uppercase tracking-wide">Salary</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-green-900 ml-0">₹{parseNumeric(selectedStaff.salary).toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Advance Available Card */}
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-4 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <span className="text-white font-bold text-base sm:text-sm">₹</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-purple-700 uppercase tracking-wide">Advance Available</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-purple-900 ml-0">₹{parseNumeric(selectedStaff.advance_amount || 0).toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Total Paid Card */}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-blue-700 uppercase tracking-wide">Total Paid</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-blue-900 ml-0">₹{calculateTotalPaid().toLocaleString('en-IN')}</p>
+                      </div>
+
+                      {/* Balance Due Card */}
+                      <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 sm:p-4 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <AlertCircle className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm sm:text-xs font-semibold text-red-700 uppercase tracking-wide">Balance Due</p>
+                          </div>
+                        </div>
+                        <p className="text-xl sm:text-lg font-bold text-red-900 ml-0">₹{(parseNumeric(selectedStaff.salary) - calculateTotalPaid()).toLocaleString('en-IN')}</p>
+                      </div>
+                      
+                    </div>
+                  </div>
+
+                  {/* Payment Form Section - Beautiful Design */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Plus className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                      </div>
+                      Record New Payment
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100">
+                        <Label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+                          Payment Date *
+                        </Label>
+                        <Input
+                          type="date"
+                          value={paymentFormData.date}
+                          onChange={(e) => setPaymentFormData(prev => ({ ...prev, date: e.target.value }))}
+                          className="w-full border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                        />
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border border-green-100">
+                        <Label className="block text-sm font-medium text-green-600 mb-2 uppercase tracking-wide">
+                          Amount (₹) *
+                        </Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter payment amount"
+                          value={paymentFormData.amount}
+                          onChange={(e) => setPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                          className="w-full border-green-200 focus:border-green-400 focus:ring-green-400"
+                        />
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-white p-4 rounded-xl border border-purple-100">
+                        <Label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
+                          Payment Type *
+                        </Label>
+                        <Select
+                          value={paymentFormData.type}
+                          onValueChange={(value) => setPaymentFormData(prev => ({ ...prev, type: value }))}
+                        >
+                          <SelectTrigger className="w-full border-purple-200 focus:border-purple-400">
+                            <SelectValue placeholder="Select payment type" />
+                          </SelectTrigger>
+                          <SelectContent 
+                            className="z-[99999]" 
+                            style={{ 
+                              zIndex: 2147483647,
+                              position: 'relative'
+                            }}
+                          >
+                            <SelectItem value="salary">Salary</SelectItem>
+                            <SelectItem value="advance">Advance</SelectItem>
+                            <SelectItem value="bonus">Bonus</SelectItem>
+                            <SelectItem value="incentive">Incentive</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button 
+                        onClick={handleSubmitPayment}
+                        disabled={isSubmitting || !paymentFormData.amount || !paymentFormData.date}
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold shadow-lg"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Recording Payment...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-5 w-5 mr-2" />
+                            Record Payment
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Payment History Section - Beautiful Design */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4 md:mb-6">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <CreditCard className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                        </div>
+                        Payment History ({filteredPaymentHistory.length})
+                      </h3>
+                    </div>
+                    
+                    {historyLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading payment history...</span>
+                      </div>
+                    ) : filteredPaymentHistory.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="text-center py-8 text-slate-500">
+                          <CreditCard className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                          <p>No payment records found{paymentModalSelectedMonth !== null && paymentModalSelectedYear !== null ? ` for ${months[paymentModalSelectedMonth - 1]} ${paymentModalSelectedYear}` : ''}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Calculation Display Section - Mobile Optimized */}
+                        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 sm:p-4 rounded-xl border border-green-100 mb-4">
+                          <h4 className="font-bold text-gray-900 mb-4 text-center text-sm sm:text-base">
+                            Payment Calculation{paymentModalSelectedMonth !== null && paymentModalSelectedYear !== null ? ` for ${months[paymentModalSelectedMonth - 1]} ${paymentModalSelectedYear}` : ''}
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                            {/* Monthly Payment Total */}
+                            <div className="bg-white p-4 sm:p-3 rounded-lg border border-blue-200 text-center">
+                              <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Monthly Payment</p>
+                              <p className="text-xl sm:text-lg font-bold text-blue-600">
+                                ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                            
+                            {/* Advance Amount */}
+                            <div className="bg-white p-4 sm:p-3 rounded-lg border border-orange-200 text-center">
+                              <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Advance Amount</p>
+                              <p className="text-xl sm:text-lg font-bold text-orange-600">
+                                ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                            
+                            {/* Total Paid */}
+                            <div className="bg-white p-4 sm:p-3 rounded-lg border border-green-200 text-center">
+                              <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Total Paid</p>
+                              <p className="text-xl sm:text-lg font-bold text-green-600">
+                                ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Calculation Formula - Mobile Responsive */}
+                          <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
+                            {/* Mobile Vertical Layout */}
+                            <div className="flex flex-col sm:hidden gap-3 items-center text-base">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">Monthly Payment:</span>
+                                <span className="font-semibold text-blue-600">
+                                  ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="text-2xl text-gray-400">+</div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">Advance Amount:</span>
+                                <span className="font-semibold text-orange-600">
+                                  ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="text-2xl text-gray-400">=</div>
+                              <Badge className="bg-green-100 text-green-800 text-lg px-4 py-2 font-bold">
+                                ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                              </Badge>
+                            </div>
+                            
+                            {/* Desktop Horizontal Layout */}
+                            <div className="hidden sm:flex items-center justify-center gap-2 text-sm">
+                              <span className="font-semibold text-blue-600">
+                                ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-gray-500">+</span>
+                              <span className="font-semibold text-orange-600">
+                                ₹{getAdvanceAmount().toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-gray-500">=</span>
+                              <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
+                                ₹{calculateTotalPaid().toLocaleString('en-IN')}
+                              </Badge>
+                            </div>
+                            
+                            <p className="text-center text-xs text-gray-500 mt-3 sm:mt-2">
+                              Monthly Payment + Advance = Total Paid
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Payment History Table */}
+                        <div className="w-full">
+                          <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 text-white">
+                                <th className="px-4 py-3 text-center text-sm font-semibold">S.No</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Date</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Amount (₹)</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Type</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Payment Mode</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Notes</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Created At</th>
+                                <th className="px-4 py-3 text-center text-sm font-semibold">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {filteredPaymentHistory.map((payment, index) => (
+                                <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                  {new Date(payment.payment_date).toLocaleDateString('en-IN')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 font-medium text-center">
+                                  ₹{parseFloat(payment.payment_amount || '0').toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`
+                                      ${payment.type === 'salary' ? 'border-blue-200 text-blue-700 bg-blue-50' : ''}
+                                      ${payment.type === 'advance' ? 'border-orange-200 text-orange-700 bg-orange-50' : ''}
+                                      ${payment.type === 'bonus' ? 'border-green-200 text-green-700 bg-green-50' : ''}
+                                      ${payment.type === 'incentive' ? 'border-purple-200 text-purple-700 bg-purple-50' : ''}
+                                    `}
+                                  >
+                                    {payment.type || 'salary'}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.payment_mode || 'Bank Transfer'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{payment.notes || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 text-center">
+                                  {new Date(payment.created_at).toLocaleDateString('en-IN')} {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeletePayment(payment)}
+                                    className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                    title="Delete payment record"
+                                  >
+                                    <Trash2 className="h-4 w-4 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        </div>
+                      </>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <DialogTitle className="text-2xl font-bold text-gray-900 mb-1">
-                      {selectedStaff.name}
-                    </DialogTitle>
-                    <DialogDescription className="text-gray-600 text-base">
-                      {selectedStaff.role} • {selectedStaff.department} • ID: {selectedStaff.id}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
 
-              <div className="space-y-6 p-6">
-                {/* Month/Year Selector for Modal */}
-                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <CalendarIcon className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800 mr-4">Viewing Period:</span>
-                  <Select 
-                    value={paymentModalSelectedMonth.toString()} 
-                    onValueChange={(value) => setPaymentModalSelectedMonth(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-36 border-blue-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Delete Payment Confirmation Dialog */}
+        {showDeleteDialog && createPortal(
+          <div 
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black bg-opacity-50"
+            style={{ 
+              zIndex: 2147483647,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setPaymentToDelete(null);
+            }}
+          >
+            <div 
+              className="relative z-[100000] w-full max-w-md mx-auto"
+              style={{ zIndex: 2147483647 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-lg shadow-2xl border-0 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <Trash2 className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-700">
+                        Delete Payment Record
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Are you sure you want to delete this payment record? This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
                   
-                  <Select 
-                    value={paymentModalSelectedYear.toString()} 
-                    onValueChange={(value) => setPaymentModalSelectedYear(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-24 border-blue-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <SelectItem key={2024 + i} value={(2024 + i).toString()}>
-                          {2024 + i}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  {paymentToDelete && (
+                    <div className="my-4 p-4 bg-gray-50 rounded-lg border">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-900">Payment Details</span>
+                          <Badge variant="outline" className="text-xs">
+                            {paymentToDelete.type || 'salary'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-xs font-medium">Date:</span>
+                            <span className="text-gray-600">
+                              {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-600 font-medium">
+                              ₹{parseFloat(paymentToDelete.payment_amount || '0').toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-2">
+                            <CreditCard className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-600">
+                              {paymentToDelete.payment_mode || 'Bank Transfer'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Staff Salary Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Monthly Salary Card */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-4 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
-                        <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm sm:text-xs font-semibold text-green-700 uppercase tracking-wide">Monthly Salary</p>
-                      </div>
-                    </div>
-                    <p className="text-xl sm:text-lg font-bold text-green-900 ml-0">₹{parseNumeric(selectedStaff.salary).toLocaleString('en-IN')}</p>
-                  </div>
-
-                  {/* Advance Amount Card */}
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 sm:p-4 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
-                        <Clock className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm sm:text-xs font-semibold text-orange-700 uppercase tracking-wide">Advance Taken</p>
-                      </div>
-                    </div>
-                    <p className="text-xl sm:text-lg font-bold text-orange-900 ml-0">₹{parseNumeric(selectedStaff.advance_amount || 0).toLocaleString('en-IN')}</p>
-                  </div>
-
-                  {/* Total Paid Card */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-4 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
-                        <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm sm:text-xs font-semibold text-blue-700 uppercase tracking-wide">Total Paid</p>
-                      </div>
-                    </div>
-                    <p className="text-xl sm:text-lg font-bold text-blue-900 ml-0">₹{parseNumeric(selectedStaff.total_paid).toLocaleString('en-IN')}</p>
-                  </div>
-
-                  {/* Balance Card */}
-                  <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 sm:p-4 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 sm:w-8 sm:h-8 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
-                        <Timer className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm sm:text-xs font-semibold text-red-700 uppercase tracking-wide">Balance Due</p>
-                      </div>
-                    </div>
-                    <p className="text-xl sm:text-lg font-bold text-red-900 ml-0">₹{(parseNumeric(selectedStaff.salary) - parseNumeric(selectedStaff.total_paid)).toLocaleString('en-IN')}</p>
-                  </div>
-                </div>
-
-                {/* Payment Form Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Plus className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
-                    </div>
-                    Record New Payment
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100">
-                      <Label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
-                        Payment Date *
-                      </Label>
-                      <Input
-                        type="date"
-                        value={paymentFormData.date}
-                        onChange={(e) => setPaymentFormData(prev => ({ ...prev, date: e.target.value }))}
-                        className="w-full border-blue-200 focus:border-blue-400 focus:ring-blue-400"
-                      />
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border border-green-100">
-                      <Label className="block text-sm font-medium text-green-600 mb-2 uppercase tracking-wide">
-                        Amount (₹) *
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter payment amount"
-                        value={paymentFormData.amount}
-                        onChange={(e) => setPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
-                        className="w-full border-green-200 focus:border-green-400 focus:ring-green-400"
-                      />
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-white p-4 rounded-xl border border-purple-100">
-                      <Label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
-                        Payment Type *
-                      </Label>
-                      <Select
-                        value={paymentFormData.type}
-                        onValueChange={(value) => setPaymentFormData(prev => ({ ...prev, type: value }))}
-                      >
-                        <SelectTrigger className="w-full border-purple-200 focus:border-purple-400">
-                          <SelectValue placeholder="Select payment type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="salary">Salary</SelectItem>
-                          <SelectItem value="advance">Advance</SelectItem>
-                          <SelectItem value="bonus">Bonus</SelectItem>
-                          <SelectItem value="incentive">Incentive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-4">
                     <Button 
-                      onClick={handleSubmitPayment}
-                      disabled={isSubmitting || !paymentFormData.amount || !paymentFormData.date}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold shadow-lg"
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowDeleteDialog(false);
+                        setPaymentToDelete(null);
+                      }}
+                      disabled={deletingPayment}
+                      className="w-full sm:w-auto"
                     >
-                      {isSubmitting ? (
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={confirmDeletePayment}
+                      disabled={deletingPayment}
+                      className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {deletingPayment ? (
                         <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Recording Payment...
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Deleting...
                         </>
                       ) : (
                         <>
-                          <Save className="h-5 w-5 mr-2" />
-                          Record Payment
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Payment
                         </>
                       )}
                     </Button>
                   </div>
                 </div>
-
-                {/* Payment History Section */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4 md:mb-6">
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
-                      </div>
-                      Payment History
-                    </h3>
-                    
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-lg border border-blue-200 shadow-sm">
-                      <h4 className="font-bold text-gray-900 mb-4 text-center text-sm sm:text-base">
-                        Payment Calculation for {new Date(paymentModalSelectedYear, paymentModalSelectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </h4>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
-                        {/* Monthly Payment Total */}
-                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-blue-200 text-center">
-                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Monthly Payment</p>
-                          <p className="text-xl sm:text-lg font-bold text-blue-600">
-                            ₹{calculateMonthlyTotal().toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                        
-                        {/* Advance Amount */}
-                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-orange-200 text-center">
-                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Advance Amount</p>
-                          <p className="text-xl sm:text-lg font-bold text-orange-600">
-                            ₹{getAdvanceAmount().toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                        
-                        {/* Total Paid */}
-                        <div className="bg-white p-4 sm:p-3 rounded-lg border border-green-200 text-center">
-                          <p className="text-sm sm:text-sm text-gray-600 mb-2 sm:mb-1 font-medium">Total Paid</p>
-                          <p className="text-xl sm:text-lg font-bold text-green-600">
-                            ₹{calculateTotalPaid().toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Payment History Table */}
-                  <div className="overflow-x-auto">
-                    {historyLoading ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="text-center font-semibold text-gray-700">#</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Date</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Amount</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Type</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Mode</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Notes</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Created</TableHead>
-                            <TableHead className="text-center font-semibold text-gray-700">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredPaymentHistory.map((payment, index) => (
-                            <TableRow key={payment.id} className="hover:bg-gray-50 transition-colors">
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 text-center">{index + 1}</TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 text-center">
-                                {new Date(payment.payment_date).toLocaleDateString('en-IN')}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 font-medium text-center">
-                                ₹{parseFloat(payment.payment_amount || '0').toLocaleString('en-IN')}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-center">
-                                <Badge 
-                                  variant="outline" 
-                                  className={`
-                                    ${payment.type === 'salary' ? 'border-blue-200 text-blue-700 bg-blue-50' : ''}
-                                    ${payment.type === 'advance' ? 'border-orange-200 text-orange-700 bg-orange-50' : ''}
-                                    ${payment.type === 'bonus' ? 'border-green-200 text-green-700 bg-green-50' : ''}
-                                    ${payment.type === 'incentive' ? 'border-purple-200 text-purple-700 bg-purple-50' : ''}
-                                  `}
-                                >
-                                  {payment.type || 'salary'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 text-center">{payment.payment_mode || 'Bank Transfer'}</TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 text-center">{payment.notes || '-'}</TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-600 text-center">
-                                {new Date(payment.created_at).toLocaleDateString('en-IN')} {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-center">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleDeletePayment(payment)}
-                                  className="action-btn-lead action-btn-delete h-8 w-8 sm:h-9 sm:w-9 p-0"
-                                  title="Delete Payment"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {filteredPaymentHistory.length === 0 && (
-                            <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8">
-                                <div className="flex flex-col items-center justify-center space-y-2">
-                                  <History className="h-8 w-8 text-gray-400" />
-                                  <p className="text-gray-500">No payment history for this period</p>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </div>
-                </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
-
-        {/* Delete Payment Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md bg-white border border-gray-200 shadow-2xl">
-            <DialogHeader className="text-center pb-4">
-              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <DialogTitle className="text-xl font-semibold text-gray-900">Delete Payment</DialogTitle>
-              <DialogDescription className="text-center text-gray-600 mt-2">
-                Are you sure you want to delete this payment record? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-
-            {paymentToDelete && (
-              <div className="bg-gray-50 p-4 rounded-lg border mb-4">
-                <div className="space-y-2 text-sm">
-                  <div className="font-medium text-gray-900">Payment Details</div>
-                  <div className="text-gray-600">Date: {new Date(paymentToDelete.payment_date).toLocaleDateString('en-IN')}</div>
-                  <div className="text-gray-600">Amount: ₹{parseFloat(paymentToDelete.payment_amount || 0).toLocaleString('en-IN')}</div>
-                  <div className="text-gray-600">Type: {paymentToDelete.type || 'salary'}</div>
-                  <div className="text-gray-600">Mode: {paymentToDelete.payment_mode || 'Bank Transfer'}</div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setPaymentToDelete(null);
-                }}
-                disabled={deletingPayment}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="button" 
-                onClick={confirmDeletePayment}
-                disabled={deletingPayment}
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-              >
-                {deletingPayment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Payment
-                  </>
-                )}
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>,
+          document.body
+        )}
 
         {/* Month/Year Picker Dialog */}
         <MonthYearPickerDialog

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +23,7 @@ import {
   User,
   RefreshCcw,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Plus,
   FileText,
   Clock,
@@ -30,7 +31,6 @@ import {
   Save,
   Calendar,
   Trash2,
-  IndianRupee,
   Briefcase
 } from 'lucide-react';
 import '@/styles/global-crm-design.css';
@@ -49,6 +49,7 @@ interface Staff {
 }
 
 const StaffAdvancePage: React.FC = () => {
+  usePageTitle();
   // Debug: Component is rendering
   console.log('👥 StaffAdvancePage component is rendering...');
   
@@ -535,12 +536,12 @@ const StaffAdvancePage: React.FC = () => {
                   <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Total Amount</p>
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">{formatCurrency(totalAmount)}</p>
                   <div className="flex items-center text-xs text-green-600">
-                    <DollarSign className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
                     <span className="truncate">Advance payments</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-green">
-                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                  <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -611,7 +612,7 @@ const StaffAdvancePage: React.FC = () => {
                       <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">
                         <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                           <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span>Name & Role</span>
+                          <span>Name</span>
                         </div>
                       </TableHead>
                       <TableHead className="px-2 sm:px-3 lg:px-4 py-3 text-center font-medium text-gray-700 text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
@@ -641,7 +642,6 @@ const StaffAdvancePage: React.FC = () => {
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm">
                             <div className="font-medium text-slate-800">{staffMember.name}</div>
-                            <div className="text-xs text-gray-500">{staffMember.role}</div>
                           </TableCell>
                           <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1 sm:gap-2">
@@ -1159,7 +1159,7 @@ const StaffAdvancePage: React.FC = () => {
                     <span className="font-medium text-gray-900">{advanceToDelete.staff_name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <IndianRupee className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-600">Amount: ₹{advanceToDelete.amount}</span>
                   </div>
                   <div className="flex items-center gap-2">

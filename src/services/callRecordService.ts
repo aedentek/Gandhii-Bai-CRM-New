@@ -51,6 +51,9 @@ class CallRecordService {
 
   static async deletePatientCallRecord(id: string): Promise<boolean> {
     try {
+      console.log('🗑️ CallRecordService: Attempting to delete record ID:', id);
+      console.log('🔗 CallRecordService: Delete URL:', `${this.baseUrl}/patient-call-records/${id}`);
+      
       const response = await fetch(`${this.baseUrl}/patient-call-records/${id}`, {
         method: 'DELETE',
         headers: {
@@ -58,12 +61,21 @@ class CallRecordService {
         },
         credentials: 'include'
       });
+      
+      console.log('📡 CallRecordService: Response status:', response.status);
+      console.log('📡 CallRecordService: Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error('Failed to delete call record');
+        const errorText = await response.text();
+        console.error('❌ CallRecordService: Error response:', errorText);
+        throw new Error(`Failed to delete call record: ${response.status} ${response.statusText} - ${errorText}`);
       }
+      
+      const result = await response.json();
+      console.log('✅ CallRecordService: Delete successful:', result);
       return true;
     } catch (error) {
-      console.error('Error deleting call record:', error);
+      console.error('❌ CallRecordService: Error deleting call record:', error);
       throw error;
     }
   }

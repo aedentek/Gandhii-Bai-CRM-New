@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Search, Edit2, Trash2, Users, User, Shield, Activity, UserCheck, X } from 'lucide-react';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface User {
   id: string;
@@ -19,6 +20,9 @@ interface User {
 }
 
 const AddUser: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [users, setUsers] = useState<User[]>(() => {
     const stored = localStorage.getItem('users');
     return stored ? JSON.parse(stored) : [];

@@ -30,8 +30,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock, X, ShoppingCart, DollarSign, Tag, Building, FileText, Package2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCcw, Activity, TrendingUp, AlertCircle, Calendar, Download, UserCheck, Clock, X, ShoppingCart, IndianRupee, Tag, Building, FileText, Package2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface GeneralProduct {
   id: string;
@@ -47,6 +48,9 @@ interface GeneralProduct {
 }
 
 const GeneralManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
 const [products, setProducts] = useState<GeneralProduct[]>([]);
 const [loading, setLoading] = useState(true);
 const [refreshKey, setRefreshKey] = useState(0);
@@ -1052,7 +1056,7 @@ const handleRefresh = React.useCallback(() => {
                 </div>
                 <div className="editpopup form crm-edit-form-group">
                   <Label htmlFor="price" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
+                    <IndianRupee className="h-4 w-4" />
                     Price <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -1181,7 +1185,7 @@ const handleRefresh = React.useCallback(() => {
                     <span className="text-gray-600">Supplier: {productToDelete.supplier}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <IndianRupee className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-600">Price: ₹{productToDelete.price.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex items-center gap-2">

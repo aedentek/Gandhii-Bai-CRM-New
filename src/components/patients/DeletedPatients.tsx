@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { DatabaseService } from '@/services/databaseService';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface Patient {
   id: string;
@@ -56,6 +57,9 @@ interface Patient {
 }
 
 const DeletedPatients: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   // Month/year constants
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',

@@ -34,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit2, Trash2, Truck, RefreshCw, Activity, TrendingUp, AlertCircle, Calendar, Download, Phone, Mail, MapPin, X, Building, Building2, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface GrocerySupplier {
   id: string;
@@ -48,6 +49,9 @@ interface GrocerySupplier {
 }
 
 const GrocerySuppliers: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
 const [suppliers, setSuppliers] = useState<GrocerySupplier[]>([]);
 const [loading, setLoading] = useState(true);
 const [refreshKey, setRefreshKey] = useState(0);

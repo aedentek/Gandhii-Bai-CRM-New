@@ -8,9 +8,10 @@ import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye, BarChart3, History, X, User, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, DollarSign, ShoppingBasket } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Calendar, Download, Eye, BarChart3, History, X, User, Building, ShoppingCart, Clock, Tag, Warehouse, Package2, IndianRupee, ShoppingBasket, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 
 // Simple error boundary for dialog content
@@ -52,18 +53,13 @@ interface GroceryStockItem {
 }
 
 const GroceryStock: React.FC = () => {
+  // Set custom page title
+  usePageTitle('Grocery Stock Management');
+
 const [products, setProducts] = useState<GroceryStockItem[]>([]);
 const [groceryCategories, setGroceryCategories] = useState<any[]>([]);
 const [loading, setLoading] = useState(true);
 const [refreshKey, setRefreshKey] = useState(0);
-
-// Stock status calculation
-const getStockStatus = (item: { currentStock: number; usedStock: number }): 'in-stock' | 'low-stock' | 'out-of-stock' => {
-  const balance = item.currentStock - item.usedStock;
-  if (balance === 0) return 'out-of-stock';
-  if (balance <= 5) return 'low-stock';
-  return 'in-stock';
-};
 
 React.useEffect(() => {
   (async () => {
@@ -84,10 +80,14 @@ React.useEffect(() => {
         supplier: prod.supplier || 'N/A',
         price: prod.price || 0,
         unit: prod.unit || 'pcs',
-        status: getStockStatus({
-          currentStock: prod.current_stock || prod.quantity || 0,
-          usedStock: prod.used_stock || 0
-        })
+        status: (() => {
+          const currentStock = prod.current_stock || prod.quantity || 0;
+          const usedStock = prod.used_stock || 0;
+          const available = currentStock - usedStock;
+          if (available <= 0) return 'out-of-stock';
+          if (available <= 10) return 'low-stock';
+          return 'in-stock';
+        })() as 'in-stock' | 'low-stock' | 'out-of-stock'
       })));
       
       const categories = await db.getAllGroceryCategories();
@@ -121,6 +121,19 @@ const handleRefresh = React.useCallback(() => {
   const [stockToDelete, setStockToDelete] = useState<GroceryStockItem | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [viewingStock, setViewingStock] = useState<GroceryStockItem | null>(null);
+  
+  // Edit state variables (like General Stock Management)
+  const [editUsedStock, setEditUsedStock] = useState(0);
+  const [editStatus, setEditStatus] = useState<'in-stock' | 'low-stock' | 'out-of-stock'>('in-stock');
+  const [editBalance, setEditBalance] = useState(0);
+  
+  // New glass morphism view modal states (from General Stock Management)
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewProduct, setViewProduct] = useState<GroceryStockItem | null>(null);
+  const [viewStockHistory, setViewStockHistory] = useState<any[]>([]);
+  const [showDeleteHistoryConfirm, setShowDeleteHistoryConfirm] = useState(false);
+  const [historyToDelete, setHistoryToDelete] = useState<any>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -149,6 +162,23 @@ const handleRefresh = React.useCallback(() => {
   const [filterYear, setFilterYear] = useState<number | null>(currentYear);
 
   const { toast } = useToast();
+  
+  // Helper function to format date as DD/MM/YYYY (from General Stock Management)
+  const formatDateDDMMYYYY = (dateStr?: string): string => {
+    if (!dateStr) return 'N/A';
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-');
+      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    }
+    return dateStr;
+  };
 
   // Enhanced global refresh function
   const handleGlobalRefresh = React.useCallback(async () => {
@@ -177,10 +207,14 @@ const handleRefresh = React.useCallback(() => {
         supplier: prod.supplier || 'N/A',
         price: prod.price || 0,
         unit: prod.unit || 'pcs',
-        status: getStockStatus({
-          currentStock: prod.current_stock || prod.quantity || 0,
-          usedStock: prod.used_stock || 0
-        })
+        status: (() => {
+          const currentStock = prod.current_stock || prod.quantity || 0;
+          const usedStock = prod.used_stock || 0;
+          const available = currentStock - usedStock;
+          if (available <= 0) return 'out-of-stock';
+          if (available <= 10) return 'low-stock';
+          return 'in-stock';
+        })() as 'in-stock' | 'low-stock' | 'out-of-stock'
       })));
       
       const categories = await db.getAllGroceryCategories();
@@ -211,21 +245,244 @@ const handleRefresh = React.useCallback(() => {
 
   const handleEditStock = (stock: GroceryStockItem) => {
     setEditingStock(stock);
-    setFormData({
-      productName: stock.productName,
-      category: stock.category,
-      currentStock: stock.currentStock,
-      usedStock: stock.usedStock,
-      unit: stock.unit,
-      supplier: stock.supplier,
-      price: stock.price,
-    });
+    setEditUsedStock(0); // Always reset to 0 for new entry (like General Stock Management)
+    setEditStatus(stock.status);
+    setEditBalance(stock.currentStock - stock.usedStock);
     setIsAddingStock(true);
+  };
+
+  // Helper function to get available balance (like General Stock Management)
+  const getAvailableBalance = (item: GroceryStockItem): number => {
+    return item.currentStock - item.usedStock;
+  };
+
+  // Update edit balance when used stock changes (like General Stock Management)
+  React.useEffect(() => {
+    if (editingStock) {
+      // Show the remaining balance after deducting the new used stock
+      const availableBalance = editingStock.currentStock - editingStock.usedStock;
+      setEditBalance(availableBalance - editUsedStock);
+    }
+  }, [editUsedStock, editingStock]);
+
+  // Close edit popup function
+  const closeEditPopup = () => {
+    setIsAddingStock(false);
+    setEditingStock(null);
+    setEditUsedStock(0);
+    setEditStatus('in-stock');
+    setEditBalance(0);
+    setFormData({
+      productName: '',
+      category: '',
+      currentStock: 0,
+      usedStock: 0,
+      unit: 'pcs',
+      supplier: '',
+      price: 0,
+    });
   };
 
   const handleViewStock = (stock: GroceryStockItem) => {
     setViewingStock(stock);
     setShowViewDialog(true);
+  };
+
+  // New glass morphism view function (mirroring General Stock Management)
+  const handleViewClick = async (product: GroceryStockItem) => {
+    try {
+      console.log('Opening view modal for product:', product);
+      console.log('Product properties:', {
+        id: product.id,
+        productName: product.productName,
+        category: product.category,
+        currentStock: product.currentStock,
+        usedStock: product.usedStock,
+        unit: product.unit,
+        supplier: product.supplier,
+        price: product.price,
+        grId: product.grId
+      });
+      
+      // Set the product first
+      setViewProduct(product);
+      setViewModalOpen(true);
+      setLoadingHistory(true);
+      
+      // Then load history
+      const history = await getStockHistory(product.id);
+      console.log('Loaded stock history:', history);
+      setViewStockHistory(history);
+      setLoadingHistory(false);
+      
+    } catch (error) {
+      console.error('Error loading stock history:', error);
+      setLoadingHistory(false);
+      toast({
+        title: "Error",
+        description: "Failed to load product details",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Calculate total used stock from history - SUM ALL STOCK AFTER VALUES
+  const calculateTotalUsedStock = (history: any[], currentUsedStock: number) => {
+    console.log('🔍 DEBUGGING USED STOCK CALCULATION');
+    console.log('History received:', history);
+    console.log('Current used stock:', currentUsedStock);
+    
+    if (!history || history.length === 0) {
+      console.log('❌ No history found, returning current used stock:', currentUsedStock);
+      return currentUsedStock;
+    }
+    
+    // Get all Stock After values and sum them up
+    const stockAfterValues = history
+      .filter(entry => entry.stock_after !== undefined && entry.stock_after !== null)
+      .map(entry => Number(entry.stock_after));
+    
+    console.log('📊 Stock After values extracted:', stockAfterValues);
+    
+    if (stockAfterValues.length === 0) {
+      console.log('❌ No valid stock_after values found, returning current used stock:', currentUsedStock);
+      return currentUsedStock;
+    }
+    
+    // Sum all Stock After values to get total used stock
+    const totalUsedStock = stockAfterValues.reduce((sum, value) => {
+      console.log(`➕ Adding ${value} to sum (current sum: ${sum})`);
+      return sum + value;
+    }, 0);
+    
+    console.log('✅ Final calculated total used stock:', totalUsedStock);
+    console.log('🔍 END DEBUGGING');
+    
+    // Return the sum of all Stock After values
+    return totalUsedStock;
+  };
+
+  // Handle delete stock history record (from General Stock Management)
+  const handleDeleteStockHistory = (historyRecord: any) => {
+    setHistoryToDelete(historyRecord);
+    setShowDeleteHistoryConfirm(true);
+  };
+
+  // Confirm delete stock history record (from General Stock Management)
+  const confirmDeleteStockHistory = async () => {
+    if (!historyToDelete || !viewProduct) return;
+    
+    try {
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      
+      // First, calculate the stock adjustment needed
+      const stockChange = historyToDelete.stock_change || 0;
+      const stockType = historyToDelete.stock_type;
+      
+      // Delete the history record from database
+      await db.deleteGroceryStockHistoryRecord(historyToDelete.id);
+      
+      // Adjust the product's stock values based on the deleted record
+      if (stockType === 'used' && stockChange > 0) {
+        // If we're deleting a "used" record, we need to reduce the used_stock
+        // This effectively adds back the stock to available
+        const allProducts = await db.getAllGroceryProducts();
+        const currentProduct = allProducts.find((p: any) => p.id.toString() === viewProduct.id.toString());
+        
+        if (currentProduct) {
+          const currentUsedStock = currentProduct.used_stock || 0;
+          const newUsedStock = Math.max(0, currentUsedStock - stockChange);
+          
+          await db.updateGroceryStock(viewProduct.id, {
+            used_stock: newUsedStock,
+            stock_status: newUsedStock === 0 ? 'in-stock' : 
+                         (currentProduct.current_stock - newUsedStock) <= 10 ? 'low-stock' : 'in-stock',
+            last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+          });
+          
+          console.log(`Deleted stock history: Reduced used_stock by ${stockChange} units`);
+          console.log(`New used_stock: ${newUsedStock}`);
+        }
+      } else if (stockType === 'added' && stockChange > 0) {
+        // If we're deleting an "added" record, we need to reduce the current_stock
+        const allProducts = await db.getAllGroceryProducts();
+        const currentProduct = allProducts.find((p: any) => p.id.toString() === viewProduct.id.toString());
+        
+        if (currentProduct) {
+          const currentStock = currentProduct.current_stock || 0;
+          const newCurrentStock = Math.max(0, currentStock - stockChange);
+          
+          await db.updateGroceryStock(viewProduct.id, {
+            current_stock: newCurrentStock,
+            stock_status: newCurrentStock === 0 ? 'out-of-stock' : 
+                         newCurrentStock <= 10 ? 'low-stock' : 'in-stock',
+            last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+          });
+          
+          console.log(`Deleted stock history: Reduced current_stock by ${stockChange} units`);
+          console.log(`New current_stock: ${newCurrentStock}`);
+        }
+      }
+      
+      toast({
+        title: "Success",
+        description: "Stock history record deleted and stock adjusted successfully",
+        variant: "default"
+      });
+      
+      // Refresh the stock history
+      const updatedHistory = await getStockHistory(viewProduct.id);
+      setViewStockHistory(updatedHistory);
+      
+      // Refresh the main products list
+      await handleGlobalRefresh();
+      
+    } catch (error) {
+      console.error('Error deleting stock history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete stock history record",
+        variant: "destructive"
+      });
+    } finally {
+      setShowDeleteHistoryConfirm(false);
+      setHistoryToDelete(null);
+    }
+  };
+
+  // Function to get stock history for a product (from General Stock Management)
+  const getStockHistory = async (productId: string) => {
+    try {
+      console.log('Fetching stock history for product ID:', productId);
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      const history = await db.getGroceryStockHistory(productId);
+      console.log('Received history data:', history);
+      return history || [];
+    } catch (error) {
+      console.error('Error fetching stock history:', error);
+      toast({
+        title: "Warning",
+        description: "Could not load stock history",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
+  // Function to get stock status (from General Stock Management)
+  const getStockStatus = (product: GroceryStockItem): string => {
+    const available = (product.currentStock || 0) - (product.usedStock || 0);
+    if (available <= 0) return 'out-of-stock';
+    if (available <= 10) return 'low-stock';
+    return 'in-stock';
+  };
+
+  // Close view modal and reset states
+  const closeViewModal = () => {
+    setViewModalOpen(false);
+    setViewProduct(null);
+    setViewStockHistory([]);
+    setLoadingHistory(false);
   };
 
   const handleDeleteStock = (stock: GroceryStockItem) => {
@@ -244,10 +501,16 @@ const handleRefresh = React.useCallback(() => {
     }
     
     try {
+      setSubmitting(true);
       const db = (await import('@/services/databaseService')).DatabaseService;
       
       if (editingStock) {
-        await db.updateGroceryProduct(editingStock.id, {
+        // Get the original stock values before update
+        const originalStock = editingStock.currentStock;
+        const originalUsedStock = editingStock.usedStock;
+        
+        // Use updateGroceryStock for better consistency with General Stock Management
+        await db.updateGroceryStock(editingStock.id, {
           name: formData.productName,
           category: formData.category,
           current_stock: formData.currentStock,
@@ -255,10 +518,45 @@ const handleRefresh = React.useCallback(() => {
           unit: formData.unit,
           supplier: formData.supplier,
           price: formData.price,
+          last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
         });
-        toast({ title: "Success", description: "Stock updated successfully" });
+        
+        // Create stock history records for the changes
+        const currentStockChange = formData.currentStock - originalStock;
+        const usedStockChange = formData.usedStock - originalUsedStock;
+        
+        if (currentStockChange !== 0) {
+          await db.addGroceryStockHistoryRecord({
+            product_id: editingStock.id,
+            stock_change: Math.abs(currentStockChange),
+            stock_type: currentStockChange > 0 ? 'added' : 'adjusted',
+            current_stock_before: originalStock,
+            current_stock_after: formData.currentStock,
+            update_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            description: `Stock ${currentStockChange > 0 ? 'added' : 'reduced'} - Manual Update`
+          });
+        }
+        
+        if (usedStockChange !== 0) {
+          await db.addGroceryStockHistoryRecord({
+            product_id: editingStock.id,
+            stock_change: Math.abs(usedStockChange),
+            stock_type: 'used',
+            current_stock_before: originalUsedStock,
+            current_stock_after: formData.usedStock,
+            update_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            description: `Used stock ${usedStockChange > 0 ? 'increased' : 'decreased'} - Manual Update`
+          });
+        }
+        
+        toast({ 
+          title: "Success", 
+          description: "Stock updated successfully with history record",
+          variant: "default"
+        });
       } else {
-        await db.addGroceryProduct({
+        // Add new product
+        const newProduct = await db.addGroceryProduct({
           name: formData.productName,
           category: formData.category,
           current_stock: formData.currentStock,
@@ -266,12 +564,46 @@ const handleRefresh = React.useCallback(() => {
           unit: formData.unit,
           supplier: formData.supplier,
           price: formData.price,
+          purchase_date: new Date().toISOString().slice(0, 10),
+          created_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
         });
-        toast({ title: "Success", description: "Stock added successfully" });
+        
+        // Create initial stock history record for new product
+        if (formData.currentStock > 0) {
+          await db.addGroceryStockHistoryRecord({
+            product_id: newProduct.id || newProduct.insertId,
+            stock_change: formData.currentStock,
+            stock_type: 'added',
+            current_stock_before: 0,
+            current_stock_after: formData.currentStock,
+            update_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            description: 'Initial stock - Product Created'
+          });
+        }
+        
+        if (formData.usedStock > 0) {
+          await db.addGroceryStockHistoryRecord({
+            product_id: newProduct.id || newProduct.insertId,
+            stock_change: formData.usedStock,
+            stock_type: 'used',
+            current_stock_before: 0,
+            current_stock_after: formData.usedStock,
+            update_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            description: 'Initial used stock - Product Created'
+          });
+        }
+        
+        toast({ 
+          title: "Success", 
+          description: "Stock added successfully with history record",
+          variant: "default"
+        });
       }
       
-      handleRefresh();
+      // Refresh the data
+      await handleGlobalRefresh();
       
+      // Reset form
       setFormData({
         productName: '',
         category: '',
@@ -283,8 +615,15 @@ const handleRefresh = React.useCallback(() => {
       });
       setIsAddingStock(false);
       setEditingStock(null);
-    } catch (e) {
-      toast({ title: "Error", description: `Failed to ${editingStock ? 'update' : 'add'} stock`, variant: "destructive" });
+    } catch (error) {
+      console.error(`Error ${editingStock ? 'updating' : 'adding'} stock:`, error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to ${editingStock ? 'update' : 'add'} stock. Please try again.`, 
+        variant: "destructive" 
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -730,25 +1069,7 @@ const handleRefresh = React.useCallback(() => {
                 return (
                   <TableRow key={product.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{(page - 1) * pageSize + idx + 1}</TableCell>
-                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{
-                      (() => {
-                        const dateStr = product.lastUpdate;
-                        if (!dateStr) return '';
-                        let dateObj;
-                        if (dateStr.includes('T')) {
-                          dateObj = new Date(dateStr);
-                        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                          dateObj = new Date(dateStr + 'T00:00:00');
-                        } else {
-                          return dateStr;
-                        }
-                        if (isNaN(dateObj.getTime())) return dateStr;
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const year = dateObj.getFullYear();
-                        return `${day}/${month}/${year}`;
-                      })()
-                    }</TableCell>
+                    <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{formatDateDDMMYYYY(product.lastUpdate)}</TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm whitespace-nowrap">{product.grId}</TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 font-medium text-center text-xs sm:text-sm max-w-[200px] truncate">{product.productName}</TableCell>
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center text-xs sm:text-sm whitespace-nowrap">{product.category}</TableCell>
@@ -776,9 +1097,9 @@ const handleRefresh = React.useCallback(() => {
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => handleViewStock(product)}
+                          onClick={() => handleViewClick(product)}
                           className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
-                          title="View Details"
+                          title="View Details with Glass Morphism"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
@@ -875,7 +1196,7 @@ const handleRefresh = React.useCallback(() => {
         )}
       </div>
 
-        {/* Add/Edit Stock Dialog */}
+        {/* Add/Edit Stock Dialog - Exact General Stock Management Design */}
         <Dialog open={isAddingStock} onOpenChange={setIsAddingStock}>
           <DialogContent className="crm-modal-container">
             <DialogHeader className="editpopup form dialog-header">
@@ -888,20 +1209,272 @@ const handleRefresh = React.useCallback(() => {
                     {editingStock ? 'Edit Stock' : 'Add New Stock'}
                   </DialogTitle>
                   <DialogDescription className="editpopup form dialog-description">
-                    {editingStock ? 'Update stock information' : 'Enter the details for the new stock item'}
+                    {editingStock ? 'Update stock information and status' : 'Enter the details for the new stock item'}
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
             
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                handleSubmit();
-              }}
-              className="editpopup form crm-edit-form-content"
-            >
-              <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+            {editingStock ? (
+              // Edit Mode - Exact General Stock Management Design
+              <div className="editpopup form crm-edit-form-content">
+                {/* Product Info */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Product
+                  </Label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-sm font-medium text-blue-900">{editingStock.productName}</div>
+                  </div>
+                </div>
+                
+                <div className="editpopup form crm-edit-form-grid grid-cols-2">
+                  {/* Current Stock */}
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Warehouse className="h-4 w-4" />
+                      Current Stock
+                    </Label>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-lg font-bold text-blue-600">{editingStock.currentStock}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Available Balance */}
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Package2 className="h-4 w-4" />
+                      Available Balance
+                    </Label>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="text-lg font-bold text-green-600">{getAvailableBalance(editingStock)}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Used Stock Input */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Additional Used Stock
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={getAvailableBalance(editingStock)}
+                    value={editUsedStock}
+                    onChange={e => {
+                      let val = Number(e.target.value);
+                      const availableBalance = getAvailableBalance(editingStock);
+                      
+                      // Validation: Don't allow negative values
+                      if (val < 0) val = 0;
+                      
+                      // Validation: Don't allow more than available balance stock
+                      if (val > availableBalance) {
+                        val = availableBalance;
+                        console.warn(`Cannot use more than available balance stock (${availableBalance})`);
+                      }
+                      
+                      setEditUsedStock(val);
+                    }}
+                    className="editpopup form crm-edit-form-input text-center"
+                  />
+                  <div className="text-xs text-gray-500">
+                    Maximum available: {getAvailableBalance(editingStock)} units
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    Enter additional stock to mark as used (will be added to current used stock: {editingStock.usedStock})
+                  </div>
+                  {editUsedStock > getAvailableBalance(editingStock) && (
+                    <div className="text-xs text-red-500">
+                      Cannot exceed available balance stock
+                    </div>
+                  )}
+                </div>
+                
+                {/* Balance After Edit */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Balance After Edit
+                  </Label>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="text-lg font-bold text-yellow-700">{editBalance} {editingStock?.unit || 'units'}</div>
+                  </div>
+                </div>
+                
+                {/* Status Selection */}
+                <div className="editpopup form crm-edit-form-group">
+                  <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Stock Status
+                  </Label>
+                  <Select value={editStatus} onValueChange={v => setEditStatus(v as any)}>
+                    <SelectTrigger className="editpopup form crm-edit-form-select">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in-stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          In Stock
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="low-stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          Low Stock
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="out-of-stock">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Out of Stock
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Action Buttons */}
+                <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={closeEditPopup}
+                    disabled={submitting}
+                    className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+                  >
+                    <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      // General Stock Management edit logic - EXACT IMPLEMENTATION
+                      if (!editingStock) return closeEditPopup();
+                      
+                      console.log('Edit item:', editingStock);
+                      console.log('Edit used stock:', editUsedStock);
+                      console.log('Edit status:', editStatus);
+                      
+                      // Additional validation before saving (like General Stock Management)
+                      const availableBalance = getAvailableBalance(editingStock);
+                      console.log('Available balance:', availableBalance);
+                      
+                      if (editUsedStock > availableBalance) {
+                        console.log('Validation failed: Used stock exceeds available balance');
+                        toast({
+                          title: "Error",
+                          description: `Cannot use more than available balance stock (${availableBalance})`,
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      
+                      if (editUsedStock < 0) {
+                        console.log('Validation failed: Used stock is negative');
+                        toast({
+                          title: "Error", 
+                          description: "Used stock cannot be negative",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      
+                      console.log('Starting save operation...');
+                      setSubmitting(true);
+                      try {
+                        const db = (await import('@/services/databaseService')).DatabaseService;
+                        
+                        // Calculate the new total used stock (current used stock + new usage) - LIKE GENERAL STOCK
+                        const currentUsedStock = editingStock.usedStock || 0;
+                        const newTotalUsedStock = currentUsedStock + editUsedStock;
+                        
+                        console.log('Current used stock:', currentUsedStock);
+                        console.log('New total used stock:', newTotalUsedStock);
+                        
+                        // Record the stock change in history before updating (ONLY if editUsedStock > 0)
+                        if (editUsedStock > 0) {
+                          console.log('Adding stock history record...');
+                          await db.addGroceryStockHistoryRecord({
+                            product_id: editingStock.id,
+                            stock_change: editUsedStock,
+                            stock_type: 'used',
+                            current_stock_before: editingStock.currentStock - currentUsedStock,
+                            current_stock_after: editingStock.currentStock - newTotalUsedStock,
+                            update_date: new Date().toISOString().split('T')[0],
+                            description: `Stock usage: ${editUsedStock} units used`
+                          });
+                          console.log('Stock history record added successfully');
+                        }
+                        
+                        // Update product stock fields in backend (use updateGroceryStock)
+                        console.log('Updating grocery stock...');
+                        const updateData = {
+                          used_stock: newTotalUsedStock,
+                          stock_status: editStatus,
+                          last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        };
+                        console.log('Update data:', updateData);
+                        
+                        await db.updateGroceryStock(editingStock.id, updateData);
+                        console.log('Grocery stock updated successfully');
+                        
+                        toast({
+                          title: "Success",
+                          description: "Stock updated successfully",
+                          variant: "default"
+                        });
+                        
+                        // Close popup
+                        console.log('Closing edit popup...');
+                        closeEditPopup();
+                        
+                        // Refresh data
+                        console.log('Refreshing data...');
+                        await handleGlobalRefresh();
+                        console.log('Data refresh completed');
+                        
+                      } catch (error) {
+                        console.error('Error saving stock:', error);
+                        toast({
+                          title: "Error",
+                          description: `Failed to save stock changes: ${error.message || error}`,
+                          variant: "destructive"
+                        });
+                      } finally {
+                        console.log('Save operation finished, setting submitting to false');
+                        setSubmitting(false);
+                      }
+                    }}
+                    disabled={submitting}
+                    className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin h-3 w-3 sm:h-4 sm:w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : (
+              // Add Mode - Keep original form for adding new items
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleSubmit();
+                }}
+                className="editpopup form crm-edit-form-content"
+              >
                 <div className="editpopup form crm-edit-form-group">
                   <Label htmlFor="productName" className="editpopup form crm-edit-form-label flex items-center gap-2">
                     <ShoppingBasket className="h-4 w-4" />
@@ -916,137 +1489,141 @@ const handleRefresh = React.useCallback(() => {
                     required
                   />
                 </div>
-                <div className="editpopup form crm-edit-form-group">
-                  <Label htmlFor="category" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Category
-                  </Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                    <SelectTrigger className="editpopup form crm-edit-form-select">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groceryCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                
+                <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="category" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Tag className="h-4 w-4" />
+                      Category
+                    </Label>
+                    <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                      <SelectTrigger className="editpopup form crm-edit-form-select">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groceryCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="unit" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Unit
+                    </Label>
+                    <Select value={formData.unit} onValueChange={(value) => setFormData({...formData, unit: value})}>
+                      <SelectTrigger className="editpopup form crm-edit-form-select">
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pcs">Pieces</SelectItem>
+                        <SelectItem value="kg">Kilograms</SelectItem>
+                        <SelectItem value="g">Grams</SelectItem>
+                        <SelectItem value="l">Liters</SelectItem>
+                        <SelectItem value="ml">Milliliters</SelectItem>
+                        <SelectItem value="box">Box</SelectItem>
+                        <SelectItem value="pack">Pack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="editpopup form crm-edit-form-group">
-                  <Label htmlFor="currentStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <Warehouse className="h-4 w-4" />
-                    Current Stock <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="currentStock"
-                    type="number"
-                    min="0"
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                    placeholder="Enter current stock"
-                    className="editpopup form crm-edit-form-input"
-                    required
-                  />
+                
+                <div className="editpopup form crm-edit-form-grid grid-cols-2">
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="currentStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Warehouse className="h-4 w-4" />
+                      Current Stock
+                    </Label>
+                    <Input
+                      id="currentStock"
+                      type="number"
+                      min="0"
+                      value={formData.currentStock}
+                      onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                      placeholder="Enter current stock"
+                      className="editpopup form crm-edit-form-input text-center"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="usedStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Used Stock
+                    </Label>
+                    <Input
+                      id="usedStock"
+                      type="number"
+                      min="0"
+                      max={formData.currentStock}
+                      value={formData.usedStock}
+                      onChange={(e) => {
+                        let val = parseInt(e.target.value) || 0;
+                        if (val < 0) val = 0;
+                        if (val > formData.currentStock) val = formData.currentStock;
+                        setFormData({...formData, usedStock: val});
+                      }}
+                      placeholder="Enter used stock"
+                      className="editpopup form crm-edit-form-input text-center"
+                    />
+                  </div>
                 </div>
-                <div className="editpopup form crm-edit-form-group">
-                  <Label htmlFor="usedStock" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <Package2 className="h-4 w-4" />
-                    Used Stock
-                  </Label>
-                  <Input
-                    id="usedStock"
-                    type="number"
-                    min="0"
-                    value={formData.usedStock}
-                    onChange={(e) => setFormData({...formData, usedStock: parseInt(e.target.value) || 0})}
-                    placeholder="Enter used stock"
-                    className="editpopup form crm-edit-form-input"
-                  />
+                
+                <div className="editpopup form crm-edit-form-grid grid-cols-1 md:grid-cols-2">
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="price" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4" />
+                      Price
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
+                      placeholder="Enter price"
+                      className="editpopup form crm-edit-form-input text-center"
+                    />
+                  </div>
+                  <div className="editpopup form crm-edit-form-group">
+                    <Label htmlFor="supplier" className="editpopup form crm-edit-form-label flex items-center gap-2">
+                      <Building className="h-4 w-4" />
+                      Supplier
+                    </Label>
+                    <Input
+                      id="supplier"
+                      value={formData.supplier}
+                      onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                      placeholder="Enter supplier name"
+                      className="editpopup form crm-edit-form-input"
+                    />
+                  </div>
                 </div>
-                <div className="editpopup form crm-edit-form-group">
-                  <Label htmlFor="unit" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Unit
-                  </Label>
-                  <Select value={formData.unit} onValueChange={(value) => setFormData({...formData, unit: value})}>
-                    <SelectTrigger className="editpopup form crm-edit-form-select">
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pcs">Pieces</SelectItem>
-                      <SelectItem value="kg">Kilograms</SelectItem>
-                      <SelectItem value="g">Grams</SelectItem>
-                      <SelectItem value="l">Liters</SelectItem>
-                      <SelectItem value="ml">Milliliters</SelectItem>
-                      <SelectItem value="box">Box</SelectItem>
-                      <SelectItem value="pack">Pack</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="editpopup form crm-edit-form-group">
-                  <Label htmlFor="price" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Price
-                  </Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
-                    placeholder="Enter price"
-                    className="editpopup form crm-edit-form-input"
-                  />
-                </div>
-                <div className="editpopup form crm-edit-form-group md:col-span-2">
-                  <Label htmlFor="supplier" className="editpopup form crm-edit-form-label flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Supplier
-                  </Label>
-                  <Input
-                    id="supplier"
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                    placeholder="Enter supplier name"
-                    className="editpopup form crm-edit-form-input"
-                  />
-                </div>
-              </div>
-              
-              <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsAddingStock(false);
-                    setEditingStock(null);
-                    setFormData({
-                      productName: '',
-                      category: '',
-                      currentStock: 0,
-                      usedStock: 0,
-                      unit: 'pcs',
-                      supplier: '',
-                      price: 0,
-                    });
-                  }}
-                  className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
-                >
-                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="editpopup form footer-button-save w-full sm:w-auto global-btn"
-                >
-                  <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                  {editingStock ? 'Update Stock' : 'Add Stock'}
-                </Button>
-              </DialogFooter>
-            </form>
+                
+                <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={closeEditPopup}
+                    className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+                  >
+                    <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="editpopup form footer-button-save w-full sm:w-auto global-btn"
+                  >
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    Add Stock
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -1156,7 +1733,7 @@ const handleRefresh = React.useCallback(() => {
                       <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Price per Unit</div>
@@ -1185,17 +1762,7 @@ const handleRefresh = React.useCallback(() => {
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Purchase Date</div>
                             <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                              {viewingStock.purchaseDate ? (() => {
-                                try {
-                                  const date = new Date(viewingStock.purchaseDate);
-                                  if (!isNaN(date.getTime())) {
-                                    return date.toLocaleDateString('en-GB');
-                                  }
-                                  return viewingStock.purchaseDate;
-                                } catch {
-                                  return viewingStock.purchaseDate || 'Not specified';
-                                }
-                              })() : 'Not specified'}
+                              {formatDateDDMMYYYY(viewingStock.purchaseDate)}
                             </p>
                           </div>
                         </div>
@@ -1209,17 +1776,7 @@ const handleRefresh = React.useCallback(() => {
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-medium text-teal-600 uppercase tracking-wide">Last Update</div>
                             <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                              {viewingStock.lastUpdate ? (() => {
-                                try {
-                                  const date = new Date(viewingStock.lastUpdate);
-                                  if (!isNaN(date.getTime())) {
-                                    return date.toLocaleDateString('en-GB');
-                                  }
-                                  return viewingStock.lastUpdate;
-                                } catch {
-                                  return viewingStock.lastUpdate || 'Not specified';
-                                }
-                              })() : 'Not specified'}
+                              {formatDateDDMMYYYY(viewingStock.lastUpdate)}
                             </p>
                           </div>
                         </div>
@@ -1406,6 +1963,338 @@ const handleRefresh = React.useCallback(() => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* New Glass Morphism View Modal - Mirrored from General Stock Management */}
+      {viewModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={closeViewModal}
+        >
+          {!viewProduct ? (
+            <div className="bg-white rounded-xl p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p>Loading product details...</p>
+            </div>
+          ) : (
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <ShoppingBasket className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1">
+                    <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${
+                      getStockStatus(viewProduct) === 'in-stock' ? 'bg-green-100 text-green-800' :
+                      getStockStatus(viewProduct) === 'low-stock' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {getStockStatus(viewProduct).replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <ShoppingBasket className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">{viewProduct?.productName || 'Product Name'}</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">Product ID:</span>
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                      {viewProduct?.grId || viewProduct?.id || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeViewModal}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Modal Body - Glass Morphism Style */}
+            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                
+                {/* Product Information Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <ShoppingBasket className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                    </div>
+                    Product Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <ShoppingBasket className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Product Name</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">
+                            {viewProduct?.productName || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">
+                            {viewProduct?.category || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Building className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                            {viewProduct?.supplier || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Unit Price</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                            ₹{viewProduct?.price || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Package2 className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Unit</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                            {viewProduct?.unit || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Purchase Date</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                            {formatDateDDMMYYYY(viewProduct?.purchaseDate)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Stock Summary Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                    </div>
+                    Stock Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                        {viewProduct?.currentStock || 0}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Stock</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-red-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
+                        {calculateTotalUsedStock(viewStockHistory, viewProduct?.usedStock || 0)}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Used Stock</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center col-span-2 md:col-span-1">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                        {(viewProduct?.currentStock || 0) - (viewProduct?.usedStock || 0)}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Available Stock</div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Stock History Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                    </div>
+                    Stock Movement History
+                  </h3>
+                  
+                  <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                          <TableHead className="text-center font-semibold text-gray-700">S NO</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Date</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Change</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Type</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Stock After</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Description</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loadingHistory ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <p className="text-lg font-medium text-gray-500">Loading stock history...</p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : viewStockHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <History className="h-8 w-8 text-gray-400" />
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-lg font-medium text-gray-500">No stock movement records found</p>
+                                  <p className="text-sm text-gray-400 mt-1">Stock history will appear here</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          viewStockHistory.map((entry, idx) => {
+                            const formattedDate = (() => {
+                              const date = new Date(entry.update_date);
+                              if (isNaN(date.getTime())) return entry.update_date;
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const year = date.getFullYear();
+                              return `${day}/${month}/${year}`;
+                            })();
+                            
+                            return (
+                              <TableRow key={entry.id || idx} className="hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="text-center font-medium">{idx + 1}</TableCell>
+                                <TableCell className="text-center">{formattedDate}</TableCell>
+                                <TableCell className="text-center">
+                                  <span className={entry.stock_type === 'used' ? 'text-red-600' : 'text-green-600'}>
+                                    {entry.stock_type === 'used' ? '-' : '+'}{entry.stock_change}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant={entry.stock_type === 'used' ? 'destructive' : 'default'} className="capitalize">
+                                    {entry.stock_type}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center font-bold text-blue-600">
+                                  {entry.current_stock_after}
+                                </TableCell>
+                                <TableCell className="text-center">{entry.description || '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteStockHistory(entry)}
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Delete this history record"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete Stock History Confirmation Dialog */}
+      <Dialog open={showDeleteHistoryConfirm} onOpenChange={setShowDeleteHistoryConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Stock History Record
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this stock history record? This action will also adjust the product's current stock values and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteHistoryConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteStockHistory}
+            >
+              Delete Record
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Download, Search, Users, Plus, Eye, Edit2, Trash2, RefreshCw, Activity, UserCheck, UserX, Clock, User, Mail, Phone, MapPin, Calendar, DollarSign, X, IdCard, FileText, Briefcase } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { parseISO, format as formatDate } from 'date-fns';
@@ -13,11 +14,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from '@/components/ui/textarea';
 import { DatabaseService } from '@/services/databaseService';
 import { getStaffFileUrl } from '@/services/staffFileUpload';
+import usePageTitle from '@/hooks/usePageTitle';
 import '@/styles/global-crm-design.css';
 import '../../styles/modern-forms.css';
 import '../../styles/modern-tables.css';
 
 const StaffManagement: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const [staff, setStaff] = useState<any[]>([]);
   const [staffCategories, setStaffCategories] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -572,22 +577,17 @@ const StaffManagement: React.FC = () => {
                     
                     {/* Photo */}
                     <TableCell className="px-2 sm:px-3 lg:px-4 py-2 lg:py-3 text-center">
-                      {s.photo ? (
-                        <img
-                          src={getImageUrl(s.photo)}
-                          alt={s.name || 'Profile'}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover mx-auto border bg-muted"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center mx-auto text-xs text-muted-foreground border">
-                          N/A
-                        </div>
-                      )}
+                      <div className="flex justify-center">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage 
+                            src={getImageUrl(s.photo)}
+                            alt={s.name || 'Profile'}
+                          />
+                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                            {s.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
                     </TableCell>
                     
                     {/* Staff ID */}

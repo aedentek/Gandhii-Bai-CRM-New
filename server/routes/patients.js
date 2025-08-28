@@ -453,95 +453,121 @@ router.put('/patient-attendance/:id/status', async (req, res) => {
 
 
 
-// Data paths
-const PATIENT_CALL_RECORDS_PATH = path.join(__dirname, 'data', 'patientCallRecords.json');
+// Database-based patient call records - no file initialization needed
 
-// Ensure data directory exists
-const ensureDataDirectory = async () => {
-  const dataDir = path.join(__dirname, 'data');
-  try {
-    await fsPromises.access(dataDir);
-  } catch {
-    await fsPromises.mkdir(dataDir, { recursive: true });
-  }
-};
-
-// Initialize data files if they don't exist
-const initializeDataFiles = async () => {
-  try {
-    await fsPromises.access(PATIENT_CALL_RECORDS_PATH);
-  } catch {
-    await fsPromises.writeFile(PATIENT_CALL_RECORDS_PATH, JSON.stringify([]));
-  }
-};
-
-// GET all patient call records
+// GET all patient call records (Database version)
 router.get('/patient-call-records', async (req, res) => {
+  console.log('✅ Patient call records requested');
   try {
-    const data = await fsPromises.readFile(PATIENT_CALL_RECORDS_PATH, 'utf8');
-    res.json(JSON.parse(data));
+    const [rows] = await db.execute('SELECT * FROM patient_call_records ORDER BY date DESC');
+    res.json(rows);
   } catch (error) {
-    console.error('Error reading patient call records:', error);
-    res.status(500).json({ error: 'Failed to retrieve patient call records' });
+    console.error('❌ Error fetching patient call records:', error);
+    res.status(500).json({ error: 'Failed to fetch patient call records' });
   }
 });
 
-// POST new patient call record
+// POST new patient call record (Database version)
 router.post('/patient-call-records', async (req, res) => {
+  console.log('✅ Add patient call record requested');
+  console.log('📄 Request body:', req.body);
   try {
-    const records = JSON.parse(await fsPromises.readFile(PATIENT_CALL_RECORDS_PATH, 'utf8'));
-    const newRecord = {
-      id: uuidv4(),
-      ...req.body,
-      createdAt: new Date().toISOString()
-    };
-    records.push(newRecord);
-    await fsPromises.writeFile(PATIENT_CALL_RECORDS_PATH, JSON.stringify(records, null, 2));
-    res.status(201).json(newRecord);
+    const { 
+      id, 
+      patient_id, 
+      patient_name, 
+      date, 
+      description, 
+      audio_file_path, 
+      audio_file_name, 
+      audio_duration 
+    } = req.body;
+
+    // Convert patient_id to numeric for foreign key constraint
+    const numericPatientId = parseInt(patient_id);
+    if (isNaN(numericPatientId)) {
+      console.error('❌ Invalid patient_id:', patient_id);
+      return res.status(400).json({ error: 'Invalid patient ID' });
+    }
+
+    console.log(`🔍 Looking for patient with numeric ID: ${numericPatientId} (from ${patient_id})`);
+
+    // First, verify patient exists
+    const [patientCheck] = await db.execute('SELECT id FROM patients WHERE id = ?', [numericPatientId]);
+    if (patientCheck.length === 0) {
+      console.error('❌ Patient not found:', numericPatientId);
+      return res.status(400).json({ error: `Patient ${patient_id} not found` });
+    }
+
+    console.log('✅ Patient found, proceeding with insert');
+
+    // Generate ID if not provided
+    const recordId = id || `call_${Date.now()}`;
+
+    // Try to insert the record - use the numeric patient_id for foreign key constraint
+    await db.execute(`
+      INSERT INTO patient_call_records (
+        id, patient_id, patient_name, date, description, 
+        audio_file_path, audio_file_name, audio_duration, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [recordId, numericPatientId, patient_name, date, description, audio_file_path, audio_file_name, audio_duration]);
+
+    console.log('✅ Patient call record added successfully');
+    res.json({ success: true, message: 'Call record added successfully', id: recordId });
   } catch (error) {
-    console.error('Error creating patient call record:', error);
-    res.status(500).json({ error: 'Failed to create patient call record' });
+    console.error('❌ Error adding patient call record:', error);
+    console.error('❌ Full error details:', error.message);
+    console.error('❌ SQL State:', error.sqlState);
+    console.error('❌ Error Code:', error.code);
+    res.status(500).json({ error: 'Failed to add patient call record', details: error.message });
   }
 });
 
-// PUT update patient call record
+// PUT update patient call record (Database version)
 router.put('/patient-call-records/:id', async (req, res) => {
+  console.log('✅ Update patient call record requested for ID:', req.params.id);
+  console.log('📄 Request body:', req.body);
   try {
-    const records = JSON.parse(await fsPromises.readFile(PATIENT_CALL_RECORDS_PATH, 'utf8'));
-    const index = records.findIndex(r => r.id === req.params.id);
-    if (index === -1) {
-      return res.status(404).json({ error: 'Patient call record not found' });
-    }
-    records[index] = { ...records[index], ...req.body };
-    await fsPromises.writeFile(PATIENT_CALL_RECORDS_PATH, JSON.stringify(records, null, 2));
-    res.json(records[index]);
+    const { id } = req.params;
+    const { 
+      patient_id, 
+      patient_name, 
+      date, 
+      description, 
+      audio_file_path, 
+      audio_file_name, 
+      audio_duration 
+    } = req.body;
+
+    await db.execute(`
+      UPDATE patient_call_records SET 
+        patient_id = ?, patient_name = ?, date = ?, description = ?,
+        audio_file_path = ?, audio_file_name = ?, audio_duration = ?
+      WHERE id = ?
+    `, [patient_id, patient_name, date, description, audio_file_path, audio_file_name, audio_duration, id]);
+
+    console.log('✅ Patient call record updated successfully');
+    res.json({ success: true, message: 'Call record updated successfully' });
   } catch (error) {
-    console.error('Error updating patient call record:', error);
+    console.error('❌ Error updating patient call record:', error);
     res.status(500).json({ error: 'Failed to update patient call record' });
   }
 });
 
 
-// Initialize server
-(async () => {
-  try {
-    await ensureDataDirectory();
-    await initializeDataFiles();
- 
-  } catch (error) {
-    console.error('Failed to initialize server:', error);
-    process.exit(1);
-  }
-})();
-// DELETE patient call record
+// Database-based endpoints don't need file initialization
+// Removed legacy file initialization code
+
+// DELETE patient call record (Database version)
 router.delete('/patient-call-records/:id', async (req, res) => {
+  console.log('✅ Delete patient call record requested for ID:', req.params.id);
   try {
-    const records = JSON.parse(await fsPromises.readFile(PATIENT_CALL_RECORDS_PATH, 'utf8'));
-    const filtered = records.filter(r => r.id !== req.params.id);
-    await fsPromises.writeFile(PATIENT_CALL_RECORDS_PATH, JSON.stringify(filtered, null, 2));
-    res.status(204).send();
+    const { id } = req.params;
+    await db.execute('DELETE FROM patient_call_records WHERE id = ?', [id]);
+    console.log('✅ Patient call record deleted successfully');
+    res.json({ success: true, message: 'Call record deleted successfully' });
   } catch (error) {
-    console.error('Error deleting patient call record:', error);
+    console.error('❌ Error deleting patient call record:', error);
     res.status(500).json({ error: 'Failed to delete patient call record' });
   }
 });
@@ -1725,110 +1751,6 @@ router.get('/patient-payments', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching patient payments:', error);
     res.status(500).json({ error: 'Failed to fetch patient payments' });
-  }
-});
-
-router.get('/patient-call-records', async (req, res) => {
-  console.log('✅ Patient call records requested');
-  try {
-    const [rows] = await db.execute('SELECT * FROM patient_call_records ORDER BY date DESC');
-    res.json(rows);
-  } catch (error) {
-    console.error('❌ Error fetching patient call records:', error);
-    res.status(500).json({ error: 'Failed to fetch patient call records' });
-  }
-});
-
-// Add patient call record
-router.post('/patient-call-records', async (req, res) => {
-  console.log('✅ Add patient call record requested');
-  console.log('📄 Request body:', req.body);
-  try {
-    const { 
-      id, 
-      patient_id, 
-      patient_name, 
-      date, 
-      description, 
-      audio_file_path, 
-      audio_file_name, 
-      audio_duration 
-    } = req.body;
-
-    // Convert formatted patient ID (P0042) to numeric ID (42) for database lookup
-    const numericPatientId = patient_id.startsWith('P') ? parseInt(patient_id.substring(1)) : patient_id;
-    console.log(`🔍 Looking for patient with numeric ID: ${numericPatientId} (from ${patient_id})`);
-
-    // First, verify patient exists
-    const [patientCheck] = await db.execute('SELECT id FROM patients WHERE id = ?', [numericPatientId]);
-    if (patientCheck.length === 0) {
-      console.error('❌ Patient not found:', numericPatientId);
-      return res.status(400).json({ error: `Patient ${patient_id} not found` });
-    }
-
-    console.log('✅ Patient found, proceeding with insert');
-
-    // Try to insert the record - use the numeric patient_id for foreign key constraint
-    await db.execute(`
-      INSERT INTO patient_call_records (
-        id, patient_id, patient_name, date, description, 
-        audio_file_path, audio_file_name, audio_duration, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `, [id, numericPatientId, patient_name, date, description, audio_file_path, audio_file_name, audio_duration]);
-
-    console.log('✅ Patient call record added successfully');
-    res.json({ success: true, message: 'Call record added successfully' });
-  } catch (error) {
-    console.error('❌ Error adding patient call record:', error);
-    console.error('❌ Full error details:', error.message);
-    console.error('❌ SQL State:', error.sqlState);
-    console.error('❌ Error Code:', error.code);
-    res.status(500).json({ error: 'Failed to add patient call record', details: error.message });
-  }
-});
-
-// Update patient call record
-router.put('/patient-call-records/:id', async (req, res) => {
-  console.log('✅ Update patient call record requested for ID:', req.params.id);
-  console.log('📄 Request body:', req.body);
-  try {
-    const { id } = req.params;
-    const { 
-      patient_id, 
-      patient_name, 
-      date, 
-      description, 
-      audio_file_path, 
-      audio_file_name, 
-      audio_duration 
-    } = req.body;
-
-    await db.execute(`
-      UPDATE patient_call_records SET 
-        patient_id = ?, patient_name = ?, date = ?, description = ?,
-        audio_file_path = ?, audio_file_name = ?, audio_duration = ?
-      WHERE id = ?
-    `, [patient_id, patient_name, date, description, audio_file_path, audio_file_name, audio_duration, id]);
-
-    console.log('✅ Patient call record updated successfully');
-    res.json({ success: true, message: 'Call record updated successfully' });
-  } catch (error) {
-    console.error('❌ Error updating patient call record:', error);
-    res.status(500).json({ error: 'Failed to update patient call record' });
-  }
-});
-
-// Delete patient call record
-router.delete('/patient-call-records/:id', async (req, res) => {
-  console.log('✅ Delete patient call record requested for ID:', req.params.id);
-  try {
-    const { id } = req.params;
-    await db.execute('DELETE FROM patient_call_records WHERE id = ?', [id]);
-    console.log('✅ Patient call record deleted successfully');
-    res.json({ success: true, message: 'Call record deleted successfully' });
-  } catch (error) {
-    console.error('❌ Error deleting patient call record:', error);
-    res.status(500).json({ error: 'Failed to delete patient call record' });
   }
 });
 

@@ -10,10 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash2, Package, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText, AlertTriangle, TrendingDown, Tag, DollarSign, Clock, BarChart3, Warehouse, Package2, Layers, Info, History, PencilIcon as Pencil } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Phone, Mail, MapPin, RefreshCcw, Calendar, Download, Edit2, Activity, TrendingUp, AlertCircle, Eye, X, Users, FileText, AlertTriangle, TrendingDown, Tag, IndianRupee, Clock, BarChart3, Warehouse, Package2, Layers, Info, History, PencilIcon as Pencil, Receipt, Building, ShoppingCart, Banknote, ShoppingBasket, User, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MonthYearPickerDialog from '@/components/shared/MonthYearPickerDialog';
 import LoadingScreen from '@/components/shared/LoadingScreen';
+import usePageTitle from '@/hooks/usePageTitle';
 
 interface GeneralStockItem {
   id: string;
@@ -31,7 +32,27 @@ interface GeneralStockItem {
 }
 
 const GeneralStock: React.FC = () => {
+  // Set page title
+  usePageTitle();
+
   const { toast } = useToast();
+  
+  // Helper function to format date as DD/MM/YYYY
+  const formatDateDDMMYYYY = (dateStr?: string): string => {
+    if (!dateStr) return 'N/A';
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-');
+      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    }
+    return dateStr;
+  };
   
   // Month and year state for filtering
   const months = [
@@ -52,6 +73,14 @@ const GeneralStock: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<GeneralStockItem | null>(null);
+  
+  // New glass morphism view modal states
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewProduct, setViewProduct] = useState<GeneralStockItem | null>(null);
+  const [viewStockHistory, setViewStockHistory] = useState<any[]>([]);
+  const [showDeleteHistoryConfirm, setShowDeleteHistoryConfirm] = useState(false);
+  const [historyToDelete, setHistoryToDelete] = useState<any>(null);
+  
   const [formData, setFormData] = useState({
     gpId: '',
     productName: '',
@@ -101,22 +130,7 @@ const GeneralStock: React.FC = () => {
   const handleExportCSV = () => {
     const headers = ['S No', 'Date', 'Product Name', 'Category', 'Current Stock', 'Used Stock', 'Available', 'Unit', 'Price', 'Supplier', 'Status'];
     const csvData = filteredStockItems.map((item, idx) => {
-      const dateStr = item.purchaseDate;
-      let formattedDate = '';
-      if (dateStr) {
-        let dateObj;
-        if (dateStr.includes('T')) {
-          dateObj = new Date(dateStr);
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-          dateObj = new Date(dateStr + 'T00:00:00');
-        }
-        if (dateObj && !isNaN(dateObj.getTime())) {
-          const day = String(dateObj.getDate()).padStart(2, '0');
-          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-          const year = dateObj.getFullYear();
-          formattedDate = `${day}/${month}/${year}`;
-        }
-      }
+      const formattedDate = formatDateDDMMYYYY(item.purchaseDate);
       
       return [
         idx + 1,
@@ -176,6 +190,123 @@ const GeneralStock: React.FC = () => {
     const history = await getStockHistory(item.id);
     setStockHistory(history);
   }
+
+  // New glass morphism view function (mirroring Grocery Accounts)
+  const handleViewClick = async (product: GeneralStockItem) => {
+    try {
+      setViewProduct(product);
+      const history = await getStockHistory(product.id);
+      setViewStockHistory(history);
+      setViewModalOpen(true);
+    } catch (error) {
+      console.error('Error loading stock history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load stock history",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle delete stock history record
+  const handleDeleteStockHistory = (historyRecord: any) => {
+    setHistoryToDelete(historyRecord);
+    setShowDeleteHistoryConfirm(true);
+  };
+
+  // Confirm delete stock history record
+  const confirmDeleteStockHistory = async () => {
+    if (!historyToDelete || !viewProduct) return;
+    
+    try {
+      const db = (await import('@/services/databaseService')).DatabaseService;
+      
+      // First, calculate the stock adjustment needed
+      const stockChange = historyToDelete.stock_change || 0;
+      const stockType = historyToDelete.stock_type;
+      
+      // Delete the history record from database
+      await db.deleteStockHistoryRecord(historyToDelete.id);
+      
+      // Adjust the product's stock values based on the deleted record
+      if (stockType === 'used' && stockChange > 0) {
+        // If we're deleting a "used" record, we need to reduce the used_stock
+        // This effectively adds back the stock to available
+        const allProducts = await db.getAllGeneralProducts();
+        const currentProduct = allProducts.find((p: any) => p.id.toString() === viewProduct.id.toString());
+        
+        if (currentProduct) {
+          const currentUsedStock = currentProduct.used_stock || 0;
+          const newUsedStock = Math.max(0, currentUsedStock - stockChange);
+          
+          await db.updateGeneralStock(viewProduct.id, {
+            used_stock: newUsedStock,
+            stock_status: newUsedStock === 0 ? 'in-stock' : 
+                         (currentProduct.current_stock - newUsedStock) <= 10 ? 'low-stock' : 'in-stock',
+            last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+          });
+          
+          console.log(`Deleted stock history: Reduced used_stock by ${stockChange} units`);
+          console.log(`New used_stock: ${newUsedStock}`);
+        }
+      } else if (stockType === 'added' && stockChange > 0) {
+        // If we're deleting an "added" record, we need to reduce the current_stock
+        const allProducts = await db.getAllGeneralProducts();
+        const currentProduct = allProducts.find((p: any) => p.id.toString() === viewProduct.id.toString());
+        
+        if (currentProduct) {
+          const currentStock = currentProduct.current_stock || 0;
+          const newCurrentStock = Math.max(0, currentStock - stockChange);
+          
+          await db.updateGeneralStock(viewProduct.id, {
+            current_stock: newCurrentStock,
+            stock_status: newCurrentStock === 0 ? 'out-of-stock' : 
+                         newCurrentStock <= 10 ? 'low-stock' : 'in-stock',
+            last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+          });
+          
+          console.log(`Deleted stock history: Reduced current_stock by ${stockChange} units`);
+          console.log(`New current_stock: ${newCurrentStock}`);
+        }
+      }
+      
+      toast({
+        title: "Success",
+        description: "Stock history record deleted and stock adjusted successfully",
+        variant: "default"
+      });
+      
+      // Refresh the stock history
+      const updatedHistory = await getStockHistory(viewProduct.id);
+      setViewStockHistory(updatedHistory);
+      
+      // Refresh the main products list
+      await handleGlobalRefresh();
+      
+      // Update the view modal with fresh product data
+      const allProducts = await db.getAllGeneralProducts();
+      const updatedProduct = allProducts.find((p: any) => p.id.toString() === viewProduct.id.toString());
+      if (updatedProduct) {
+        setViewProduct({
+          ...viewProduct,
+          currentStock: updatedProduct.current_stock || 0,
+          usedStock: updatedProduct.used_stock || 0,
+          status: updatedProduct.stock_status || 'in-stock'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error deleting stock history record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete stock history record",
+        variant: "destructive"
+      });
+    } finally {
+      setShowDeleteHistoryConfirm(false);
+      setHistoryToDelete(null);
+    }
+  };
 
   // Delete/Reset used stock for a product
   async function resetUsedStock(productId: string) {
@@ -417,20 +548,42 @@ const GeneralStock: React.FC = () => {
   }
 
   async function saveEdit() {
-    if (!editItem) return closeEditPopup();
+    console.log('saveEdit function called');
+    if (!editItem) {
+      console.log('No edit item found, closing popup');
+      return closeEditPopup();
+    }
+    
+    console.log('Edit item:', editItem);
+    console.log('Edit used stock:', editUsedStock);
+    console.log('Edit status:', editStatus);
     
     // Additional validation before saving
     const availableBalance = getAvailableBalance(editItem);
+    console.log('Available balance:', availableBalance);
+    
     if (editUsedStock > availableBalance) {
-      alert(`Cannot use more than available balance stock (${availableBalance})`);
+      console.log('Validation failed: Used stock exceeds available balance');
+      toast({
+        title: "Error",
+        description: `Cannot use more than available balance stock (${availableBalance})`,
+        variant: "destructive"
+      });
       return;
     }
     
     if (editUsedStock < 0) {
-      alert('Used stock cannot be negative');
+      console.log('Validation failed: Used stock is negative');
+      toast({
+        title: "Error", 
+        description: "Used stock cannot be negative",
+        variant: "destructive"
+      });
       return;
     }
     
+    console.log('Starting save operation...');
+    setSubmitting(true);
     try {
       const db = (await import('@/services/databaseService')).DatabaseService;
       
@@ -438,8 +591,12 @@ const GeneralStock: React.FC = () => {
       const currentUsedStock = editItem.usedStock || 0;
       const newTotalUsedStock = currentUsedStock + editUsedStock;
       
+      console.log('Current used stock:', currentUsedStock);
+      console.log('New total used stock:', newTotalUsedStock);
+      
       // Record the stock change in history before updating
       if (editUsedStock > 0) {
+        console.log('Adding stock history record...');
         await db.addStockHistoryRecord({
           product_id: editItem.id,
           stock_change: editUsedStock,
@@ -449,29 +606,46 @@ const GeneralStock: React.FC = () => {
           update_date: new Date().toISOString().split('T')[0],
           description: `Stock usage: ${editUsedStock} units used`
         });
+        console.log('Stock history record added successfully');
       }
       
       // Update product stock fields in backend (use updateGeneralStock)
-      await db.updateGeneralStock(editItem.id, {
+      console.log('Updating general stock...');
+      const updateData = {
         used_stock: newTotalUsedStock,
         stock_status: editStatus,
         last_update: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      };
+      console.log('Update data:', updateData);
+      
+      await db.updateGeneralStock(editItem.id, updateData);
+      console.log('General stock updated successfully');
+      
+      toast({
+        title: "Success",
+        description: "Stock updated successfully",
+        variant: "default"
       });
       
-      // Close popup and force refresh
+      // Close popup
+      console.log('Closing edit popup...');
       closeEditPopup();
       
-      // Force refresh by updating the refresh key AND reload page
-      setRefreshKey(prev => prev + 1);
-      
-      // Multiple reload methods to ensure it works
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // Refresh data
+      console.log('Refreshing data...');
+      await handleGlobalRefresh();
+      console.log('Data refresh completed');
       
     } catch (error) {
       console.error('Error saving stock:', error);
-      closeEditPopup();
+      toast({
+        title: "Error",
+        description: `Failed to save stock changes: ${error.message || error}`,
+        variant: "destructive"
+      });
+    } finally {
+      console.log('Save operation finished, setting submitting to false');
+      setSubmitting(false);
     }
   }
 
@@ -489,30 +663,7 @@ const GeneralStock: React.FC = () => {
         'Used Stock': item.usedStock,
         'Balance Stock': item.currentStock - item.usedStock,
         'Status': getStockStatus(item).replace('-', ' ').charAt(0).toUpperCase() + getStockStatus(item).replace('-', ' ').slice(1),
-        'Purchase Date': (() => {
-          const dateStr = item.purchaseDate;
-          if (!dateStr) return '';
-          
-          let date;
-          if (dateStr.includes('T')) {
-            date = new Date(dateStr);
-          } else if (dateStr.includes('-') && dateStr.split('-').length === 3) {
-            const [y, m, d] = dateStr.split('-');
-            if (y && m && d) {
-              date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-            }
-          } else {
-            date = new Date(dateStr);
-          }
-          
-          if (date && !isNaN(date.getTime())) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}-${month}-${year}`;
-          }
-          return '';
-        })(),
+        'Purchase Date': formatDateDDMMYYYY(item.purchaseDate).replace('/', '-').replace('/', '-'),
         'Last Update': (() => {
           const dateStr = item.lastUpdate;
           if (!dateStr) return '';
@@ -880,9 +1031,9 @@ const GeneralStock: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => openViewPopup(item)}
+                        onClick={() => handleViewClick(item)}
                         className="action-btn-lead action-btn-view h-8 w-8 sm:h-9 sm:w-9 p-0"
-                        title="View Details"
+                        title="View Stock History"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
@@ -997,6 +1148,282 @@ const GeneralStock: React.FC = () => {
         previewText="stock data"
       />
 
+      {/* New Glass Morphism View Modal - Mirrored from Grocery Accounts */}
+      {viewModalOpen && viewProduct && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewModalOpen(false)}
+        >
+          <div 
+            className="max-w-[95vw] max-h-[95vh] w-full sm:max-w-6xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-2xl p-0 m-4 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - Glass Morphism Style */}
+            <div className="relative pb-3 sm:pb-4 md:pb-6 border-b border-blue-100 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <Package className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-white" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1">
+                    <div className={`border-2 border-white shadow-sm text-xs px-2 py-1 rounded-full ${
+                      getStockStatus(viewProduct) === 'in-stock' ? 'bg-green-100 text-green-800' :
+                      getStockStatus(viewProduct) === 'low-stock' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {getStockStatus(viewProduct).replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-1 sm:gap-2 truncate">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">{viewProduct.productName}</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm md:text-lg lg:text-xl mt-1 flex items-center gap-2">
+                    <span className="text-gray-600">Product ID:</span>
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                      {viewProduct.gpId || viewProduct.id}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewModalOpen(false)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Modal Body - Glass Morphism Style */}
+            <div className="overflow-y-auto max-h-[calc(95vh-100px)] sm:max-h-[calc(95vh-120px)] md:max-h-[calc(95vh-140px)] lg:max-h-[calc(95vh-200px)] custom-scrollbar">
+              <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 lg:space-y-8">
+                
+                {/* Product Information Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Package className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-blue-600" />
+                    </div>
+                    Product Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Product Name</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.productName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-green-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-green-600 uppercase tracking-wide">Category</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{viewProduct.category}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Building className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wide">Supplier</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewProduct.supplier || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-orange-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-orange-600 uppercase tracking-wide">Unit Price</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">₹{viewProduct.price || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-indigo-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-indigo-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Package2 className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Unit</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{viewProduct.unit}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-50 to-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-red-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-red-600 uppercase tracking-wide">Purchase Date</div>
+                          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">{formatDateDDMMYYYY(viewProduct.purchaseDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Stock Summary Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-green-600" />
+                    </div>
+                    Stock Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-blue-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                        {viewProduct.currentStock || 0}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">Total Stock</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-red-100 text-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
+                        {viewProduct.usedStock || 0}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-red-600 uppercase tracking-wide">Used Stock</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-white p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl border border-green-100 text-center col-span-2 md:col-span-1">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                        {(viewProduct.currentStock || 0) - (viewProduct.usedStock || 0)}
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">Available Stock</div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                {/* Stock History Section */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 border border-blue-100 shadow-sm">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <History className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4 text-purple-600" />
+                    </div>
+                    Stock Movement History
+                  </h3>
+                  
+                  <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                          <TableHead className="text-center font-semibold text-gray-700">S NO</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Date</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Change</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Type</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Stock After</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Description</TableHead>
+                          <TableHead className="text-center font-semibold text-gray-700">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewStockHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <History className="h-8 w-8 text-gray-400" />
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-lg font-medium text-gray-500">No stock movement records found</p>
+                                  <p className="text-sm text-gray-400 mt-1">Stock history will appear here</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          viewStockHistory.map((entry, idx) => {
+                            const formattedDate = (() => {
+                              const date = new Date(entry.update_date);
+                              if (isNaN(date.getTime())) return entry.update_date;
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const year = date.getFullYear();
+                              return `${day}/${month}/${year}`;
+                            })();
+                            
+                            return (
+                              <TableRow key={entry.id || idx} className="hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="text-center font-medium">{idx + 1}</TableCell>
+                                <TableCell className="text-center">{formattedDate}</TableCell>
+                                <TableCell className="text-center">
+                                  <span className={entry.stock_type === 'used' ? 'text-red-600' : 'text-green-600'}>
+                                    {entry.stock_type === 'used' ? '-' : '+'}{entry.stock_change}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant={entry.stock_type === 'used' ? 'destructive' : 'default'} className="capitalize">
+                                    {entry.stock_type}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center font-bold text-blue-600">
+                                  {entry.current_stock_after}
+                                </TableCell>
+                                <TableCell className="text-center">{entry.description || '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteStockHistory(entry)}
+                                    className="action-btn-lead action-btn-delete h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                                    title="Delete Stock History Record"
+                                    disabled={submitting}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View Stock Item Dialog */}
       <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -1059,7 +1486,7 @@ const GeneralStock: React.FC = () => {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Purchase Date</Label>
                   <div className="p-3 bg-gray-50 rounded-lg border">
-                    <p className="font-semibold text-gray-900">{viewItem.purchaseDate}</p>
+                    <p className="font-semibold text-gray-900">{formatDateDDMMYYYY(viewItem.purchaseDate)}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1278,11 +1705,11 @@ const GeneralStock: React.FC = () => {
               {/* Balance After Edit */}
               <div className="editpopup form crm-edit-form-group">
                 <Label className="editpopup form crm-edit-form-label flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
+                  <Package className="h-4 w-4" />
                   Balance After Edit
                 </Label>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="text-lg font-bold text-yellow-700">{editBalance}</div>
+                  <div className="text-lg font-bold text-yellow-700">{editBalance} {editItem?.unit || 'units'}</div>
                 </div>
               </div>
               
@@ -1325,6 +1752,7 @@ const GeneralStock: React.FC = () => {
                   type="button"
                   variant="outline" 
                   onClick={closeEditPopup}
+                  disabled={submitting}
                   className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
                 >
                   <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1332,10 +1760,20 @@ const GeneralStock: React.FC = () => {
                 </Button>
                 <Button 
                   onClick={saveEdit}
+                  disabled={submitting}
                   className="editpopup form footer-button-save w-full sm:w-auto global-btn"
                 >
-                  <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                  Save Changes
+                  {submitting ? (
+                    <>
+                      <div className="animate-spin h-3 w-3 sm:h-4 sm:w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </div>
@@ -1382,7 +1820,7 @@ const GeneralStock: React.FC = () => {
                   <span className="text-gray-600">{itemToDelete.currentStock} {itemToDelete.unit}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-gray-500" />
+                  <IndianRupee className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-600">₹{itemToDelete.price}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1422,6 +1860,95 @@ const GeneralStock: React.FC = () => {
                 <>
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Delete Item
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Stock History Confirmation Dialog */}
+      <Dialog open={showDeleteHistoryConfirm} onOpenChange={setShowDeleteHistoryConfirm}>
+        <DialogContent className="crm-modal-container">
+          <DialogHeader className="editpopup form dialog-header">
+            <div className="editpopup form icon-title-container">
+              <div className="editpopup form dialog-icon">
+                <Trash2 className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <div className="editpopup form title-description">
+                <DialogTitle className="editpopup form dialog-title text-red-700">
+                  Delete Stock History Record
+                </DialogTitle>
+                <DialogDescription className="editpopup form dialog-description">
+                  Are you sure you want to delete this stock movement record? This action cannot be undone.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {historyToDelete && (
+            <div className="mx-4 my-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900">
+                    {(() => {
+                      const date = new Date(historyToDelete.update_date);
+                      if (isNaN(date.getTime())) return historyToDelete.update_date;
+                      const day = String(date.getDate()).padStart(2, '0');
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const year = date.getFullYear();
+                      return `${day}/${month}/${year}`;
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600 capitalize">{historyToDelete.stock_type}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">
+                    {historyToDelete.stock_type === 'used' ? '-' : '+'}{historyToDelete.stock_change} units
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">{historyToDelete.description || 'No description'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="editpopup form dialog-footer flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteHistoryConfirm(false);
+                setHistoryToDelete(null);
+              }}
+              disabled={submitting}
+              className="editpopup form footer-button-cancel w-full sm:w-auto modern-btn modern-btn-secondary"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={confirmDeleteStockHistory}
+              disabled={submitting}
+              className="editpopup form footer-button-delete w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              {submitting ? (
+                <>
+                  <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  Delete Record
                 </>
               )}
             </Button>

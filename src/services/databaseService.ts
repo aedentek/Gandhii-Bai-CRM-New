@@ -49,6 +49,13 @@ export class DatabaseService {
     if (!res.ok) throw new Error('Failed to fetch general products');
     return res.json();
   }
+  
+  static async getGeneralProductById(id: string | number) {
+    const res = await fetch(`${this.apiBaseUrl}/general-products/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch general product');
+    return res.json();
+  }
+  
   static async addGeneralProduct(data: any) {
     const res = await fetch(`${this.apiBaseUrl}/general-products`, {
       method: 'POST',
@@ -800,7 +807,7 @@ export class DatabaseService {
     return res.json();
   }
   static async updateGeneralStock(id: string | number, data: any) {
-    const res = await fetch(`${this.apiBaseUrl}/general-stock/${id}`, {
+    const res = await fetch(`${this.apiBaseUrl}/stock/general-stock/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -1015,6 +1022,17 @@ export class DatabaseService {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Failed to update grocery product');
+    return res.json();
+  }
+  
+  // Update grocery stock (for stock adjustment operations)
+  static async updateGroceryStock(id: string | number, data: any) {
+    const res = await fetch(`${this.apiBaseUrl}/grocery-products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update grocery stock');
     return res.json();
   }
   static async deleteGroceryProduct(id: string | number) {
