@@ -91,9 +91,10 @@ const server = createServer((req, res) => {
         status: 'success',
         message: 'Gandhi Bai Healthcare CRM API is running',
         timestamp: new Date().toISOString(),
-        server: 'Emergency Minimal Server',
+        server: 'Emergency Minimal Server - UPDATED VERSION',
         port: PORT,
         environment: process.env.NODE_ENV || 'production',
+        version: 'v2.0-embedded-html',
         debug: {
           distPath,
           indexPath,
@@ -131,6 +132,12 @@ const server = createServer((req, res) => {
         dirname: __dirname,
         timestamp: new Date().toISOString()
       }));
+      return;
+    }
+    
+    if (pathname === '/api/test-html') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<h1>🏥 Gandhi Bai Healthcare CRM - HTML Test Working!</h1><p>This proves the server can serve HTML directly.</p>');
       return;
     }
     
