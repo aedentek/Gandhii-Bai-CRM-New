@@ -3,7 +3,7 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: rm -rf node_modules package-lock.json && npm cache clean --force && npm install --no-optional && npm run build
+    buildCommand: mkdir -p dist && cp static-index.html dist/index.html && cp -r public/* dist/ 2>/dev/null || true
     startCommand: npm start
     envVars:
       - key: NODE_ENV

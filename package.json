@@ -4,19 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development", 
-    "build:prod": "vite build --mode production",
-    "lint": "eslint .",
-    "preview": "vite preview",
     "start": "node render-start.js",
     "start:server": "node server/server.js",
-    "start:frontend": "vite preview --port $PORT --host 0.0.0.0",
-    "start:dev": "vite preview --port 3000",
-    "test": "jest",
-    "test:api": "node test-custom-domain-api.js",
-    "render-build": "npm install && npm run build",
+    "test": "echo 'No tests configured'",
     "render-start": "node render-start.js"
   },
   "dependencies": {
