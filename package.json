@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development", 
-    "build:prod": "NODE_ENV=production VITE_API_URL=https://crm.gandhibaideaddictioncenter.com/api VITE_BASE_URL=https://crm.gandhibaideaddictioncenter.com vite build",
+    "build:prod": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node render-start.js",
@@ -16,7 +16,7 @@
     "start:dev": "vite preview --port 3000",
     "test": "jest",
     "test:api": "node test-custom-domain-api.js",
-    "render-build": "npm install && npm run build:prod",
+    "render-build": "npm install && npm run build",
     "render-start": "node render-start.js"
   },
   "dependencies": {

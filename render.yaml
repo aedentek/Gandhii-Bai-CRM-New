@@ -3,11 +3,15 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run build --verbose
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         fromService: true
+      - key: VITE_API_URL
+        value: https://crm.gandhibaideaddictioncenter.com/api
+      - key: VITE_BASE_URL
+        value: https://crm.gandhibaideaddictioncenter.com
     healthCheckPath: /api/test
