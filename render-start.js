@@ -8,15 +8,21 @@
 
 import { startServer } from './server/server.js';
 
+// Set production environment
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+
 console.log('🚀 Starting Gandhi Bai Healthcare CRM on Render.com...');
 console.log('✅ Deployment fixed - tcp-port-used issue resolved');
 console.log(`📅 Deployment Date: ${new Date().toISOString()}`);
-console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 console.log(`🔧 Port: ${process.env.PORT || '4000'}`);
+console.log('📁 Will serve static files from dist/ directory');
+console.log('🎯 React SPA routing enabled for production');
 
 // Start the server with error handling
 startServer().catch((error) => {
   console.error('💥 Application startup failed:', error);
   console.error('📋 Error details:', error.message);
+  console.error('🔍 Stack trace:', error.stack);
   process.exit(1);
 });
