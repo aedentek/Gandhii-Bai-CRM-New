@@ -3,7 +3,7 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: mkdir -p dist && cp static-index.html dist/index.html && echo "Static HTML copied successfully"
+    buildCommand: echo "Using embedded HTML - no build required"
     startCommand: npm start
     envVars:
       - key: NODE_ENV
