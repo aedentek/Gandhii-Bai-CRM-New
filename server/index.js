@@ -142,12 +142,72 @@ db.execute(`
   console.log('⚠️ Staff attendance table setup:', err.message);
 });
 
+// Create patient monthly records table for carry forward functionality
+db.execute(`
+  CREATE TABLE IF NOT EXISTS patient_monthly_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id VARCHAR(20) NOT NULL,
+    month INT NOT NULL,
+    year INT NOT NULL,
+    monthly_fees DECIMAL(10,2) DEFAULT 0.00,
+    other_fees DECIMAL(10,2) DEFAULT 0.00,
+    total_amount DECIMAL(10,2) DEFAULT 0.00,
+    amount_paid DECIMAL(10,2) DEFAULT 0.00,
+    amount_pending DECIMAL(10,2) DEFAULT 0.00,
+    carry_forward_from_previous DECIMAL(10,2) DEFAULT 0.00,
+    carry_forward_to_next DECIMAL(10,2) DEFAULT 0.00,
+    net_balance DECIMAL(10,2) DEFAULT 0.00,
+    payment_status ENUM('pending', 'completed', 'partial') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_patient_id (patient_id),
+    INDEX idx_month_year (month, year),
+    INDEX idx_patient_month_year (patient_id, month, year),
+    INDEX idx_payment_status (payment_status),
+    
+    UNIQUE KEY unique_patient_month_year (patient_id, month, year)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+`).then(() => {
+  console.log('✅ Patient monthly records table ready');
+}).catch(err => {
+  console.log('⚠️ Patient monthly records table setup:', err.message);
+});
+
+// Create patient payment history table
+db.execute(`
+  CREATE TABLE IF NOT EXISTS patient_payment_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id VARCHAR(20) NOT NULL,
+    amount_paid DECIMAL(10,2) NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_mode ENUM('Cash', 'Card', 'Bank Transfer', 'UPI', 'Cheque') DEFAULT 'Bank Transfer',
+    type ENUM('fee_payment', 'advance_payment', 'partial_payment') DEFAULT 'fee_payment',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_patient_id (patient_id),
+    INDEX idx_payment_date (payment_date),
+    INDEX idx_patient_payment_date (patient_id, payment_date),
+    INDEX idx_type (type)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+`).then(() => {
+  console.log('✅ Patient payment history table ready');
+}).catch(err => {
+  console.log('⚠️ Patient payment history table setup:', err.message);
+});
 
 
 
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+// Bind server to all interfaces so external checks can detect the service
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Server running on http://0.0.0.0:${PORT}`);
+  console.log(`📝 CRM API endpoints are ready`);
+  console.log(`💾 Database connection established`);
+  console.log(`🔧 Effective PORT env value: ${process.env.PORT ?? 'not set'}\n`);
 });
 
 

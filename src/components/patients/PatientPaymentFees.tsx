@@ -222,17 +222,18 @@ const PatientPaymentFees: React.FC = () => {
     loadPatients();
   }, []);
 
-  // Load data when page changes (but NOT when month/year changes)
+  // Load data when page changes or month/year changes
   useEffect(() => {
     if (currentPage > 1) { // Only reload when page changes, not on initial load
       loadPatients();
     }
   }, [currentPage]);
 
-  // Remove automatic refresh on month/year change
-  // useEffect(() => {
-  //   loadPatients();
-  // }, [selectedMonth, selectedYear]);
+  // ✅ FIXED: Load data when month/year changes
+  useEffect(() => {
+    console.log('🔄 Month/Year changed, reloading data:', selectedMonth, selectedYear);
+    loadPatients();
+  }, [selectedMonth, selectedYear]);
 
   // Effect to automatically check carry forward when month/year changes
   useEffect(() => {
@@ -281,44 +282,24 @@ const PatientPaymentFees: React.FC = () => {
     });
   };
 
-  // Save monthly records and carry forward balances
-  const saveMonthlyRecords = async () => {
+  // Check carry forward amounts for current month (mirroring doctor salary exactly)
+  const checkCarryForward = async () => {
     try {
-      await PatientPaymentAPI.saveMonthlyRecords(selectedMonth, selectedYear);
-      toast({
-        title: "Success",
-        description: "Monthly records saved successfully",
-      });
-      await refreshData();
-    } catch (error) {
-      console.error('Error saving monthly records:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save monthly records",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Check carry forward amounts for current month
-  const checkCarryForward = async (showSuccessToast = false) => {
-    try {
-      console.log('🔄 Checking carry forward for:', selectedMonth, selectedYear);
-      await PatientPaymentAPI.checkCarryForward(selectedMonth, selectedYear);
-      if (showSuccessToast) {
+      const month = selectedMonth;
+      const year = selectedYear;
+      
+      const response = await PatientPaymentAPI.checkCarryForward(month, year);
+      
+      if (response.success && response.data.length > 0) {
+        const totalCarryForward = response.totalCarryForward.toFixed(2);
         toast({
-          title: "Success",
-          description: "Carry forward balances updated successfully",
+          title: `Carry Forward Available for ${months[month-1]} ${year}`,
+          description: `${response.data.length} patients have ₹${parseFloat(totalCarryForward).toLocaleString()} total carry forward amount`,
         });
       }
-      // Don't automatically reload patients to prevent loops - let the user refresh manually if needed
     } catch (error) {
       console.error('Error checking carry forward:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update carry forward balances",
-        variant: "destructive",
-      });
+      // Don't show error toast for carry forward check as it's automatic
     }
   };
 
@@ -442,15 +423,46 @@ const PatientPaymentFees: React.FC = () => {
     }
   };
 
-  // Save monthly records handler (mirroring Staff Salary functionality)
+  // Save monthly records handler (mirroring Doctor Salary functionality)
   const handleSaveMonthlyRecords = async () => {
     try {
-      await saveMonthlyRecords();
+      setLoading(true);
       
-      toast({
-        title: "Success",
-        description: `Monthly records saved successfully! Patient records processed with carry-forward`,
-      });
+      // Get current month and year from the filter or use current date
+      const month = selectedMonth !== null ? selectedMonth : new Date().getMonth() + 1;
+      const year = selectedYear !== null ? selectedYear : new Date().getFullYear();
+      
+      const data = await PatientPaymentAPI.saveMonthlyRecords(month, year);
+      
+      if (data.success) {
+        const monthName = months[month-1];
+        const recordsText = `${data.recordsProcessed || 0} patient records processed`;
+        const carryForwardText = data.carryForwardUpdates ? `, ${data.carryForwardUpdates} with carry-forward` : '';
+        
+        toast({
+          title: "Success",
+          description: `Monthly records saved successfully for ${monthName} ${year}! ${recordsText}${carryForwardText}`
+        });
+        
+        // Check if there are carry forward amounts and provide additional info
+        if (data.carryForwardUpdates > 0) {
+          setTimeout(() => {
+            toast({
+              title: "Carry Forward Info",
+              description: `${data.carryForwardUpdates} patients have balance amounts that will carry forward to the next month`,
+            });
+          }, 1000);
+        }
+        
+        // Refresh the data to show updated information
+        loadPatients();
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || 'Failed to save monthly records. Please try again.',
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error saving monthly records:', error);
       toast({
@@ -458,6 +470,8 @@ const PatientPaymentFees: React.FC = () => {
         description: 'Failed to save monthly records. Please check your connection and try again.',
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -510,9 +524,11 @@ const PatientPaymentFees: React.FC = () => {
                 onClick={handleSaveMonthlyRecords}
                 disabled={loading}
                 className="global-btn flex-1 sm:flex-none text-xs sm:text-sm px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                title={`Save monthly records for ${months[selectedMonth - 1]} ${selectedYear}`}
               >
                 <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Save Monthly</span>
+                <span className="hidden lg:inline">Save Monthly - {months[selectedMonth - 1]} {selectedYear}</span>
+                <span className="hidden sm:inline lg:hidden">Save {months[selectedMonth - 1]}</span>
                 <span className="sm:hidden">Save</span>
               </Button>
               
@@ -535,15 +551,7 @@ const PatientPaymentFees: React.FC = () => {
                 window.location.reload();
               }} />
               
-              <Button 
-                onClick={saveMonthlyRecords}
-                className="action-btn-lead bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
-                title="Save Monthly Records"
-              >
-                <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Save Records</span>
-                <span className="sm:hidden">Save</span>
-              </Button>
+       
             </div>
           </div>
         </div>
@@ -558,7 +566,7 @@ const PatientPaymentFees: React.FC = () => {
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mb-1">{stats.totalPatients}</p>
                   <div className="flex items-center text-xs text-blue-600">
                     <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Active</span>
+                    <span className="truncate">{months[selectedMonth - 1]} {selectedYear}</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-blue">
@@ -576,7 +584,7 @@ const PatientPaymentFees: React.FC = () => {
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mb-1">₹{stats.totalTestReportAmount.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-green-600">
                     <IndianRupee className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Monthly</span>
+                    <span className="truncate">{months[selectedMonth - 1]} {selectedYear}</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-green">
@@ -594,7 +602,7 @@ const PatientPaymentFees: React.FC = () => {
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">₹{stats.totalPaid.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-purple-600">
                     <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Completed</span>
+                    <span className="truncate">{months[selectedMonth - 1]} {selectedYear}</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-purple">
@@ -612,7 +620,7 @@ const PatientPaymentFees: React.FC = () => {
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">₹{stats.totalPending.toLocaleString()}</p>
                   <div className="flex items-center text-xs text-orange-600">
                     <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">Outstanding</span>
+                    <span className="truncate">{months[selectedMonth - 1]} {selectedYear}</span>
                   </div>
                 </div>
                 <div className="crm-stat-icon crm-stat-icon-orange">
@@ -643,8 +651,8 @@ const PatientPaymentFees: React.FC = () => {
           <CardHeader className="crm-table-header">
             <div className="crm-table-title">
               <CreditCard className="crm-table-title-icon" />
-              <span className="crm-table-title-text">Patient Payment Management ({filteredPatients.length})</span>
-              <span className="crm-table-title-text-mobile">Payments ({filteredPatients.length})</span>
+              <span className="crm-table-title-text">Patient Payment Management - {months[selectedMonth - 1]} {selectedYear} ({filteredPatients.length})</span>
+              <span className="crm-table-title-text-mobile">{months[selectedMonth - 1]} {selectedYear} ({filteredPatients.length})</span>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -1106,7 +1114,7 @@ const PatientPaymentFees: React.FC = () => {
                         Payment Calculation for {months[paymentModalSelectedMonth - 1]} {paymentModalSelectedYear}
                       </h4>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         {/* Monthly Fees Total */}
                         <div className="bg-white p-4 rounded-lg border border-blue-200 text-center">
                           <p className="text-sm text-gray-600 mb-2 font-medium">Monthly Fees</p>
@@ -1130,27 +1138,48 @@ const PatientPaymentFees: React.FC = () => {
                             ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
                           </p>
                         </div>
+
+                        {/* Total Paid Amount */}
+                        <div className="bg-white p-4 rounded-lg border border-purple-200 text-center">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Total Paid Amount</p>
+                          <p className="text-xl font-bold text-purple-600">
+                            ₹{paymentHistory.reduce((total, payment) => total + parseNumeric(payment.payment_amount || 0), 0).toLocaleString('en-IN')}
+                          </p>
+                        </div>
                       </div>
                       
                       {/* Calculation Formula - Mobile Responsive */}
                       <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                        <div className="flex items-center justify-center gap-3 text-lg">
-                          <span className="font-semibold text-blue-600">
-                            ₹{parseNumeric(selectedPatient.monthlyFees || 0).toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-gray-500">+</span>
-                          <span className="font-semibold text-orange-600">
-                            ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-gray-500">=</span>
-                          <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
-                            ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
-                          </Badge>
+                        <div className="flex flex-col lg:flex-row items-center justify-center gap-3 text-lg">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-blue-600">
+                              ₹{parseNumeric(selectedPatient.monthlyFees || 0).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-gray-500">+</span>
+                            <span className="font-semibold text-orange-600">
+                              ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-gray-500">=</span>
+                            <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
+                              ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
+                            </Badge>
+                          </div>
+                          
+                          <div className="hidden lg:block w-px h-8 bg-gray-300"></div>
+                          <div className="block lg:hidden w-full h-px bg-gray-300"></div>
+                          
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-600 font-medium">Total Paid:</span>
+                            <Badge className="bg-purple-100 text-purple-800 text-lg px-3 py-1 font-bold">
+                              ₹{paymentHistory.reduce((total, payment) => total + parseNumeric(payment.payment_amount || 0), 0).toLocaleString('en-IN')}
+                            </Badge>
+                          </div>
                         </div>
                         
-                        <p className="text-center text-xs text-gray-500 mt-2">
-                          Monthly Fees + Other Fees = Total Amount
-                        </p>
+                        <div className="text-center text-xs text-gray-500 mt-3 space-y-1">
+                          <p>Monthly Fees + Other Fees = Total Amount</p>
+                          <p className="text-purple-600 font-medium">Total Paid Amount = Sum of All Payments Made</p>
+                        </div>
                       </div>
                     </div>
                   )}

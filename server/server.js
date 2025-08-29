@@ -57,13 +57,12 @@ async function startServer() {
     console.log('✅ Database connection successful');
     connection.release();
 
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`
-🚀 Server is running on port ${PORT}
-📝 CRM API endpoints are ready
-💾 Database connection established
-      `);
+    // Start server (bind to all interfaces so external port scans can detect it)
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n🚀 Server is running on http://0.0.0.0:${PORT}`);
+      console.log(`📝 CRM API endpoints are ready`);
+      console.log(`💾 Database connection established`);
+      console.log(`ℹ️ Effective PORT env value: ${process.env.PORT ?? 'not set'}\n`);
     });
 
   } catch (err) {

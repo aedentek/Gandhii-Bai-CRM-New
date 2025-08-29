@@ -1,11 +1,11 @@
 import React from 'react';
-import CorporateDashboard from './CorporateDashboard'; 
+import FastCorporateDashboard from './FastCorporateDashboard'; 
 interface DashboardProps {
   user?: { name: string; role: string };
 }
 
 const ProperAlignedDashboard: React.FC<DashboardProps> = ({ user = { name: "Admin", role: "Administrator" } }) => {
-  return <CorporateDashboard user={user} />;
+  return <FastCorporateDashboard user={user} />;
 };
 
 export default ProperAlignedDashboard;

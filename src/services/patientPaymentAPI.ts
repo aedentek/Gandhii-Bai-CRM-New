@@ -37,7 +37,7 @@ export const PatientPaymentAPI = {
     notes?: string;
   }) {
     try {
-      const response = await fetch(`${BASE_URL}/patient-payments/payment`, {
+      const response = await fetch(`${BASE_URL}/patient-payments/record-payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,28 +93,6 @@ export const PatientPaymentAPI = {
     }
   },
 
-  // Save monthly records
-  async saveMonthlyRecords() {
-    try {
-      const response = await fetch(`${BASE_URL}/patient-payments/save-monthly`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error saving monthly records:', error);
-      throw error;
-    }
-  },
-
   // Update payment record
   async updatePayment(paymentId: string, paymentData: {
     paymentAmount: number;
@@ -146,11 +124,15 @@ export const PatientPaymentAPI = {
   // Save monthly records and carry forward balances
   async saveMonthlyRecords(month: number, year: number) {
     try {
-      const response = await fetch(`${BASE_URL}/patient-payments/save-monthly-records/${month}/${year}`, {
+      const response = await fetch(`${BASE_URL}/patient-payments/save-monthly-records`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          month,
+          year
+        }),
       });
 
       if (!response.ok) {
@@ -187,11 +169,17 @@ export const PatientPaymentAPI = {
     }
   },
 
-  // Check carry forward amounts for current month
+  // Check carry forward amounts for current month (exactly like doctor salary)
   async checkCarryForward(month: number, year: number) {
     try {
-      // This will call the auto-carry-forward endpoint which updates all records
-      return await this.autoCarryForward(month, year);
+      const response = await fetch(`${BASE_URL}/patient-payments/carry-forward/${month}/${year}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error checking carry forward:', error);
       throw error;

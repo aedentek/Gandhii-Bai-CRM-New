@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Patient Monthly Save Fix</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .button:hover { background-color: #0056b3; }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Patient Monthly Records Fix Test</h1>
+    <p>This will trigger the FIXED save-monthly-records endpoint for May 2025.</p>
+    
+    <button class="button" onclick="saveMonthlyRecords()">
+        💾 Save Monthly Records for May 2025 (FIXED Balance Carry Forward)
+    </button>
+    
+    <button class="button" onclick="checkCurrentData()">
+        🔍 Check Current Data
+    </button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function saveMonthlyRecords() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '⏳ Saving monthly records for May 2025...';
+            resultDiv.className = 'info';
+            
+            try {
+                const response = await fetch('http://localhost:4000/api/patient-payments/save-monthly-records', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        month: 5,
+                        year: 2025
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `✅ SUCCESS!\n\nRecords processed: ${result.recordsProcessed}\nCarry forward updates: ${result.carryForwardUpdates}\nMonth: ${result.month}/${result.year}\n\nMessage: ${result.message}`;
+                    resultDiv.className = 'success';
+                } else {
+                    resultDiv.innerHTML = `❌ FAILED!\n\nError: ${result.message}\n\nDetails: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ REQUEST FAILED!\n\nError: ${error.message}`;
+                resultDiv.className = 'error';
+            }
+        }
+        
+        async function checkCurrentData() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '⏳ Checking current database data...';
+            resultDiv.className = 'info';
+            
+            try {
+                const response = await fetch('http://localhost:4000/api/patient-payments/all?month=5&year=2025&limit=50');
+                const result = await response.json();
+                
+                if (result.success) {
+                    let output = `📋 Current Patient Data for May 2025:\n\n`;
+                    output += `Total patients: ${result.payments.length}\n\n`;
+                    
+                    result.payments.forEach((patient, index) => {
+                        output += `${index + 1}. ${patient.patient_name} (${patient.patient_id})\n`;
+                        output += `   Monthly Fees: ₹${patient.fees || 0}\n`;
+                        output += `   Other Fees: ₹${patient.month_specific_other_fees || 0}\n`;
+                        output += `   Total Amount: ₹${patient.total_amount || 0}\n`;
+                        output += `   Amount Paid: ₹${patient.amount_paid || 0}\n`;
+                        output += `   Balance: ₹${patient.amount_pending || 0}\n`;
+                        output += `   Carry Forward: ₹${patient.carry_forward || 0}\n\n`;
+                    });
+                    
+                    resultDiv.innerHTML = output;
+                    resultDiv.className = 'success';
+                } else {
+                    resultDiv.innerHTML = `❌ FAILED to get data!\n\nError: ${result.message}`;
+                    resultDiv.className = 'error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ REQUEST FAILED!\n\nError: ${error.message}`;
+                resultDiv.className = 'error';
+            }
+        }
+    </script>
+</body>
+</html>
