@@ -35,7 +35,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.API_PORT || 4000;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -207,7 +207,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`📝 CRM API endpoints are ready`);
   console.log(`💾 Database connection established`);
-  console.log(`🔧 Effective PORT env value: ${process.env.PORT ?? 'not set'}\n`);
+  console.log(`🔧 Effective PORT env value: ${process.env.API_PORT ?? 'not set'}\n`);
 });
 
 
