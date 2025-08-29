@@ -12,5 +12,9 @@ console.log(`📅 Deployment Date: ${new Date().toISOString()}`);
 console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`);
 console.log(`🔧 Port: ${process.env.PORT || '4000'}`);
 
-// Start the server
-startServer();
+// Start the server with error handling
+startServer().catch((error) => {
+  console.error('💥 Application startup failed:', error);
+  console.error('📋 Error details:', error.message);
+  process.exit(1);
+});
