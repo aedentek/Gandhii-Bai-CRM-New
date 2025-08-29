@@ -51,12 +51,16 @@ app.get('/api/test', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
+  console.log('🏠 Root endpoint called');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Production check:', process.env.NODE_ENV === 'production');
+  
   if (process.env.NODE_ENV === 'production') {
-    console.log('inside production');
-    
+    console.log('✅ Production mode - serving React app');
     // Serve the React app in production
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   } else {
+    console.log('🔧 Development mode - serving API info');
     // API info for development
     res.json({
       name: 'Gandhi Bai Healthcare CRM API',
@@ -73,17 +77,19 @@ app.get('*', (req, res) => {
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Starts with /api:', req.path.startsWith('/api'));
   
-  if (process.env.NODE_ENV === 'production' && !req.path.startsWith('/api')) {
-    console.log('📄 Serving React app HTML');
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  } else {
-    console.log('❌ Returning 404 for:', req.path);
-    res.status(404).json({ 
+  // If it's an API route, return 404 JSON
+  if (req.path.startsWith('/api')) {
+    console.log('❌ Returning 404 for API route:', req.path);
+    return res.status(404).json({ 
       error: 'API endpoint not found',
       path: req.path,
       method: req.method 
     });
   }
+  
+  // For all non-API routes, serve the React app
+  console.log('📄 Serving React app HTML for:', req.path);
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Database connection

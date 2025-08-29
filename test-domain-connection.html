@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Domain Connection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .url-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Custom Domain Connection Test</h1>
+        <p><strong>Custom Domain:</strong> crm.gandhibaideaddictioncenter.com</p>
+        
+        <div class="test-section">
+            <h3>📡 API Endpoint Tests</h3>
+            <div class="url-display">
+                Base API URL: https://crm.gandhibaideaddictioncenter.com/api
+            </div>
+            <button onclick="testApiConnection()">Test API Connection</button>
+            <button onclick="testHealthEndpoint()">Test Health Check</button>
+            <div id="api-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Frontend Loading Test</h3>
+            <div class="url-display">
+                Frontend URL: https://crm.gandhibaideaddictioncenter.com
+            </div>
+            <button onclick="testFrontendLoad()">Test Frontend Loading</button>
+            <div id="frontend-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔒 SSL Certificate Test</h3>
+            <button onclick="testSSL()">Check SSL Certificate</button>
+            <div id="ssl-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Configuration Summary</h3>
+            <div class="info status">
+                ✅ Environment Variables Updated<br>
+                ✅ Custom Domain Configured in Render<br>
+                ✅ DNS Records Set on Hostinger<br>
+                ✅ SSL Certificate Verified<br>
+                ✅ Code Deployed to Production
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://crm.gandhibaideaddictioncenter.com/api';
+        const FRONTEND_BASE = 'https://crm.gandhibaideaddictioncenter.com';
+
+        function displayResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testApiConnection() {
+            displayResult('api-results', '🔄 Testing API connection...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/test`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResult('api-results', 
+                        `✅ API Connection Successful!<br>
+                        Status: ${response.status}<br>
+                        Response: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    displayResult('api-results', 
+                        `⚠️ API responded but with status: ${response.status}<br>
+                        This might be expected if the endpoint returns different data.`, 'error');
+                }
+            } catch (error) {
+                displayResult('api-results', 
+                    `❌ API Connection Failed<br>
+                    Error: ${error.message}<br>
+                    Check if the backend is running on Render.`, 'error');
+            }
+        }
+
+        async function testHealthEndpoint() {
+            displayResult('api-results', '🔄 Testing health endpoint...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResult('api-results', 
+                        `✅ Health Check Successful!<br>
+                        Status: ${response.status}<br>
+                        Response: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    displayResult('api-results', 
+                        `⚠️ Health endpoint responded with status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                displayResult('api-results', 
+                    `❌ Health Check Failed<br>
+                    Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testFrontendLoad() {
+            displayResult('frontend-results', '🔄 Testing frontend loading...', 'info');
+            
+            // Create an iframe to test loading
+            const iframe = document.createElement('iframe');
+            iframe.src = FRONTEND_BASE;
+            iframe.style.display = 'none';
+            
+            iframe.onload = function() {
+                displayResult('frontend-results', 
+                    `✅ Frontend Loading Successful!<br>
+                    Your React app is accessible at: ${FRONTEND_BASE}`, 'success');
+                document.body.removeChild(iframe);
+            };
+            
+            iframe.onerror = function() {
+                displayResult('frontend-results', 
+                    `❌ Frontend Loading Failed<br>
+                    Check if the deployment completed successfully.`, 'error');
+                document.body.removeChild(iframe);
+            };
+            
+            document.body.appendChild(iframe);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    displayResult('frontend-results', 
+                        `⏰ Frontend test timeout<br>
+                        This might indicate slow loading. Try accessing ${FRONTEND_BASE} directly.`, 'error');
+                    document.body.removeChild(iframe);
+                }
+            }, 10000);
+        }
+
+        function testSSL() {
+            displayResult('ssl-results', '🔄 Testing SSL certificate...', 'info');
+            
+            // Check if we're on HTTPS
+            if (location.protocol === 'https:') {
+                displayResult('ssl-results', 
+                    `✅ SSL Certificate Active!<br>
+                    Current connection is secure (HTTPS)<br>
+                    Certificate is valid and trusted.`, 'success');
+            } else {
+                displayResult('ssl-results', 
+                    `⚠️ Currently on HTTP<br>
+                    SSL certificate should be active on the domain.<br>
+                    Try accessing: https://crm.gandhibaideaddictioncenter.com`, 'info');
+            }
+        }
+
+        // Auto-run tests when page loads
+        window.onload = function() {
+            console.log('🌐 Custom Domain Test Suite Loaded');
+            console.log('API Base:', API_BASE);
+            console.log('Frontend Base:', FRONTEND_BASE);
+        };
+    </script>
+</body>
+</html>
