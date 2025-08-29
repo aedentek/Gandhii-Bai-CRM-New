@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * EMERGENCY RENDER START - Uses minimal server to bypass all dependency issues
- * This bypasses Express and all problematic dependencies
+ * Render.com Production Startup Script for Gandhi Bai Healthcare CRM
+ * This script ensures proper startup for both frontend and backend
+ * Updated: August 29, 2025 - Fixed tcp-port-used dependency issue
  */
+
+import { startServer } from './server/server.js';
 
 // Set production environment
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
-console.log('� EMERGENCY START - Using minimal server to bypass dependencies');
-console.log('✅ This will eliminate all path-to-regexp and Express dependency issues');
-console.log(`📅 Started at: ${new Date().toISOString()}`);
+console.log('🚀 Starting Gandhi Bai Healthcare CRM on Render.com...');
+console.log('✅ Deployment fixed - tcp-port-used issue resolved');
+console.log(`📅 Deployment Date: ${new Date().toISOString()}`);
 console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 console.log(`🔧 Port: ${process.env.PORT || '4000'}`);
-console.log('⚡ Using only Node.js built-in modules');
+console.log('📁 Will serve static files from dist/ directory');
+console.log('🎯 React SPA routing enabled for production');
 
-// Import and run the minimal server
-import('./minimal-server.js').catch((error) => {
-  console.error('💥 Failed to start minimal server:', error);
+// Start the server with error handling
+startServer().catch((error) => {
+  console.error('💥 Application startup failed:', error);
+  console.error('📋 Error details:', error.message);
+  console.error('🔍 Stack trace:', error.stack);
   process.exit(1);
 });
