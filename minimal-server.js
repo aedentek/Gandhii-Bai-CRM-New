@@ -155,7 +155,7 @@ const server = createServer((req, res) => {
   const distPath = join(__dirname, 'dist');
   console.log(`📁 Looking for static files in: ${distPath}`);
   
-  // Try to serve the exact file requested
+  // Try to serve the exact file requested (CSS, JS, assets)
   if (pathname !== '/') {
     const filePath = join(distPath, pathname);
     console.log(`🔍 Trying to serve: ${filePath}`);
@@ -164,8 +164,25 @@ const server = createServer((req, res) => {
     }
   }
   
-  // Serve embedded HTML directly for root and SPA routing (bypass file system issues)
-  console.log(`📄 Serving embedded HTML for: ${pathname}`);
+  // Try to serve built React index.html first (if it exists and is not our embedded version)
+  const indexPath = join(distPath, 'index.html');
+  if (existsSync(indexPath)) {
+    try {
+      const indexContent = readFileSync(indexPath, 'utf-8');
+      // Check if it's a real React build (contains script tags) and not our embedded static HTML
+      if (indexContent.includes('<script') && indexContent.includes('assets/') && !indexContent.includes('Premium Corporate Dashboard')) {
+        console.log(`📄 Serving React build index.html for: ${pathname}`);
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(indexContent);
+        return;
+      }
+    } catch (error) {
+      console.log('Error reading React build:', error.message);
+    }
+  }
+  
+  // Fallback to embedded HTML for landing page
+  console.log(`📄 Serving embedded landing page for: ${pathname}`);
   res.writeHead(200, { 'Content-Type': 'text/html' });
   res.end(`<!DOCTYPE html>
 <html lang="en">
@@ -282,6 +299,14 @@ const server = createServer((req, res) => {
       transform: translateY(-2px);
     }
 
+    .build-status {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      padding: 20px;
+      border-radius: 15px;
+      margin: 20px 0;
+    }
+
     @media (max-width: 768px) {
       .container {
         padding: 20px;
@@ -310,6 +335,13 @@ const server = createServer((req, res) => {
       <p><strong>Domain:</strong> crm.gandhibaideaddictioncenter.com</p>
       <p><strong>SSL:</strong> Enabled & Verified</p>
       <p><strong>Status:</strong> Production Ready</p>
+    </div>
+
+    <div class="build-status">
+      <h3>⚡ React Frontend Status</h3>
+      <p><strong>Current:</strong> Static Landing Page (Working)</p>
+      <p><strong>Next:</strong> Full React UI/UX with API Integration</p>
+      <p>Building full frontend with patient management, staff dashboard, and real-time analytics...</p>
     </div>
 
     <div class="api-status">
@@ -349,7 +381,7 @@ const server = createServer((req, res) => {
       <p style="color: #718096; font-size: 0.9rem;">
         <strong>Deployment Status:</strong> Live & Operational<br>
         <strong>Last Updated:</strong> August 29, 2025<br>
-        <strong>Version:</strong> Production v1.0
+        <strong>Version:</strong> Landing Page v1.0 → Full UI Coming Soon
       </p>
     </div>
   </div>
@@ -368,13 +400,14 @@ const server = createServer((req, res) => {
     // Run API test on page load
     testAPI();
     
-    console.log('🏥 Gandhi Bai Healthcare CRM - Production Ready');
+    console.log('🏥 Gandhi Bai Healthcare CRM - Landing Page Active');
     console.log('🌐 Custom Domain: crm.gandhibaideaddictioncenter.com');
     console.log('📡 API Base: /api');
+    console.log('⚡ Ready for React Frontend Integration');
   </script>
 </body>
 </html>`);
-  console.log('✅ Served embedded HTML for:', pathname);
+  console.log('✅ Served embedded landing page for:', pathname);
   return;
 });
 

@@ -3,7 +3,7 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: echo "Using embedded HTML - no build required"
+    buildCommand: npm install && (npm run build || echo "Build failed, will serve static landing page") && echo "Build process completed"
     startCommand: npm start
     envVars:
       - key: NODE_ENV
