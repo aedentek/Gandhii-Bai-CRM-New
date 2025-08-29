@@ -84,6 +84,8 @@ const server = createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     
     if (pathname === '/api/test') {
+      const distPath = join(__dirname, 'dist');
+      const indexPath = join(distPath, 'index.html');
       res.writeHead(200);
       res.end(JSON.stringify({
         status: 'success',
@@ -91,7 +93,15 @@ const server = createServer((req, res) => {
         timestamp: new Date().toISOString(),
         server: 'Emergency Minimal Server',
         port: PORT,
-        environment: process.env.NODE_ENV || 'production'
+        environment: process.env.NODE_ENV || 'production',
+        debug: {
+          distPath,
+          indexPath,
+          distExists: existsSync(distPath),
+          indexExists: existsSync(indexPath),
+          cwd: process.cwd(),
+          dirname: __dirname
+        }
       }));
       return;
     }
