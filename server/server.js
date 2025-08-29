@@ -31,18 +31,29 @@ if (process.env.NODE_ENV === 'production') {
 
 // Health check endpoint for Render
 app.get('/api/test', (req, res) => {
+  console.log('🔍 /api/test route called!');
+  console.log('Request headers:', req.headers.accept);
+  console.log('Request path:', req.path);
+  console.log('Request method:', req.method);
+  
+  // Set proper JSON headers
+  res.setHeader('Content-Type', 'application/json');
   res.json({
     status: 'success',
     message: 'Gandhi Bai Healthcare CRM API is running',
     timestamp: new Date().toISOString(),
     port: PORT,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    requestPath: req.path,
+    debug: 'This should be JSON response'
   });
 });
 
 // Root endpoint
 app.get('/', (req, res) => {
   if (process.env.NODE_ENV === 'production') {
+    console.log('inside production');
+    
     // Serve the React app in production
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   } else {
@@ -56,12 +67,22 @@ app.get('/', (req, res) => {
   }
 });
 
-// Catch all handler for React Router (SPA routing)
+// Catch all handler for React Router (SPA routing) - MUST BE LAST
 app.get('*', (req, res) => {
+  console.log('🌟 Catch-all route hit for:', req.path);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Starts with /api:', req.path.startsWith('/api'));
+  
   if (process.env.NODE_ENV === 'production' && !req.path.startsWith('/api')) {
+    console.log('📄 Serving React app HTML');
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   } else {
-    res.status(404).json({ error: 'API endpoint not found' });
+    console.log('❌ Returning 404 for:', req.path);
+    res.status(404).json({ 
+      error: 'API endpoint not found',
+      path: req.path,
+      method: req.method 
+    });
   }
 });
 
