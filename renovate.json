@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "timezone": "UTC",
+  "schedule": [
+    "before 6am on sunday"
+  ],
+  "labels": ["dependencies", "auto-update"],
+  "assignees": ["aedentek"],
+  "reviewers": ["aedentek"],
+  "commitMessagePrefix": "chore:",
+  "separateMajorMinor": true,
+  "separateMultipleMajor": true,
+  "separateMinorPatch": false,
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^@types/"],
+      "groupName": "Type definitions",
+      "schedule": ["before 6am on sunday"]
+    },
+    {
+      "matchPackagePatterns": ["^@radix-ui/"],
+      "groupName": "Radix UI components",
+      "schedule": ["before 6am on sunday"]
+    },
+    {
+      "matchPackageNames": ["react", "react-dom"],
+      "groupName": "React",
+      "schedule": ["before 6am on sunday"],
+      "major": {
+        "enabled": false
+      }
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "Dev dependencies",
+      "schedule": ["before 6am on sunday"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on sunday"]
+  }
+}
