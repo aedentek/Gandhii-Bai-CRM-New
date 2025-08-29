@@ -108,6 +108,22 @@ const server = createServer((req, res) => {
       return;
     }
     
+    if (pathname === '/api/debug-files') {
+      const distPath = join(__dirname, 'dist');
+      const indexPath = join(distPath, 'index.html');
+      res.writeHead(200);
+      res.end(JSON.stringify({
+        distPath,
+        indexPath,
+        distExists: existsSync(distPath),
+        indexExists: existsSync(indexPath),
+        cwd: process.cwd(),
+        dirname: __dirname,
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+    
     // Default API 404
     res.writeHead(404);
     res.end(JSON.stringify({
