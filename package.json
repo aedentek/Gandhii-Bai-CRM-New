@@ -82,6 +82,9 @@
     "vaul": "^0.9.3",
     "vite": "^5.4.1",
     "@vitejs/plugin-react-swc": "^3.5.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.11",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
@@ -97,7 +100,6 @@
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
@@ -106,8 +108,6 @@
     "jest-environment-jsdom": "^30.0.5",
     "lovable-tagger": "^1.1.7",
     "nodemon": "^3.1.10",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.11",
     "ts-jest": "^29.4.0",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1"
