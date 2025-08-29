@@ -119,11 +119,13 @@ const server = createServer((req, res) => {
   }
   
   // Serve static files
-  const distPath = join(__dirname, '../dist');
+  const distPath = join(__dirname, 'dist');
+  console.log(`📁 Looking for static files in: ${distPath}`);
   
   // Try to serve the exact file requested
   if (pathname !== '/') {
     const filePath = join(distPath, pathname);
+    console.log(`🔍 Trying to serve: ${filePath}`);
     if (serveStatic(filePath, res)) {
       return;
     }
@@ -131,12 +133,14 @@ const server = createServer((req, res) => {
   
   // Serve index.html for root and all other requests (SPA routing)
   const indexPath = join(distPath, 'index.html');
+  console.log(`📄 Trying to serve index.html from: ${indexPath}`);
   if (serveStatic(indexPath, res)) {
-    console.log('📄 Served index.html for:', pathname);
+    console.log('✅ Served index.html for:', pathname);
     return;
   }
   
   // Fallback 404
+  console.log(`❌ 404 - File not found: ${pathname}`);
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('404 - Not Found');
 });

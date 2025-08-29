@@ -3,7 +3,7 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: mkdir -p dist && cp static-index.html dist/index.html && cp -r public/* dist/ 2>/dev/null || true
+    buildCommand: mkdir -p dist && cp static-index.html dist/index.html && echo "Static HTML copied successfully"
     startCommand: npm start
     envVars:
       - key: NODE_ENV
