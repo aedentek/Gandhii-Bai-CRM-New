@@ -3,7 +3,7 @@ services:
     name: gandhii-bai-crm
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build --verbose
+    buildCommand: rm -rf node_modules package-lock.json && npm install && npm install path-to-regexp@6.2.1 --save-exact && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
