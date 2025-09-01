@@ -231,10 +231,10 @@ const DoctorAdvancePage: React.FC = () => {
     
     // Handle both old and new path formats
     if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
-      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
+      return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${photoPath.replace(/\\/g, '/')}`;
     }
     
-    return `http://localhost:4000/${photoPath}`;
+    return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${photoPath}`;
   };
 
   const loadData = async () => {

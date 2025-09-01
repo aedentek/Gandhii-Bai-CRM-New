@@ -86,7 +86,7 @@ const AddDoctor: React.FC = () => {
   const testConnection = async () => {
     try {
       console.log('Testing API connection...');
-      const response = await fetch('http://localhost:4001/api/doctors');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctors`);
       const data = await response.json();
       console.log('API connection test successful:', data);
       toast({

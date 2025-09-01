@@ -5,6 +5,57 @@ const router = express.Router();
 
 console.log('🏥 Patient Payments routes module loaded!');
 
+// 🧪 DEBUG endpoint to test carry forward query
+router.get('/patient-payments/debug-carry-forward/:patientId/:month/:year', async (req, res) => {
+  try {
+    const { patientId, month, year } = req.params;
+    const targetMonth = parseInt(month);
+    const targetYear = parseInt(year);
+    
+    console.log(`🧪 DEBUG: Testing carry forward for Patient ${patientId}, Month: ${targetMonth}/${targetYear}`);
+    console.log(`🧪 DEBUG: Looking for records from previous month: ${targetMonth - 1}/${targetYear}`);
+    
+    // Direct query to check what's in the database
+    const [records] = await db.execute(`
+      SELECT * FROM patient_monthly_records 
+      WHERE patient_id = ? 
+      AND month = ? 
+      AND year = ?
+      ORDER BY id DESC
+    `, [patientId, targetMonth - 1, targetYear]);
+    
+    console.log(`🧪 DEBUG: Found ${records.length} records for ${patientId} in ${targetMonth - 1}/${targetYear}`);
+    records.forEach(record => {
+      console.log(`🧪 DEBUG: Record ID ${record.id}: carry_forward_to_next = ${record.carry_forward_to_next}`);
+    });
+    
+    // Test the exact query used in the main API - FIXED VERSION
+    const [carryForwardTest] = await db.execute(`
+      SELECT carry_forward_to_next 
+      FROM patient_monthly_records pmr
+      WHERE pmr.patient_id = ?
+      AND pmr.month = ? AND pmr.year = ?
+      ORDER BY pmr.id DESC 
+      LIMIT 1
+    `, [patientId, targetMonth - 1, targetYear]);
+    
+    console.log(`🧪 DEBUG: Carry forward query result:`, carryForwardTest);
+    
+    res.json({
+      success: true,
+      patientId,
+      targetMonth,
+      targetYear,
+      previousMonth: targetMonth - 1,
+      records,
+      carryForwardResult: carryForwardTest[0] || null
+    });
+  } catch (error) {
+    console.error('🧪 DEBUG: Error testing carry forward:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Get all patient payments with pagination and filtering
 router.get('/patient-payments/all', async (req, res) => {
   try {
@@ -13,7 +64,16 @@ router.get('/patient-payments/all', async (req, res) => {
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
+    // Calculate previous month for carry forward (exactly like doctor salary)
+    let prevMonth = targetMonth - 1;
+    let prevYear = targetYear;
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear = prevYear - 1;
+    }
+    
     console.log(`📋 Getting patient payment data for ${targetMonth}/${targetYear}`);
+    console.log(`🔍 DEBUG: Previous month for carry forward: ${prevMonth}/${prevYear}`);
     
     // Get active patients who were admitted in or before the selected month/year
     // Now with month-specific other fees from test reports
@@ -94,16 +154,22 @@ router.get('/patient-payments/all', async (req, res) => {
           END
         ) as total_amount,
         
-        -- ✅ FIXED: Calculate month-specific payments only, not overall payments
+        -- ✅ FIXED: Calculate month-specific payments including initial advance for joining month
         COALESCE(
           (SELECT SUM(pph.payment_amount) 
            FROM patient_payment_history pph
            WHERE pph.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
            AND YEAR(pph.payment_date) = ?
            AND MONTH(pph.payment_date) = ?
-          ), 0) as amount_paid,
+          ), 0) + 
+        -- Add initial advance payment (payAmount) only for joining month
+        CASE 
+          WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+          THEN COALESCE(p.payAmount, 0)
+          ELSE 0
+        END as amount_paid,
         
-        -- ✅ FIXED: Calculate correct balance = Monthly Fees + Other Fees + Carry Forward - Amount Paid
+        -- ✅ FIXED: Calculate correct balance = Total Amount + Carry Forward - Amount Paid (including month-specific payAmount)
         (COALESCE(p.fees, 0) + COALESCE(
           -- If current month/year matches admission month/year, include blood test + pickup charges + test reports
           CASE 
@@ -132,18 +198,29 @@ router.get('/patient-payments/all', async (req, res) => {
           (SELECT carry_forward_to_next 
            FROM patient_monthly_records pmr
            WHERE pmr.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
-           AND ((pmr.month = ? - 1 AND pmr.year = ?) OR (pmr.month = 12 AND pmr.year = ? - 1 AND ? = 1))
+           AND pmr.month = ? AND pmr.year = ?
            ORDER BY pmr.id DESC 
            LIMIT 1
-          ), 0) - COALESCE(p.payAmount, 0)) as amount_pending,
+          ), 0) - (COALESCE(
+          (SELECT SUM(pph.payment_amount) 
+           FROM patient_payment_history pph
+           WHERE pph.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
+           AND YEAR(pph.payment_date) = ?
+           AND MONTH(pph.payment_date) = ?
+          ), 0) + 
+        -- Subtract initial advance payment (payAmount) only for joining month
+        CASE 
+          WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+          THEN COALESCE(p.payAmount, 0)
+          ELSE 0
+        END)) as amount_pending,
         
-        -- Calculate carry forward from previous month (exactly like doctor salary)
+        -- ✅ FIXED: Working carry forward calculation (copied from doctor salary)
         COALESCE(
           (SELECT carry_forward_to_next 
-           FROM patient_monthly_records pmr
-           WHERE pmr.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
-           AND ((pmr.month = ? - 1 AND pmr.year = ?) OR (pmr.month = 12 AND pmr.year = ? - 1 AND ? = 1))
-           ORDER BY pmr.id DESC 
+           FROM patient_monthly_records 
+           WHERE patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
+           AND month = ? AND year = ?
            LIMIT 1
           ), 0) as carry_forward,
           
@@ -175,7 +252,7 @@ router.get('/patient-payments/all', async (req, res) => {
             (SELECT carry_forward_to_next 
              FROM patient_monthly_records pmr
              WHERE pmr.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
-             AND ((pmr.month = ? - 1 AND pmr.year = ?) OR (pmr.month = 12 AND pmr.year = ? - 1 AND ? = 1))
+             AND pmr.month = ? AND pmr.year = ?
              ORDER BY pmr.id DESC 
              LIMIT 1
             ), 0) - COALESCE(p.payAmount, 0)) <= 0 THEN 'completed'
@@ -209,19 +286,25 @@ router.get('/patient-payments/all', async (req, res) => {
       targetYear, targetMonth,
       // For amount_pending balance calculation CASE ELSE - test reports in selected month
       targetYear, targetMonth,
-      // For amount_pending carry_forward calculation - previous month parameters
-      targetMonth, targetYear, targetYear, targetMonth,
-      // For carry_forward calculation - previous month parameters
-      targetMonth, targetYear, targetYear, targetMonth,
+      // For amount_pending carry_forward calculation - FIXED: Use previous month directly
+      targetMonth - 1, targetYear,
+      // For amount_pending payment calculation - month-specific payments
+      targetYear, targetMonth,
+      // For amount_pending payment calculation - joining month check for initial advance
+      targetYear, targetMonth,
+      // For carry_forward calculation (exactly like doctor salary)
+      prevMonth, prevYear,
       // For payment_status calculation CASE statement - admission month check
       targetYear, targetMonth,
       // For payment_status calculation CASE WHEN - test reports in selected month
       targetYear, targetMonth,
       // For payment_status calculation CASE ELSE - test reports in selected month
       targetYear, targetMonth,
-      // For payment_status carry_forward calculation - previous month parameters
-      targetMonth, targetYear, targetYear, targetMonth,
+      // For payment_status carry_forward calculation - FIXED: Use previous month directly
+      targetMonth - 1, targetYear,
       // For amount_paid calculation - month-specific payments
+      targetYear, targetMonth,
+      // For amount_paid calculation - joining month check for initial advance
       targetYear, targetMonth,
       // For WHERE clause - admission date filtering
       targetYear, targetYear, targetMonth,
@@ -241,9 +324,9 @@ router.get('/patient-payments/all', async (req, res) => {
         )
     `, [targetYear, targetYear, targetMonth]);
 
-    // Get stats for active patients based on selected month/year
+    // Get stats for active patients based on selected month/year - UPDATED
     // Only count patients who were admitted in or before the selected month/year
-    // Use month-specific other fees from test reports
+    // Use month-specific calculations including carry forward
     const [statsResult] = await db.execute(`
       SELECT 
         COUNT(*) as totalPatients,
@@ -273,8 +356,71 @@ router.get('/patient-payments/all', async (req, res) => {
             )
           END
         ), 0) as totalTestReportAmount,
-        COALESCE(SUM(p.payAmount), 0) as totalPaid,
-        COALESCE(SUM(p.balance), 0) as totalPending
+        COALESCE(SUM(
+          -- Calculate month-specific paid amounts for stats
+          COALESCE(
+            (SELECT SUM(pph.payment_amount) 
+             FROM patient_payment_history pph
+             WHERE pph.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
+             AND YEAR(pph.payment_date) = ?
+             AND MONTH(pph.payment_date) = ?
+            ), 0) + 
+          -- Add initial advance payment (payAmount) only for joining month
+          CASE 
+            WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+            THEN COALESCE(p.payAmount, 0)
+            ELSE 0
+          END
+        ), 0) as totalPaid,
+        -- Calculate totalPending with carry forward included
+        COALESCE(SUM(
+          -- Monthly fees + Other fees + Carry forward - Total paid = Remaining balance
+          COALESCE(p.fees, 0) + 
+          -- Add month-specific other fees
+          CASE 
+            WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+            THEN COALESCE(p.bloodTest, 0) + COALESCE(p.pickupCharge, 0) + COALESCE(
+              (SELECT SUM(tr.amount) 
+               FROM test_reports tr 
+               WHERE (tr.patient_id = CONCAT('P', LPAD(p.id, 4, '0')) OR tr.patient_id = p.id)
+                 AND YEAR(tr.test_date) = ?
+                 AND MONTH(tr.test_date) = ?
+                 AND tr.status != 'Cancelled'
+              ), 0
+            )
+            ELSE COALESCE(
+              (SELECT SUM(tr.amount) 
+               FROM test_reports tr 
+               WHERE (tr.patient_id = CONCAT('P', LPAD(p.id, 4, '0')) OR tr.patient_id = p.id)
+                 AND YEAR(tr.test_date) = ?
+                 AND MONTH(tr.test_date) = ?
+                 AND tr.status != 'Cancelled'
+              ), 0
+            )
+          END +
+          -- Add carry forward from previous month
+          COALESCE(
+            (SELECT carry_forward_to_next 
+             FROM patient_monthly_records 
+             WHERE patient_id = CONCAT('P', LPAD(p.id, 4, '0')) 
+             AND month = ? AND year = ? 
+             LIMIT 1), 0
+          ) -
+          -- Subtract total paid this month
+          (COALESCE(
+            (SELECT SUM(pph.payment_amount) 
+             FROM patient_payment_history pph
+             WHERE pph.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
+             AND YEAR(pph.payment_date) = ?
+             AND MONTH(pph.payment_date) = ?
+            ), 0) + 
+          -- Add initial advance payment (payAmount) only for joining month
+          CASE 
+            WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+            THEN COALESCE(p.payAmount, 0)
+            ELSE 0
+          END)
+        ), 0) as totalPending
       FROM patients p
       WHERE p.status = 'Active' 
         AND p.admissionDate IS NOT NULL
@@ -289,6 +435,22 @@ router.get('/patient-payments/all', async (req, res) => {
       targetYear, targetMonth,
       // For totalTestReportAmount CASE ELSE - test reports in selected month
       targetYear, targetMonth,
+      // For totalPaid calculation - month-specific payments
+      targetYear, targetMonth,
+      // For totalPaid calculation - joining month check for initial advance
+      targetYear, targetMonth,
+      // For totalPending calculation - admission month check for other fees
+      targetYear, targetMonth,
+      // For totalPending calculation - test reports in selected month (CASE WHEN)
+      targetYear, targetMonth,
+      // For totalPending calculation - test reports in selected month (CASE ELSE)
+      targetYear, targetMonth,
+      // For totalPending calculation - carry forward from previous month
+      prevMonth, prevYear,
+      // For totalPending calculation - payments in selected month
+      targetYear, targetMonth,
+      // For totalPending calculation - joining month check for initial advance
+      targetYear, targetMonth,
       // For WHERE clause - admission date filtering
       targetYear, targetYear, targetMonth
     ]);
@@ -302,8 +464,85 @@ router.get('/patient-payments/all', async (req, res) => {
       totalPending: 0
     };
 
-    console.log(`✅ Found ${patients.length} active patients for payment management`);
-    console.log('📋 Sample patient data:', patients.length > 0 ? patients[0] : 'No patients');
+        console.log(`✅ Found ${patients.length} active patients for payment management`);
+    
+    // FIXED: Calculate carry forward separately for each patient to avoid parameter mismatch
+    for (let i = 0; i < patients.length; i++) {
+      const patient = patients[i];
+      
+      // Get carry forward from previous month
+      const [carryForwardResult] = await db.execute(`
+        SELECT COALESCE(carry_forward_to_next, 0) as carry_forward_amount
+        FROM patient_monthly_records pmr
+        WHERE pmr.patient_id = ?
+        AND pmr.month = ? AND pmr.year = ?
+        ORDER BY pmr.id DESC 
+        LIMIT 1
+      `, [patient.patient_id, targetMonth - 1, targetYear]);
+      
+      // Update the patient object with correct carry forward
+      patients[i].carry_forward = carryForwardResult[0]?.carry_forward_amount || '0.00';
+      
+      // Also update amount_pending to include carry forward
+      const totalAmount = parseFloat(patient.total_amount) || 0;
+      const amountPaid = parseFloat(patient.amount_paid) || 0;
+      const carryForward = parseFloat(patients[i].carry_forward) || 0;
+      
+      patients[i].amount_pending = (totalAmount + carryForward - amountPaid).toFixed(2);
+    }
+    
+    // Enhanced debugging for carry forward issue
+    for (const patient of patients) {
+      if (patient.patient_id === 'P0002') {
+        console.log(`🔍 DEBUG P0002 Raw Query Result:`, {
+          carry_forward: patient.carry_forward,
+          amount_pending: patient.amount_pending,
+          total_amount: patient.total_amount,
+          amount_paid: patient.amount_paid
+        });
+        
+        // Test with exact same parameters as main query
+        console.log(`🔍 DEBUG P0002 Testing with parameters: patient_id='${patient.patient_id}', targetMonth-1=${targetMonth-1}, targetYear=${targetYear}`);
+        
+        // Test the exact carry forward query manually
+        const [manualTest] = await db.execute(`
+          SELECT carry_forward_to_next 
+          FROM patient_monthly_records pmr
+          WHERE pmr.patient_id = ?
+          AND pmr.month = ? AND pmr.year = ?
+        `, [patient.patient_id, targetMonth - 1, targetYear]);
+        
+        console.log(`🔍 DEBUG P0002 Manual Carry Forward Test:`, manualTest);
+        
+        // Test the exact query from the main SELECT (without CONCAT)
+        const [concatTest] = await db.execute(`
+          SELECT CONCAT('P', LPAD(?, 4, '0')) as patient_id_concat
+        `, [patient.id]);
+        
+        console.log(`🔍 DEBUG P0002 CONCAT Test: patient.id=${patient.id} -> ${concatTest[0].patient_id_concat}`);
+        
+        // Test the exact subquery from the main SELECT statement
+        const [exactSubqueryTest] = await db.execute(`
+          SELECT 
+            COALESCE(
+              (SELECT carry_forward_to_next 
+               FROM patient_monthly_records pmr
+               WHERE pmr.patient_id = CONCAT('P', LPAD(?, 4, '0'))
+               AND pmr.month = ? AND pmr.year = ?
+               ORDER BY pmr.id DESC 
+               LIMIT 1
+              ), 0) as carry_forward_result
+        `, [patient.id, targetMonth - 1, targetYear]);
+        
+        console.log(`🔍 DEBUG P0002 Exact Subquery Test:`, exactSubqueryTest);
+      }
+    }
+    
+    // Log sample patient data for debugging
+    if (patients.length > 0) {
+      console.log('📋 Sample patient data:', patients[0]);
+      console.log(`🔍 DEBUG: Patient ${patients[0].patient_id} carry_forward: ${patients[0].carry_forward}`);
+    }
     console.log('📊 Stats data:', stats);
 
     res.json({
@@ -333,19 +572,69 @@ router.get('/patient-payments/history/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params;
     
+    // Get regular payment history records
     const [history] = await db.execute(`
       SELECT 
         pph.*,
-        p.name as patient_name
+        p.name as patient_name,
+        'payment_history' as source
       FROM patient_payment_history pph
       LEFT JOIN patients p ON p.id = pph.patient_id
       WHERE pph.patient_id = ?
       ORDER BY pph.payment_date DESC
     `, [patientId]);
 
+    // Get patient admission info and initial advance
+    const patientIdNum = patientId.replace('P', '').replace(/^0+/, ''); // Remove P and leading zeros
+    const [patientInfo] = await db.execute(`
+      SELECT 
+        p.id,
+        p.name,
+        p.admissionDate,
+        p.payAmount,
+        YEAR(p.admissionDate) as admission_year,
+        MONTH(p.admissionDate) as admission_month
+      FROM patients p
+      WHERE p.id = ?
+    `, [parseInt(patientIdNum)]);
+
+    let enhancedHistory = [...history];
+
+    // Add initial advance payment as a synthetic record for the joining month
+    if (patientInfo.length > 0 && patientInfo[0].payAmount > 0) {
+      const patient = patientInfo[0];
+      const admissionDate = new Date(patient.admissionDate);
+      // Add one month to admission date to get the joining month for billing
+      const joiningMonth = admissionDate.getMonth() + 2; // +1 for next month, +1 for 0-based index
+      const joiningYear = joiningMonth > 12 ? admissionDate.getFullYear() + 1 : admissionDate.getFullYear();
+      const actualJoiningMonth = joiningMonth > 12 ? 1 : joiningMonth;
+      
+      // Create joining date (first day of the joining month)
+      const joiningDate = new Date(joiningYear, actualJoiningMonth - 1, 1);
+      
+      // Add synthetic initial advance record
+      const initialAdvanceRecord = {
+        id: `initial_${patient.id}`,
+        patient_id: patientId,
+        payment_amount: patient.payAmount.toString(),
+        payment_method: 'Initial Advance',
+        payment_date: joiningDate.toISOString().split('T')[0],
+        notes: 'Initial advance payment at joining',
+        created_at: patient.admissionDate,
+        patient_name: patient.name,
+        source: 'initial_advance',
+        type: 'initial_advance'
+      };
+      
+      enhancedHistory.unshift(initialAdvanceRecord);
+    }
+
+    // Sort by payment date descending
+    enhancedHistory.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+
     res.json({
       success: true,
-      history
+      history: enhancedHistory
     });
   } catch (error) {
     console.error('Error fetching payment history:', error);
@@ -596,22 +885,25 @@ router.post('/patient-payments/save-monthly-records', async (req, res) => {
   console.log('🔥 PATIENT PAYMENTS: Save Monthly Records endpoint hit!');
   console.log('📦 Request body:', req.body);
   
-  const connection = await db.getConnection();
-  
   try {
     const { month, year } = req.body;
     
     if (!month || !year) {
+      console.log('❌ Missing month or year in request');
       return res.status(400).json({
         success: false,
         message: 'Month and year are required'
       });
     }
-    
+
     console.log(`💾 Saving patient monthly records for ${month}/${year} with automatic carry forward...`);
     console.log(`🗓️ Applying admission date filter: only patients admitted before or during ${month}/${year}`);
     
+    const connection = await db.getConnection();
+    console.log('✅ Database connection acquired');
+    
     await connection.beginTransaction();
+    console.log('✅ Transaction started');
 
     // Calculate previous month and year for carry forward (exactly like doctor salary)
     let prevMonth = parseInt(month) - 1;
@@ -629,7 +921,7 @@ router.post('/patient-payments/save-monthly-records', async (req, res) => {
         p.id,
         p.name,
         CONCAT('P', LPAD(p.id, 4, '0')) as patient_id,
-        COALESCE(p.monthlyFees, p.fees, 0) as patient_fees,
+        COALESCE(p.fees, 0) as patient_fees,
         
         -- Use the EXACT SAME month-specific other fees calculation as the main GET endpoint
         COALESCE(
@@ -659,7 +951,20 @@ router.post('/patient-payments/save-monthly-records', async (req, res) => {
         ) as other_fees,
         
         p.admissionDate,
-        0 as total_paid_this_month,
+        
+        -- Calculate month-specific total paid including initial advance for joining month
+        COALESCE(
+          (SELECT SUM(pph.payment_amount) 
+           FROM patient_payment_history pph
+           WHERE pph.patient_id = CONCAT('P', LPAD(p.id, 4, '0'))
+           AND YEAR(pph.payment_date) = ?
+           AND MONTH(pph.payment_date) = ?
+          ), 0) + 
+        CASE 
+          WHEN YEAR(p.admissionDate) = ? AND MONTH(p.admissionDate) = ?
+          THEN COALESCE(p.payAmount, 0)
+          ELSE 0
+        END as total_paid_this_month,
         
         -- Calculate carry forward from previous month
         COALESCE(
@@ -683,6 +988,10 @@ router.post('/patient-payments/save-monthly-records', async (req, res) => {
       // For other_fees CASE WHEN - test reports in selected month
       year, month,
       // For other_fees CASE ELSE - test reports in selected month  
+      year, month,
+      // For total_paid_this_month - month-specific payments
+      year, month,
+      // For total_paid_this_month - joining month check for initial advance
       year, month,
       // For carry forward from previous month
       prevMonth, prevYear,
@@ -792,15 +1101,30 @@ router.post('/patient-payments/save-monthly-records', async (req, res) => {
     });
     
   } catch (error) {
-    await connection.rollback();
     console.error('❌ Error saving patient monthly records:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error message:', error.message);
+    
+    try {
+      await connection.rollback();
+      console.log('✅ Transaction rolled back');
+    } catch (rollbackError) {
+      console.error('❌ Rollback failed:', rollbackError);
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to save monthly records',
-      error: error.message
+      error: error.message,
+      details: error.stack
     });
   } finally {
-    connection.release();
+    try {
+      connection.release();
+      console.log('✅ Connection released');
+    } catch (releaseError) {
+      console.error('❌ Failed to release connection:', releaseError);
+    }
   }
 });
 

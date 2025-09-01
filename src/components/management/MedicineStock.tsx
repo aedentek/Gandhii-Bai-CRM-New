@@ -85,7 +85,9 @@ const MedicineStock: React.FC = () => {
     (async () => {
       if (refreshKey > 0) console.log('Refreshing data...');
       try {
+        console.log('Making API call to get medicine products...');
         const data = await DatabaseService.getAllMedicineProducts();
+        console.log('Medicine products received:', data);
         setMedicines(data);
         
         // Load doctors data for Active Doctors stats
@@ -98,7 +100,12 @@ const MedicineStock: React.FC = () => {
           setLoadingDoctors(false);
         }
       } catch (e) {
-        // Optionally show error
+        console.error('Error loading medicine products:', e);
+        toast({
+          title: "Error",
+          description: "Failed to load medicine products",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
@@ -141,8 +148,8 @@ const MedicineStock: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Grocery Management
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
-  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [filterMonth, setFilterMonth] = useState<number | null>(null); // Change to null to show all items by default
+  const [filterYear, setFilterYear] = useState<number | null>(null); // Change to null to show all items by default
 
   const { toast } = useToast();
 
@@ -193,6 +200,10 @@ const MedicineStock: React.FC = () => {
       stock_status: med.stock_status
     };
   });
+
+  console.log('Raw medicines data:', medicines);
+  console.log('Processed stockItems:', stockItems);
+  console.log('Filter settings:', { filterMonth, filterYear, searchTerm, statusFilter, categoryFilter });
 
   // Enhanced global refresh function
   const handleGlobalRefresh = React.useCallback(async () => {
@@ -449,15 +460,26 @@ const MedicineStock: React.FC = () => {
     
     if (filterMonth !== null && filterYear !== null) {
       const dateStr = item.purchase_date;
-      if (!dateStr) return false;
+      console.log(`Item ${item.name}: purchase_date = ${dateStr}, filterMonth = ${filterMonth}, filterYear = ${filterYear}`);
+      if (!dateStr) {
+        console.log(`Item ${item.name}: No purchase date, filtered out`);
+        return false;
+      }
       const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return false;
+      if (isNaN(d.getTime())) {
+        console.log(`Item ${item.name}: Invalid purchase date, filtered out`);
+        return false;
+      }
+      const itemMonth = d.getMonth() + 1; // Convert to 1-based
+      const itemYear = d.getFullYear();
+      console.log(`Item ${item.name}: parsed date month=${itemMonth}, year=${itemYear}`);
+      const dateMatches = itemMonth === filterMonth && itemYear === filterYear;
+      console.log(`Item ${item.name}: date matches filter = ${dateMatches}`);
       return (
         matchesSearch &&
         matchesStatus &&
         matchesCategory &&
-        d.getMonth() === filterMonth - 1 && // Convert 1-based to 0-based for comparison
-        d.getFullYear() === filterYear
+        dateMatches
       );
     }
     return matchesSearch && matchesStatus && matchesCategory;
@@ -527,7 +549,7 @@ const MedicineStock: React.FC = () => {
               }} />
               
               <ActionButtons.MonthYear
-                text={`${months[(filterMonth || 1) - 1]} ${filterYear}`}
+                text={filterMonth && filterYear ? `${months[(filterMonth || 1) - 1]} ${filterYear}` : "All Months"}
                 onClick={() => setShowMonthYearDialog(true)}
               />
               

@@ -116,7 +116,9 @@ router.delete('/medicine-suppliers/:id', async (req, res) => {
 // Get all medicine products
 router.get('/medicine-products', async (req, res) => {
   try {
+    console.log('🔍 Fetching medicine products from database...');
     const [rows] = await db.query('SELECT * FROM medicine_products ORDER BY id DESC');
+    console.log(`✅ Found ${rows.length} medicine products`);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

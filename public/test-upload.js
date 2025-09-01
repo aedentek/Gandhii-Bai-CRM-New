@@ -4,7 +4,7 @@ async function testUploadEndpoint() {
         console.log('🧪 Testing upload endpoint accessibility...');
         
         // Test the health endpoint first
-        const healthResponse = await fetch('http://localhost:4001/api/health');
+        const healthResponse = await fetch(`${window.location.protocol}//${window.location.hostname}:4001/api/health`);
         if (healthResponse.ok) {
             const healthData = await healthResponse.json();
             console.log('✅ Health endpoint working:', healthData);
@@ -14,7 +14,7 @@ async function testUploadEndpoint() {
         }
         
         // Test if upload endpoint exists (should return 400 for no file)
-        const uploadResponse = await fetch('http://localhost:4001/api/upload-patient-file', {
+        const uploadResponse = await fetch(`${window.location.protocol}//${window.location.hostname}:4001/api/upload-patient-file`, {
             method: 'POST',
             body: new FormData() // Empty form data
         });

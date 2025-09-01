@@ -15,7 +15,7 @@ export const API_CONFIG = {
   BACKEND_API: import.meta.env.VITE_API_URL,
   
   // Frontend development server
-  FRONTEND_URL: 'http://localhost:8080',
+  FRONTEND_URL: import.meta.env.VITE_BASE_URL || 'http://localhost:8080',
   
   // Request timeout
   TIMEOUT: 10000,

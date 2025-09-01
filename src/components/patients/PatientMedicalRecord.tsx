@@ -1083,7 +1083,7 @@ const PatientMedicalRecord: React.FC = () => {
         created_by: 'system'
       };
 
-      const response = await fetch('http://localhost:4000/api/patient-medical-records/json', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/patient-medical-records/json`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1275,7 +1275,7 @@ const PatientMedicalRecord: React.FC = () => {
             <div className="p-4 flex flex-col items-center">
               <div className="relative max-w-full max-h-[60vh] overflow-hidden rounded-lg">
                 <img
-                  src={`http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`}
+                  src={`${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${viewImageModal.images[viewImageModal.currentIndex]}`}
                   alt={`Medical record file ${viewImageModal.currentIndex + 1}`}
                   className="max-w-full max-h-full object-contain"
                   onError={(e) => {
@@ -1317,7 +1317,7 @@ const PatientMedicalRecord: React.FC = () => {
                 <button
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`;
+                    link.href = `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${viewImageModal.images[viewImageModal.currentIndex]}`;
                     link.download = viewImageModal.images[viewImageModal.currentIndex].split('/').pop() || 'file';
                     link.click();
                   }}
@@ -1329,7 +1329,7 @@ const PatientMedicalRecord: React.FC = () => {
                 
                 <button
                   onClick={() => {
-                    window.open(`http://localhost:4000${viewImageModal.images[viewImageModal.currentIndex]}`, '_blank');
+                    window.open(`${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${viewImageModal.images[viewImageModal.currentIndex]}`, '_blank');
                   }}
                   className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg flex items-center gap-2"
                 >
@@ -2327,7 +2327,7 @@ const PatientMedicalRecord: React.FC = () => {
                                         });
                                       } else {
                                         // For non-images, open in new tab
-                                        const fileUrl = `http://localhost:4000${record.images[0]}`;
+                                        const fileUrl = `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${record.images[0]}`;
                                         window.open(fileUrl, '_blank');
                                       }
                                     }}
@@ -2342,7 +2342,7 @@ const PatientMedicalRecord: React.FC = () => {
                                         // Download first file
                                         const imagePath = record.images[0];
                                         const fileName = imagePath.split('/').pop() || 'file';
-                                        const fileUrl = `http://localhost:4000${imagePath}`;
+                                        const fileUrl = `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${imagePath}`;
                                         
                                         // Fetch the file as blob to force download
                                         const response = await fetch(fileUrl);
@@ -2361,7 +2361,7 @@ const PatientMedicalRecord: React.FC = () => {
                                       } catch (error) {
                                         console.error('Download failed:', error);
                                         // Fallback to opening in new tab if download fails
-                                        const fileUrl = `http://localhost:4000${record.images[0]}`;
+                                        const fileUrl = `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${record.images[0]}`;
                                         window.open(fileUrl, '_blank');
                                       }
                                     }}

@@ -2,7 +2,7 @@
 console.log('🔄 Testing frontend Other Fees display...');
 
 // Navigate to the patient payment fees page and check console
-if (window.location.href.includes('localhost:8080')) {
+if (window.location.href.includes(window.location.hostname)) {
   console.log('✅ On frontend, checking for patient data...');
   
   // Check if patients data is available in the window or localStorage

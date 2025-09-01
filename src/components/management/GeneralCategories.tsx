@@ -108,8 +108,8 @@ const GeneralCategories: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-based like Patient Attendance
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth() + 1); // Also 1-based
-  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [filterMonth, setFilterMonth] = useState<number | null>(null); // Show all months by default
+  const [filterYear, setFilterYear] = useState<number | null>(null); // Show all years by default
 
   const { toast } = useToast();
 
@@ -590,6 +590,11 @@ const GeneralCategories: React.FC = () => {
           onApply={() => {
             setFilterMonth(selectedMonth);
             setFilterYear(selectedYear);
+            setShowMonthYearDialog(false);
+          }}
+          onShowAll={() => {
+            setFilterMonth(null);
+            setFilterYear(null);
             setShowMonthYearDialog(false);
           }}
           title="Select Month & Year"

@@ -137,7 +137,7 @@ export const uploadPatientFile = async (
       console.log('✅ Backend server is healthy:', healthData);
     } catch (healthError) {
       console.error('❌ Backend health check failed:', healthError);
-      throw new Error(`Cannot connect to backend server. Please make sure the backend server is running on http://localhost:4000 and the proxy is configured correctly. Error: ${healthError.message}`);
+      throw new Error(`Cannot connect to backend server. Please make sure the backend server is running on ${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'} and the proxy is configured correctly. Error: ${healthError.message}`);
     }
 
     const formData = new FormData();
@@ -250,7 +250,7 @@ export const getFileUrl = (filePath: string): string => {
   cleanPath = cleanPath.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
   
   // Construct the backend URL
-  const baseUrl = 'http://localhost:4000';
+  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
   let fullUrl: string;
   
   if (cleanPath.startsWith('Photos/')) {

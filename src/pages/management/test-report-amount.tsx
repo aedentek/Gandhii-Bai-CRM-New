@@ -494,7 +494,7 @@ const TestReportAmountPage: React.FC = () => {
                   try {
                     // Test GET
                     console.log('📡 Testing GET /api/test-reports...');
-                    const getResponse = await fetch('http://localhost:4000/api/test-reports');
+                    const getResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports`);
                     console.log('📡 GET API response status:', getResponse.status);
                     const getData = await getResponse.json();
                     console.log('📡 GET API response data:', getData);
@@ -512,7 +512,7 @@ const TestReportAmountPage: React.FC = () => {
                     };
                     console.log('� Sending test data:', testData);
                     
-                    const createResponse = await fetch('http://localhost:4000/api/test-reports', {
+                    const createResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',

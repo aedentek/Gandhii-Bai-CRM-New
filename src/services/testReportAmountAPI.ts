@@ -1,6 +1,6 @@
 import { TestReportAmount, CreateTestReportAmountData, UpdateTestReportAmountData } from '@/types/testReportAmount';
 
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export class TestReportAmountAPI {
   // Get all test report amounts

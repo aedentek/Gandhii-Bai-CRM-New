@@ -573,6 +573,27 @@ const GroceryAccounts: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Total Transactions Card */}
+          <Card className="crm-stat-card crm-stat-card-purple">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">Total Transactions</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mb-1">
+                    {filteredAccounts.length}
+                  </p>
+                  <div className="flex items-center text-xs text-purple-600">
+                    <History className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Records</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-purple">
+                  <History className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter Section */}

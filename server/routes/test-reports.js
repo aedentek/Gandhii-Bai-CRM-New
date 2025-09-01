@@ -3,32 +3,9 @@ import db from '../db/config.js';
 
 const router = express.Router();
 
-// Create test_reports table if it doesn't exist
-const createTableQuery = `
-  CREATE TABLE IF NOT EXISTS test_reports (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    patient_id VARCHAR(20) NOT NULL,
-    patient_name VARCHAR(255) NOT NULL,
-    test_type VARCHAR(100) NOT NULL,
-    test_date DATE NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    notes TEXT,
-    status ENUM('Pending', 'Completed', 'Cancelled') DEFAULT 'Pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_patient_id (patient_id),
-    INDEX idx_test_date (test_date),
-    INDEX idx_status (status)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-`;
-
-// Initialize table
-db.execute(createTableQuery).then(() => {
-  console.log('🧪 Test reports table ready');
-}).catch(err => {
-  console.log('⚠️ Test reports table setup:', err.message);
-});
+// Test reports table is pre-created in production environment
+// Table creation is disabled to avoid permission errors in hosted environments
+console.log('📋 Test Reports router loaded with full CRUD operations');
 
 // GET all test reports
 router.get('/test-reports', async (req, res) => {
@@ -215,7 +192,5 @@ router.delete('/test-reports/:id', async (req, res) => {
     });
   }
 });
-
-console.log('📋 Test Reports router loaded with full CRUD operations');
 
 export default router;

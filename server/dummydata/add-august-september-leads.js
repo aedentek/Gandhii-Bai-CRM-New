@@ -1,7 +1,7 @@
 // Script to add 30 sample leads for August and September 2025
 // 15 leads for current month (August) and 15 leads for next month (September)
 
-const API_BASE_URL = 'http://localhost:4001/api';
+const API_BASE_URL = process.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const augustLeads = [
   {
@@ -349,7 +349,7 @@ async function addAugustSeptemberLeads() {
     
   } catch (error) {
     console.error('❌ Script error:', error.message);
-    console.log('\n💡 Make sure your backend server is running on http://localhost:4000');
+    console.log(`\n💡 Make sure your backend server is running on ${API_BASE_URL.replace('/api', '')}`);
   }
 }
 

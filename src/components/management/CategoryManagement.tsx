@@ -101,8 +101,8 @@ const CategoryManagement: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = useState(false);
-  const [filterMonth, setFilterMonth] = useState<number | null>(new Date().getMonth());
-  const [filterYear, setFilterYear] = useState<number | null>(currentYear);
+  const [filterMonth, setFilterMonth] = useState<number | null>(null);
+  const [filterYear, setFilterYear] = useState<number | null>(null);
 
   const { toast } = useToast();
 
@@ -588,6 +588,11 @@ const CategoryManagement: React.FC = () => {
           onApply={() => {
             setFilterMonth(selectedMonth);
             setFilterYear(selectedYear);
+            setShowMonthYearDialog(false);
+          }}
+          onShowAll={() => {
+            setFilterMonth(null);
+            setFilterYear(null);
             setShowMonthYearDialog(false);
           }}
           title="Select Month & Year"

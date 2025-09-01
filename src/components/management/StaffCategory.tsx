@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ActionButtons } from '@/components/ui/HeaderActionButtons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -71,6 +72,7 @@ const StaffCategoryManagement: React.FC = () => {
   const [isEditingCategory, setIsEditingCategory] = React.useState(false);
   const [editingCategoryId, setEditingCategoryId] = React.useState<number | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('active'); // Default to showing active categories
   const [formData, setFormData] = React.useState({
     name: '',
     description: '',
@@ -87,8 +89,8 @@ const StaffCategoryManagement: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = React.useState(currentYear);
   const [showMonthYearDialog, setShowMonthYearDialog] = React.useState(false);
-  const [filterMonth, setFilterMonth] = React.useState<number | null>(new Date().getMonth());
-  const [filterYear, setFilterYear] = React.useState<number | null>(currentYear);
+  const [filterMonth, setFilterMonth] = React.useState<number | null>(null); // Show all months by default
+  const [filterYear, setFilterYear] = React.useState<number | null>(null); // Show all years by default
 
   // Delete dialog states
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
@@ -224,6 +226,8 @@ const StaffCategoryManagement: React.FC = () => {
         category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         category.description.toLowerCase().includes(searchTerm.toLowerCase());
       
+      const matchesStatus = statusFilter === 'all' || category.status === statusFilter;
+      
       if (filterMonth !== null && filterYear !== null) {
         const dateStr = category.created_at;
         if (!dateStr) return false;
@@ -238,11 +242,12 @@ const StaffCategoryManagement: React.FC = () => {
         if (isNaN(d.getTime())) return false;
         return (
           matchesSearch &&
+          matchesStatus &&
           d.getMonth() === filterMonth &&
           d.getFullYear() === filterYear
         );
       }
-      return matchesSearch;
+      return matchesSearch && matchesStatus;
     })
     .sort((a, b) => a.id - b.id); // Sort by ID in ascending order
   
@@ -355,6 +360,27 @@ const StaffCategoryManagement: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Total Transactions Card */}
+          <Card className="crm-stat-card crm-stat-card-orange">
+            <CardContent className="relative p-3 sm:p-4 lg:p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Total Transactions</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-900 mb-1">
+                    {filteredCategories.length}
+                  </p>
+                  <div className="flex items-center text-xs text-orange-600">
+                    <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Records</span>
+                  </div>
+                </div>
+                <div className="crm-stat-icon crm-stat-icon-orange">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filter */}
@@ -367,6 +393,18 @@ const StaffCategoryManagement: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
+            </div>
+            <div className="w-full sm:w-auto min-w-[150px]">
+              <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'inactive') => setStatusFilter(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-full sm:w-auto min-w-[150px]">
               <ActionButtons.MonthYear
@@ -705,6 +743,19 @@ const StaffCategoryManagement: React.FC = () => {
             </Button>
             <Button 
               type="button"
+              variant="outline"
+              onClick={() => {
+                setFilterMonth(null);
+                setFilterYear(null);
+                setShowMonthYearDialog(false);
+              }} 
+              className="editpopup form footer-button-cancel w-full sm:w-auto global-btn-outline mr-2"
+            >
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              Show All Months
+            </Button>
+            <Button 
+              type="button"
               onClick={() => {
                 setFilterMonth(selectedMonth);
                 setFilterYear(selectedYear);
@@ -713,7 +764,7 @@ const StaffCategoryManagement: React.FC = () => {
               className="editpopup form footer-button-save w-full sm:w-auto global-btn"
             >
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              Submit
+              Apply Filter
             </Button>
           </DialogFooter>
         </DialogContent>

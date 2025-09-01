@@ -13,18 +13,18 @@ console.log('=' .repeat(60));
 
 // Define API replacements - update all hardcoded API calls to use unified API
 const apiReplacements = [
-  // Port changes: Keep using 4000 (our actual backend port)
+  // Port changes: Update to use environment variables
   {
     pattern: /http:\/\/localhost:4001\/api/g,
-    replacement: 'http://localhost:4000/api',
-    description: 'Update port from 4001 back to 4000 (our actual backend)'
+    replacement: '${process.env.VITE_API_URL || \'http://localhost:4000/api\'}',
+    description: 'Update API URL to use environment variables'
   },
   
   // Photo URL fixes  
   {
     pattern: /http:\/\/localhost:4001\//g,
-    replacement: 'http://localhost:4000/',
-    description: 'Update photo URLs to correct port'
+    replacement: '${process.env.VITE_BASE_URL || \'http://localhost:4000/\'}',
+    description: 'Update base URL to use environment variables'
   },
   
   // Common fetch patterns to unified API
@@ -63,7 +63,7 @@ const componentUpdates = {
     imports: ["import { settingsAPI, rolesAPI, usersAPI } from '@/utils/api';"],
     replacements: [
       {
-        from: "const response = await fetch('http://localhost:4000/api/settings');",
+        from: "const response = await fetch('${process.env.VITE_API_URL || 'http://localhost:4000/api'}/settings');",
         to: "const settingsData = await settingsAPI.getAll();"
       }
     ]

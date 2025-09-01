@@ -103,10 +103,10 @@ const DoctorSalary: React.FC = () => {
     
     // Handle both old and new path formats
     if (photoPath.startsWith('Photos/') || photoPath.startsWith('Photos\\')) {
-      return `http://localhost:4000/${photoPath.replace(/\\/g, '/')}`;
+      return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${photoPath.replace(/\\/g, '/')}`;
     }
     
-    return `http://localhost:4000/${photoPath}`;
+    return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${photoPath}`;
   };
 
   // Helper function to format date - matching DoctorManagement format
@@ -323,7 +323,7 @@ const DoctorSalary: React.FC = () => {
       const month = filterMonth !== null ? filterMonth : new Date().getMonth() + 1;
       const year = filterYear !== null ? filterYear : new Date().getFullYear();
       
-      const response = await fetch('http://localhost:4000/api/doctor-salaries/save-monthly-records', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctor-salaries/save-monthly-records`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -384,7 +384,7 @@ const DoctorSalary: React.FC = () => {
   // Fetch monthly advance amount for selected doctor and month/year
   const fetchMonthlyAdvanceAmount = async (doctorId: string, month: number, year: number) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/doctor-advance/monthly-total?doctorId=${doctorId}&month=${month}&year=${year}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctor-advance/monthly-total?doctorId=${doctorId}&month=${month}&year=${year}`);
       const data = await response.json();
       
       if (data.success) {
@@ -430,7 +430,7 @@ const DoctorSalary: React.FC = () => {
   const fetchPaymentHistory = async (doctorId: string) => {
     setHistoryLoading(true);
     try {
-      const response = await fetch(`http://localhost:4000/api/doctor-salaries/${doctorId}/history`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctor-salaries/${doctorId}/history`);
       const data = await response.json();
       if (data.success) {
         setPaymentHistory(data.data || []);
@@ -455,7 +455,7 @@ const DoctorSalary: React.FC = () => {
 
     try {
       setDeletingPayment(true);
-      const response = await fetch(`http://localhost:4000/api/doctor-salaries/payment/${paymentToDelete.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctor-salaries/payment/${paymentToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -525,7 +525,7 @@ const DoctorSalary: React.FC = () => {
       const month = filterMonth !== null ? filterMonth : new Date().getMonth() + 1;
       const year = filterYear !== null ? filterYear : new Date().getFullYear();
       
-      const response = await fetch(`http://localhost:4000/api/doctor-salaries/carry-forward/${month}/${year}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/doctor-salaries/carry-forward/${month}/${year}`);
       const data = await response.json();
       
       if (data.success && data.data.length > 0) {

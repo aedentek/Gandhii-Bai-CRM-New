@@ -157,7 +157,7 @@ const TestReportAmount: React.FC = () => {
     try {
       console.log('📊 Loading test reports from database...');
       
-      const response = await fetch('http://localhost:4000/api/test-reports');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -273,7 +273,7 @@ const TestReportAmount: React.FC = () => {
         status: newTestReport.status
       };
 
-      const response = await fetch(`http://localhost:4000/api/test-reports/${editingTestReport.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports/${editingTestReport.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -344,7 +344,7 @@ const TestReportAmount: React.FC = () => {
       setSubmitting(true);
       console.log('🗑️ Deleting test report:', deleteReport.id);
       
-      const response = await fetch(`http://localhost:4000/api/test-reports/${deleteReport.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports/${deleteReport.id}`, {
         method: 'DELETE'
       });
 
@@ -397,7 +397,7 @@ const TestReportAmount: React.FC = () => {
     try {
       console.log('🗑️ Deleting patient:', deletePatient.id);
       
-      const response = await fetch(`http://localhost:4000/api/patients/${deletePatient.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/patients/${deletePatient.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -455,7 +455,7 @@ const TestReportAmount: React.FC = () => {
       };
 
       // Make API call to save test report
-      const response = await fetch('http://localhost:4000/api/test-reports', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/test-reports`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

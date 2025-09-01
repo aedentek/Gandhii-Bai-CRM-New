@@ -2,7 +2,7 @@
 // Author: CRM Development Team
 // Date: 2025-08-26
 
-const BASE_URL = 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export const PatientPaymentAPI = {
   // Get all patients with payment data

@@ -90,6 +90,12 @@ const PatientPaymentFees: React.FC = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
   const [deletingPayment, setDeletingPayment] = useState(false);
 
+  // Payment History month filtering - defaults to main page selected month/year
+  const [historyFilterMonth, setHistoryFilterMonth] = useState<number | null>(null);
+  const [historyFilterYear, setHistoryFilterYear] = useState<number | null>(null);
+  const [filteredPaymentHistory, setFilteredPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [showHistoryMonthYearDialog, setShowHistoryMonthYearDialog] = useState(false);
+
   const itemsPerPage = 10;
 
   const months = [
@@ -122,23 +128,25 @@ const PatientPaymentFees: React.FC = () => {
       const response = await PatientPaymentAPI.getAll(selectedMonth, selectedYear, currentPage, recordsPerPage);
       
       // Transform the API response data to match the UI expectations
-      const transformedPatients = (response.payments || []).map((payment: any) => ({
-        id: payment.patient_id,
-        name: payment.patient_name,
-        phone: payment.phone || '',
-        email: payment.email || '',
-        photo: payment.photo || '',
-        admissionDate: payment.admissionDate || payment.admission_date || '',
-        monthlyFees: payment.fees || 0,  // Monthly consultation fees
-        otherFees: payment.month_specific_other_fees || 0, // Month-specific other fees from test reports
-        totalAmount: payment.total_amount || 0,
-        balance: payment.amount_pending || 0,
-        advance_amount: (payment.amount_paid || 0).toString(),
-        carry_forward: (payment.carry_forward || 0).toString(),
-        total_paid: (payment.amount_paid || 0).toString(),
-        payment_mode: payment.payment_method || '',
-        status: payment.payment_status === 'completed' ? 'Paid' : 'Pending'
-      }));
+      const transformedPatients = (response.payments || []).map((payment: any) => {
+        return {
+          id: payment.patient_id,
+          name: payment.patient_name,
+          phone: payment.phone || '',
+          email: payment.email || '',
+          photo: payment.photo || '',
+          admissionDate: payment.admissionDate || payment.admission_date || '',
+          monthlyFees: payment.fees || 0,  // Monthly consultation fees
+          otherFees: payment.month_specific_other_fees || 0, // Month-specific other fees from test reports
+          totalAmount: payment.total_amount || 0,
+          balance: payment.amount_pending || 0,
+          advance_amount: (payment.amount_paid || 0).toString(),
+          carry_forward: (payment.carry_forward || 0).toString(),
+          total_paid: (payment.amount_paid || 0).toString(),
+          payment_mode: payment.payment_method || '',
+          status: payment.payment_status === 'completed' ? 'Paid' : 'Pending'
+        };
+      });
 
       setPatientPayments(transformedPatients);
       setStats(response.stats || {
@@ -168,6 +176,12 @@ const PatientPaymentFees: React.FC = () => {
   const applyFilter = async () => {
     setCurrentPage(1);
     await loadPatients();
+    
+    // Check carry forward after applying filter
+    if (patientPayments.length > 0) {
+      console.log('🔄 Checking carry forward after applying filter:', selectedMonth, selectedYear);
+      checkCarryForward();
+    }
   };
 
   const recordPayment = async (patientId: string, amount: number, method: string, notes?: string) => {
@@ -229,19 +243,19 @@ const PatientPaymentFees: React.FC = () => {
     }
   }, [currentPage]);
 
-  // ✅ FIXED: Load data when month/year changes
-  useEffect(() => {
-    console.log('🔄 Month/Year changed, reloading data:', selectedMonth, selectedYear);
-    loadPatients();
-  }, [selectedMonth, selectedYear]);
+  // REMOVED: Auto-refresh on month/year change - now only refreshes when Apply button is clicked
+  // useEffect(() => {
+  //   console.log('🔄 Month/Year changed, reloading data:', selectedMonth, selectedYear);
+  //   loadPatients();
+  // }, [selectedMonth, selectedYear]);
 
-  // Effect to automatically check carry forward when month/year changes
-  useEffect(() => {
-    if (patientPayments.length > 0) {
-      console.log('🔄 Auto-triggering carry forward for month/year change:', selectedMonth, selectedYear);
-      checkCarryForward();
-    }
-  }, [selectedMonth, selectedYear]);
+  // REMOVED: Auto-trigger carry forward on month/year change - now only happens when Apply is clicked
+  // useEffect(() => {
+  //   if (patientPayments.length > 0) {
+  //     console.log('🔄 Auto-triggering carry forward for month/year change:', selectedMonth, selectedYear);
+  //     checkCarryForward();
+  //   }
+  // }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     filterPatients();
@@ -309,6 +323,11 @@ const PatientPaymentFees: React.FC = () => {
     setSelectedPatient(patient);
     setPaymentModalSelectedMonth(selectedMonth);
     setPaymentModalSelectedYear(selectedYear);
+    
+    // Set Payment History filter to match main page selection
+    setHistoryFilterMonth(selectedMonth);
+    setHistoryFilterYear(selectedYear);
+    
     setPaymentFormData({
       date: new Date().toISOString().split('T')[0],
       amount: '',
@@ -324,7 +343,10 @@ const PatientPaymentFees: React.FC = () => {
   const fetchPaymentHistory = async (patientId: string) => {
     try {
       setHistoryLoading(true);
+      console.log('🔍 Fetching payment history for patient:', patientId);
       const response = await PatientPaymentAPI.getPaymentHistory(patientId);
+      console.log('💳 Payment history API response:', response);
+      console.log('💳 Payment history data:', response.history);
       setPaymentHistory(response.history || []);
     } catch (error) {
       console.error('Error fetching payment history:', error);
@@ -332,6 +354,32 @@ const PatientPaymentFees: React.FC = () => {
       setHistoryLoading(false);
     }
   };
+
+  // Filter payment history by selected month/year
+  useEffect(() => {
+    if (paymentHistory.length > 0) {
+      let filtered = paymentHistory;
+      
+      // Use Payment History filter if set, otherwise use main page filter
+      const filterMonth = historyFilterMonth || selectedMonth;
+      const filterYear = historyFilterYear || selectedYear;
+      
+      // Apply month/year filtering if set
+      if (filterMonth !== null && filterYear !== null) {
+        filtered = paymentHistory.filter(payment => {
+          const paymentDate = new Date(payment.payment_date);
+          const paymentMonth = paymentDate.getMonth() + 1; // 1-12
+          const paymentYear = paymentDate.getFullYear();
+          
+          return paymentMonth === filterMonth && paymentYear === filterYear;
+        });
+      }
+      
+      setFilteredPaymentHistory(filtered);
+    } else {
+      setFilteredPaymentHistory([]);
+    }
+  }, [paymentHistory, historyFilterMonth, historyFilterYear, selectedMonth, selectedYear]);
 
   // Numeric parsing helper
   const parseNumeric = (value: string | number | undefined): number => {
@@ -454,8 +502,12 @@ const PatientPaymentFees: React.FC = () => {
           }, 1000);
         }
         
-        // Refresh the data to show updated information
-        loadPatients();
+        // Refresh the data after a small delay to ensure database transaction is committed
+        setTimeout(async () => {
+          // Force refresh by clearing any cached state
+          setPatients([]);
+          await loadPatients();
+        }, 500);
       } else {
         toast({
           title: "Error",
@@ -476,19 +528,31 @@ const PatientPaymentFees: React.FC = () => {
   };
 
   const exportToExcel = () => {
-    const exportData = filteredPatients.map((patient, index) => ({
-      'S.No': index + 1,
-      'Patient ID': patient.id,
-      'Name': patient.name,
-      'Phone': patient.phone,
-      'Email': patient.email,
-      'Monthly Fees': `₹${parseNumeric(patient.monthlyFees).toLocaleString()}`,
-      'Total Paid': `₹${parseNumeric(patient.total_paid).toLocaleString()}`,
-      'Advance Amount': `₹${parseNumeric(patient.advance_amount).toLocaleString()}`,
-      'Balance': `₹${parseNumeric(patient.balance).toLocaleString()}`,
-      'Status': patient.status,
-      'Admission Date': patient.admissionDate,
-    }));
+    const exportData = filteredPatients.map((patient, index) => {
+      const monthlyFees = parseNumeric(patient.monthlyFees);
+      const otherFees = parseNumeric(patient.otherFees);
+      const carryForward = parseNumeric(patient.carry_forward);
+      const totalPaid = parseNumeric(patient.total_paid);
+      const totalAmount = monthlyFees + otherFees + carryForward;
+      const remainingBalance = totalAmount - totalPaid;
+      
+      return {
+        'S.No': index + 1,
+        'Patient ID': patient.id,
+        'Name': patient.name,
+        'Phone': patient.phone,
+        'Email': patient.email,
+        'Monthly Fees': `₹${monthlyFees.toLocaleString()}`,
+        'Other Fees': `₹${otherFees.toLocaleString()}`,
+        'Carry Forward': `₹${carryForward.toLocaleString()}`,
+        'Total Amount': `₹${totalAmount.toLocaleString()}`,
+        'Total Paid': `₹${totalPaid.toLocaleString()}`,
+        'Advance Amount': `₹${parseNumeric(patient.advance_amount).toLocaleString()}`,
+        'Remaining Balance': `₹${remainingBalance.toLocaleString()}`,
+        'Status': remainingBalance > 0 ? 'Pending' : 'Paid',
+        'Admission Date': patient.admissionDate,
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -547,8 +611,8 @@ const PatientPaymentFees: React.FC = () => {
               </Button>
               
               <ActionButtons.Refresh onClick={() => {
-                console.log('🔄 Manual refresh triggered - refreshing entire page');
-                window.location.reload();
+                console.log('🔄 Manual refresh triggered - refreshing data');
+                refreshDataHandler();
               }} />
               
        
@@ -669,7 +733,7 @@ const PatientPaymentFees: React.FC = () => {
                     <TableHead className="text-center font-semibold text-gray-700">Other Fees</TableHead>
                     <TableHead className="text-center font-semibold text-gray-700">Carry Forward</TableHead>
                     <TableHead className="text-center font-semibold text-gray-700">Total Paid</TableHead>
-                    <TableHead className="text-center font-semibold text-gray-700">Balance</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">Remaining Balance</TableHead>
                     <TableHead className="text-center font-semibold text-gray-700">Status</TableHead>
                     <TableHead className="text-center font-semibold text-gray-700">Actions</TableHead>
                   </TableRow>
@@ -677,12 +741,13 @@ const PatientPaymentFees: React.FC = () => {
                 <TableBody>
                   {filteredPatients.length > 0 ? (
                     filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((patient, index) => {
-                      const balance = parseNumeric(patient.balance);
                       const advance = parseNumeric(patient.advance_amount);
                       const carryForward = parseNumeric(patient.carry_forward);
                       const totalPaid = parseNumeric(patient.total_paid);
                       const monthlyFees = parseNumeric(patient.monthlyFees);
                       const otherFees = parseNumeric(patient.otherFees);
+                      const totalAmount = monthlyFees + otherFees + carryForward; // Include carry forward in total
+                      const remainingBalance = totalAmount - totalPaid; // Calculate proper remaining balance
                       const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
                       
                       return (
@@ -756,17 +821,17 @@ const PatientPaymentFees: React.FC = () => {
                           
                           {/* Balance */}
                           <TableCell className="py-4 px-6 text-center">
-                            <span className={`text-sm font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                              ₹{balance.toLocaleString()}
+                            <span className={`text-sm font-medium ${remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              ₹{remainingBalance.toLocaleString()}
                             </span>
                           </TableCell>
                           
                           {/* Status */}
                           <TableCell className="py-4 px-6 text-center">
                             <Badge 
-                              className={`text-xs ${balance > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
+                              className={`text-xs ${remainingBalance > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
                             >
-                              {balance > 0 ? 'Pending' : 'Paid'}
+                              {remainingBalance > 0 ? 'Pending' : 'Paid'}
                             </Badge>
                           </TableCell>
                           
@@ -882,6 +947,22 @@ const PatientPaymentFees: React.FC = () => {
           title="Select Month & Year"
           description="Select month and year for patient payment data"
           previewText="patient records"
+        />
+
+        {/* Payment History Month/Year Dialog */}
+        <MonthYearPickerDialog
+          open={showHistoryMonthYearDialog}
+          onOpenChange={setShowHistoryMonthYearDialog}
+          selectedMonth={historyFilterMonth || selectedMonth}
+          selectedYear={historyFilterYear || selectedYear}
+          onMonthChange={setHistoryFilterMonth}
+          onYearChange={setHistoryFilterYear}
+          onApply={() => {
+            setShowHistoryMonthYearDialog(false);
+          }}
+          title="Select Month & Year for Payment History"
+          description="Filter payment history by month and year"
+          previewText="payment records"
         />
 
         {/* Payment Modal - Beautiful Design with Portal (mirroring Staff Salary) */}
@@ -1114,7 +1195,7 @@ const PatientPaymentFees: React.FC = () => {
                         Payment Calculation for {months[paymentModalSelectedMonth - 1]} {paymentModalSelectedYear}
                       </h4>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                         {/* Monthly Fees Total */}
                         <div className="bg-white p-4 rounded-lg border border-blue-200 text-center">
                           <p className="text-sm text-gray-600 mb-2 font-medium">Monthly Fees</p>
@@ -1130,21 +1211,49 @@ const PatientPaymentFees: React.FC = () => {
                             ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
                           </p>
                         </div>
+
+                        {/* Carry Forward */}
+                        <div className="bg-white p-4 rounded-lg border border-yellow-200 text-center">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Carry Forward</p>
+                          <p className="text-xl font-bold text-yellow-600">
+                            ₹{parseNumeric(selectedPatient.carry_forward || 0).toLocaleString('en-IN')}
+                          </p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Previous Month
+                          </div>
+                        </div>
                         
                         {/* Total Amount */}
                         <div className="bg-white p-4 rounded-lg border border-green-200 text-center">
                           <p className="text-sm text-gray-600 mb-2 font-medium">Total Amount</p>
                           <p className="text-xl font-bold text-green-600">
-                            ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
+                            ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0) + parseNumeric(selectedPatient.carry_forward || 0)).toLocaleString('en-IN')}
                           </p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Including Carry Forward
+                          </div>
                         </div>
 
                         {/* Total Paid Amount */}
                         <div className="bg-white p-4 rounded-lg border border-purple-200 text-center">
                           <p className="text-sm text-gray-600 mb-2 font-medium">Total Paid Amount</p>
                           <p className="text-xl font-bold text-purple-600">
-                            ₹{paymentHistory.reduce((total, payment) => total + parseNumeric(payment.payment_amount || 0), 0).toLocaleString('en-IN')}
+                            ₹{parseNumeric(selectedPatient.total_paid || 0).toLocaleString('en-IN')}
                           </p>
+                        </div>
+                      </div>
+                      
+                      {/* Remaining Balance Row */}
+                      <div className="grid grid-cols-1 gap-4 mb-4">
+                        {/* Remaining Balance */}
+                        <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200 text-center shadow-sm">
+                          <p className="text-sm text-gray-600 mb-2 font-medium">Remaining Balance</p>
+                          <p className="text-2xl font-bold text-red-600">
+                            ₹{((parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0) + parseNumeric(selectedPatient.carry_forward || 0)) - parseNumeric(selectedPatient.total_paid || 0)).toLocaleString('en-IN')}
+                          </p>
+                          <div className="text-xs text-gray-500 mt-2">
+                            Total Amount - Total Paid Amount
+                          </div>
                         </div>
                       </div>
                       
@@ -1159,9 +1268,13 @@ const PatientPaymentFees: React.FC = () => {
                             <span className="font-semibold text-orange-600">
                               ₹{parseNumeric(selectedPatient.otherFees || 0).toLocaleString('en-IN')}
                             </span>
+                            <span className="text-gray-500">+</span>
+                            <span className="font-semibold text-yellow-600">
+                              ₹{parseNumeric(selectedPatient.carry_forward || 0).toLocaleString('en-IN')}
+                            </span>
                             <span className="text-gray-500">=</span>
                             <Badge className="bg-green-100 text-green-800 text-lg px-3 py-1 font-bold">
-                              ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0)).toLocaleString('en-IN')}
+                              ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0) + parseNumeric(selectedPatient.carry_forward || 0)).toLocaleString('en-IN')}
                             </Badge>
                           </div>
                           
@@ -1171,14 +1284,34 @@ const PatientPaymentFees: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <span className="text-gray-600 font-medium">Total Paid:</span>
                             <Badge className="bg-purple-100 text-purple-800 text-lg px-3 py-1 font-bold">
-                              ₹{paymentHistory.reduce((total, payment) => total + parseNumeric(payment.payment_amount || 0), 0).toLocaleString('en-IN')}
+                              ₹{parseNumeric(selectedPatient.total_paid || 0).toLocaleString('en-IN')}
                             </Badge>
                           </div>
                         </div>
                         
+                        {/* Remaining Balance Calculation */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex flex-col lg:flex-row items-center justify-center gap-3 text-lg">
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold text-green-600">
+                                ₹{(parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0) + parseNumeric(selectedPatient.carry_forward || 0)).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-gray-500">-</span>
+                              <span className="font-semibold text-purple-600">
+                                ₹{parseNumeric(selectedPatient.total_paid || 0).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-gray-500">=</span>
+                              <Badge className="bg-red-100 text-red-800 text-lg px-3 py-1 font-bold">
+                                ₹{((parseNumeric(selectedPatient.monthlyFees || 0) + parseNumeric(selectedPatient.otherFees || 0) + parseNumeric(selectedPatient.carry_forward || 0)) - parseNumeric(selectedPatient.total_paid || 0)).toLocaleString('en-IN')}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
                         <div className="text-center text-xs text-gray-500 mt-3 space-y-1">
-                          <p>Monthly Fees + Other Fees = Total Amount</p>
+                          <p>Monthly Fees + Other Fees + Carry Forward = Total Amount</p>
                           <p className="text-purple-600 font-medium">Total Paid Amount = Sum of All Payments Made</p>
+                          <p className="text-red-600 font-medium">Remaining Balance = Total Amount - Total Paid Amount</p>
                         </div>
                       </div>
                     </div>
@@ -1187,12 +1320,30 @@ const PatientPaymentFees: React.FC = () => {
                   {/* Payment History Section */}
                   {paymentHistory.length > 0 && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-blue-200 shadow-lg">
-                      <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <History className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                          <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <History className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
+                          </div>
+                          Payment History ({filteredPaymentHistory.length})
+                        </h3>
+                        
+                        {/* Month/Year Selector for Payment History */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => setShowHistoryMonthYearDialog(true)}
+                            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-sm font-medium"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                            <span>
+                              {(historyFilterMonth || selectedMonth) !== null && (historyFilterYear || selectedYear) !== null 
+                                ? `${months[(historyFilterMonth || selectedMonth) - 1]} ${historyFilterYear || selectedYear}`
+                                : 'All Months'
+                              }
+                            </span>
+                          </Button>
                         </div>
-                        Payment History
-                      </h3>
+                      </div>
                       
                       {/* Payment History Table */}
                       <div className="w-full overflow-x-auto">
@@ -1210,7 +1361,17 @@ const PatientPaymentFees: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
-                            {paymentHistory.map((payment, index) => (
+                            {filteredPaymentHistory.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                                  {(historyFilterMonth || selectedMonth) !== null && (historyFilterYear || selectedYear) !== null 
+                                    ? `No payment records found for ${months[(historyFilterMonth || selectedMonth) - 1]} ${historyFilterYear || selectedYear}`
+                                    : 'No payment history found'
+                                  }
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredPaymentHistory.map((payment, index) => (
                               <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3 text-sm text-gray-900 text-center font-medium">{index + 1}</td>
                                 <td className="px-4 py-3 text-sm text-gray-900 text-center">
@@ -1250,7 +1411,8 @@ const PatientPaymentFees: React.FC = () => {
                                   </Button>
                                 </td>
                               </tr>
-                            ))}
+                              ))
+                            )}
                           </tbody>
                         </table>
                       </div>

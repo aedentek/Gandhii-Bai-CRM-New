@@ -74,7 +74,7 @@ const AddRole: React.FC = () => {
     (async () => {
       if (refreshKey > 0) console.log('Refreshing data...');
       try {
-        const res = await fetch('http://localhost:4000/api/roles');
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/roles`);
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -138,7 +138,7 @@ const AddRole: React.FC = () => {
       const currentSearchTerm = searchTerm;
       const currentStatusFilter = statusFilter;
       
-      const res = await fetch('http://localhost:4000/api/roles');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/roles`);
       const freshRoles = await res.json();
       
       setRoles(freshRoles);
@@ -190,7 +190,7 @@ const AddRole: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const res = await fetch('http://localhost:4000/api/roles', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/roles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -231,7 +231,7 @@ const AddRole: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const res = await fetch(`http://localhost:4000/api/roles/${editingRole.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/roles/${editingRole.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -271,7 +271,7 @@ const AddRole: React.FC = () => {
     
     try {
       setSubmitting(true);
-      const res = await fetch(`http://localhost:4000/api/roles/${roleToDelete.id}`, { 
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/roles/${roleToDelete.id}`, { 
         method: 'DELETE' 
       });
       

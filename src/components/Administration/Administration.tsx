@@ -75,7 +75,7 @@ const Administration: React.FC = () => {
 	const loadUsers = () => {
 		setLoading(true);
 		// Fetch users from backend using .env API URL
-		const apiUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
+		const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
 		fetch(`${apiUrl}/api/management-users`)
 			.then(res => res.json())
 			.then(data => {
@@ -87,7 +87,7 @@ const Administration: React.FC = () => {
 
 	const loadRoles = async () => {
 		try {
-			const apiUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
+			const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
 			const res = await fetch(`${apiUrl}/api/roles`);
 			const data = await res.json();
 			setRoles(data);
@@ -121,7 +121,7 @@ const Administration: React.FC = () => {
 
 	// Handle add user API call
 	const handleCreateUser = async () => {
-		const apiUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
+		const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
 		try {
 			const response = await fetch(`${apiUrl}/api/management-users`, {
 				method: 'POST',
@@ -154,7 +154,7 @@ const Administration: React.FC = () => {
 	const handleUpdateUser = async () => {
 		if (!editUser) return;
 		
-		const apiUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
+		const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
 		try {
 			const response = await fetch(`${apiUrl}/api/management-users/${editUser.id}`, {
 				method: 'PUT',
@@ -193,7 +193,7 @@ const Administration: React.FC = () => {
 	const confirmDeleteUser = async () => {
 		if (!userToDelete) return;
 		
-		const apiUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:4000';
+		const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000';
 		try {
 			const response = await fetch(`${apiUrl}/api/management-users/${userToDelete.id}`, {
 				method: 'DELETE',

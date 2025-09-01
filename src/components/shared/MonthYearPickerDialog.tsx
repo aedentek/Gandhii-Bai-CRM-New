@@ -13,6 +13,7 @@ interface MonthYearPickerDialogProps {
   onMonthChange: (month: number) => void;
   onYearChange: (year: number) => void;
   onApply: () => void;
+  onShowAll?: () => void;
   title?: string;
   description?: string;
   previewText?: string;
@@ -31,6 +32,7 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
   onMonthChange,
   onYearChange,
   onApply,
+  onShowAll,
   title = "Select Month & Year",
   description = "Filter data by specific month and year",
   previewText = "data"
@@ -131,6 +133,19 @@ const MonthYearPickerDialog: React.FC<MonthYearPickerDialogProps> = ({
           >
             Cancel
           </Button>
+          {onShowAll && (
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={(e) => {
+                e.preventDefault();
+                onShowAll();
+              }}
+              className="w-full sm:w-auto modern-btn modern-btn-accent"
+            >
+              Show All Months
+            </Button>
+          )}
           <Button 
             type="button" 
             onClick={(e) => {

@@ -19,7 +19,7 @@ import LoadingScreen from '@/components/shared/LoadingScreen';
 import * as XLSX from 'xlsx';
 
 // API Base URL
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 // Interfaces
 interface Patient {
@@ -734,7 +734,7 @@ const PatientAttendance: React.FC = () => {
                         <div className="flex items-center gap-3">
                           {patient.photo && (
                             <img
-                              src={`http://localhost:4000/${patient.photo}`}
+                              src={`${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${patient.photo}`}
                               alt={patient.name}
                               className="h-8 w-8 rounded-full object-cover"
                             />

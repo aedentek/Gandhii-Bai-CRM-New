@@ -629,7 +629,7 @@ const StaffAdvancePage: React.FC = () => {
                             <div className="flex justify-center">
                               <Avatar className="h-10 w-10">
                                 <AvatarImage 
-                                  src={staffMember.photo ? `http://localhost:4000${staffMember.photo}` : undefined} 
+                                  src={staffMember.photo ? `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${staffMember.photo}` : undefined} 
                                 />
                                 <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                                   {staffMember.name.split(' ').map(n => n[0]).join('')}
@@ -693,7 +693,7 @@ const StaffAdvancePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
                       <AvatarImage 
-                        src={selectedStaff.photo ? `http://localhost:4000${selectedStaff.photo}` : undefined} 
+                        src={selectedStaff.photo ? `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${selectedStaff.photo}` : undefined} 
                       />
                       <AvatarFallback className="bg-blue-100 text-blue-600">
                         {selectedStaff.name.split(' ').map(n => n[0]).join('')}
@@ -804,7 +804,7 @@ const StaffAdvancePage: React.FC = () => {
                     <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 sm:border-4 border-white shadow-lg overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600">
                       {selectedStaff.photo ? (
                         <img
-                          src={`http://localhost:4000${selectedStaff.photo}`}
+                          src={`${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${selectedStaff.photo}`}
                           alt={selectedStaff.name || 'Profile'}
                           className="w-full h-full object-cover"
                           onError={(e) => {

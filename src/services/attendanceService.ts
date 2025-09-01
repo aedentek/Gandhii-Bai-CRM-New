@@ -13,7 +13,7 @@ interface AttendanceRecord {
 }
 
 export class AttendanceService {
-  private static API_URL = 'http://localhost:4000/api';
+  private static API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
   static async checkIn(patientId: string, patientName: string): Promise<AttendanceRecord> {
     const now = new Date();

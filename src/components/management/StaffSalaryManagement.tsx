@@ -67,11 +67,11 @@ const SalaryPayment: React.FC = () => {
     
     // If it's a file path, use proxy for image processing
     if (photo.startsWith('/') || photo.startsWith('http')) {
-      return `http://localhost:4000${photo.startsWith('/') ? '' : '/'}${photo}`;
+      return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}${photo.startsWith('/') ? '' : '/'}${photo}`;
     }
     
     // Default proxy path
-    return `http://localhost:4000/${photo}`;
+    return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:4000'}/${photo}`;
   };
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -349,7 +349,7 @@ const SalaryPayment: React.FC = () => {
       const month = selectedMonth;
       const year = selectedYear;
       
-      const response = await fetch('http://localhost:4000/api/staff-salaries/save-monthly-records', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/staff-salaries/save-monthly-records`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
