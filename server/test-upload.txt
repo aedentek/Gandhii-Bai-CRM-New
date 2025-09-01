@@ -1,4 +1,0 @@
-This is a test file for medical record upload.
-Date: 17-08-2025
-Patient ID: P0100
-Test upload functionality.
